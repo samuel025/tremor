@@ -46,3 +46,15 @@ Reason: coin-weighted voting gives a majority holder control, and the human does
 - D-21: anyone may submit a CLAIM (id, magnitude, origin) so visitors can try the system: a claim creates a pending event with no attestations. Bots attest it only if USGS confirms it, so a made-up claim stays unconfirmed and mints nothing. Claims cost nothing, so they are bounded: one open claim per account, at most `max_claims` open at once, each open for `claim_wait_s`; bot-posted pending events have their own limit `max_open`, so claim spam cannot block real quakes.
 - D-22: trust moves from "whoever holds most coins" to "three of five named accounts". If three bots are bad, fakes mint up to the caps (and real quakes can be blocked); the caps and the fixed relief list still bound the damage. In the demo all five bots are run by us, so independence is only demonstrated, not real. If the bots are offline nothing mints (fails safe).
 - D-23: removed: bonds/deposits, challenge, vote, claim_vote, quorum, penalty, dispute scenarios 3-5 of the simulation (replaced by bad-bot, offline-bot and claim-spam scenarios), the dispute replay. Kept: tap, caps, cooldown, relief list, finalize-free minting.
+
+## Simulation under the bot model: thresholds, logged BEFORE the run (2026-11-07)
+Grid (the mint math is unchanged, so S1/S2 behave as before): base_ppm {0.25%, 0.5%, 1%}, weekly cap {1%, 1.5%, 3%}, monthly cap {3%, 5%, 10%}; threshold 3 of 5 bots, min age 1 h. A combination passes only if ALL hold:
+- T1 (any scenario): a passive holder never loses more than the monthly cap in any 30 days.
+- T2 (scenario 1, real catalog, five honest bots): the weekly cap binds in at most 25% of the 8 full weeks.
+- T3 (scenario 3, three bad bots post 10 identical fakes in a week): trailing-7-day minting never exceeds the weekly cap.
+- T4 (scenario 3, TWO bad bots): zero fakes count.
+- T5 (scenario 4, two bots offline): every real event still counts.
+- Swarm (scenario 2): trailing-7-day minting never exceeds the weekly cap.
+Also reported, no pass mark: bad bots 0..5 (how many fakes count and the extra supply), offline bots 0..5 (the share of real events that count; fails safe below 3 online), and claim spam (a spammer fills the claim limit: real events must still all count, fake claims must never count).
+Choice among passing combinations: lowest passive-holder dilution in scenario 1, then lowest worst-week share in scenario 2, then closest to the spec defaults. The human already confirmed 0.25% / 1.5% / 5% at Gate A; if this run picks something else, say so and keep the confirmed values.
+Modelling: bots attest 1 h to 3 h after a quake's origin (seeded lags); catalog and seeds as before; the real catalog is one 60-day window (a small sample).

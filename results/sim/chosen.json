@@ -3,18 +3,16 @@
   "base_ppm": 2500,
   "week_ppm": 15000,
   "month_ppm": 50000,
-  "slash_pct": 20,
-  "quorum_ppm": 2000,
-  "s1_dilution": 0.06425951978625155,
+  "s1_dilution": 0.06425936225168316,
   "s1_clipped_weeks": 0.25,
-  "t1_loss30": 0.048152653408691015,
+  "t1_loss30": 0.04990780298982167,
   "s2_week": 0.01499999999894742,
-  "s3_week_nowatch": 0.014999999999902989,
-  "s3_dilution_nowatch": 0.07390606248078606,
-  "s3_rej_half": 0.9916666666666667,
-  "s5_count_30": 0.9672619047619048,
+  "s3_week_3bad": 0.014999999999902989,
+  "s3_extra_3bad": 0.0759524498476688,
+  "s3_fakes_2bad": 0,
+  "s4_real_counted_2off": 1.0,
   "pass": true
  },
- "n_pass": 45,
- "n_grid": 243
+ "n_pass": 5,
+ "n_grid": 27
 }
