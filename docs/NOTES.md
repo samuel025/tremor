@@ -54,3 +54,10 @@ near-contract-standards minting, sandbox time travel, storage per event, gas, no
 - README.md is generated: `make results` (or `make results-full` with the slow sandbox suite) records command output in results/results.json; `make readme` renders README.tmpl.md; `make check-readme` fails if the README is stale, names a missing make target or path, drops a required section, or uses risky wording. Edit README.tmpl.md, never README.md.
 - Correction: I told the human the demo had 12 checks; the generated count is 13 (counted by hand before).
 - Left for the human (marked TODO(human) in the template): hosted URL, demo video and X post links, Rounds link.
+
+## Live deployment, tap, wallet (2026-11-07)
+- Contract change: `tap()` (starter coins once per account from a pool in the contract's own balance; mints nothing) with a `tap_amount` parameter, `has_tapped`, and `tap_pool` in get_state. Python reference, Rust engine and the 200-scenario conformance set all cover it (443+ successful taps); a sandbox test covers registration, once-only, empty pool and unchanged supply.
+- Two deployments (deployments.json, docs/LIVE.md): demo (120 s / 180 s) and live (24 h / 48 h) with a keeper account and function-call key; keeper/keeper.mjs (near-api-js, so it runs on GitHub Actions without the NEAR CLI). Workflows for the keeper and for Pages are written but NOT pushed.
+- The second funded account came from another Rounds account (rounds-fund-5928), with the human's OK.
+- Wallet: the human said MyNearWallet is discontinued, so the page uses the Meteor wallet only (wallet-selector).
+- Bug found by the human: "Connect wallet" did nothing. Cause (reproduced with a scripted Chrome session): the wallet libraries use Node's `Buffer`, which browsers lack, so the lazily loaded wallet chunk threw "Cannot read properties of undefined (reading 'from')" and the click handler had nothing to call. Fix: provide `Buffer` (the `buffer` package) before the wallet loads. After the fix the Meteor modal opens with no console errors. Still not tested: signing in and sending a transaction with a real wallet account.

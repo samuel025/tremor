@@ -47,6 +47,13 @@ if demo_log.exists() and "--keep-demo" not in sys.argv:
     t = demo_log.read_text()
     res["demo"] = dict(pass_=len(re.findall(r"^\s+PASS", t, re.M)), fail=len(re.findall(r"^\s+FAIL", t, re.M)), ok="ALL CHECKS PASSED" in t, date=now)
 
+if "--live" in sys.argv:  # starter coins per tap, read from the deployed contract's parameters
+    import base64, urllib.request
+    live = json.loads((ROOT / "deployments.json").read_text())["live"]["contract"]
+    body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "query", "params": {"request_type": "call_function", "finality": "final", "account_id": live, "method_name": "get_params", "args_base64": base64.b64encode(b"{}").decode()}}).encode()
+    r = json.load(urllib.request.urlopen(urllib.request.Request("https://test.rpc.fastnear.com", body, {"Content-Type": "application/json"}), timeout=30))
+    res["tap_amount"] = int(json.loads(bytes(r["result"]["result"]))["tap_amount"]) // 10**6
+
 ch = json.loads((ROOT / "results/sim/chosen.json").read_text()); c = ch["chosen"]; summ = (ROOT / "results/sim/SUMMARY.md").read_text()
 whale = float(need(r"blocks ([\d.]+)% of real events", summ, "whale block share").group(1))
 defaults = float(need(r"With the spec defaults the weekly cap binds in ([\d.]+)%", summ, "default cap-binding share").group(1))

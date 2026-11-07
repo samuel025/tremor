@@ -6,7 +6,7 @@
  },
  "conformance": {
   "scenarios": 200,
-  "steps": 24222,
+  "steps": 24529,
   "mismatches": 0,
   "tests_passed": 2,
   "ok": true,
@@ -19,12 +19,22 @@
   "date": "2026-11-07"
  },
  "verify_onchain": {
-  "pass_": 16,
-  "fail": 0,
-  "ok": true,
-  "date": "2026-11-07",
-  "contract": "tremor.rounds-indep-5928.testnet",
-  "keys": 1
+  "demo": {
+   "pass_": 12,
+   "fail": 0,
+   "ok": true,
+   "date": "2026-11-07",
+   "contract": "tremor.rounds-indep-5928.testnet",
+   "keys": 1
+  },
+  "live": {
+   "pass_": 14,
+   "fail": 0,
+   "ok": true,
+   "date": "2026-11-07",
+   "contract": "tremor-live.rounds-fund-5928.testnet",
+   "keys": 1
+  }
  },
  "simulation": {
   "grid": 243,
@@ -49,7 +59,7 @@
   "catalog_m6": 28
  },
  "sandbox": {
-  "passed": 7,
+  "passed": 8,
   "failed": 0,
   "ok": true,
   "storage_per_event_bytes": 303,
@@ -61,5 +71,6 @@
   "fail": 0,
   "ok": true,
   "date": "2026-11-07"
- }
+ },
+ "tap_amount": 5000
 }

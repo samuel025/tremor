@@ -1,3 +1,8 @@
+// Browsers have no Node `Buffer`, which the wallet libraries expect; provide it before they load.
+import { Buffer } from "buffer";
+(globalThis as unknown as { Buffer: typeof Buffer }).Buffer = Buffer;
+(globalThis as unknown as { global: unknown }).global = globalThis;
+
 // NEAR wallet connection (testnet only) through wallet-selector. Logging in creates a key limited to the Tremor contract, so the
 // page can only ever call Tremor methods; it never gets a full-access key.
 import { actionCreators, setupWalletSelector, type WalletSelector } from "@near-wallet-selector/core";

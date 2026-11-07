@@ -5,7 +5,8 @@
 > **Testnet prototype. No value, no real donations.** Tremor promises no value, and holding it dilutes you when quakes happen. The five relief accounts are stand-ins that donate nothing real. Nothing here claims real-world impact. Earthquakes cause real harm; this project uses the word "relief" for a mechanism, not for an outcome, and shows no casualty figures.
 
 - Live page: TODO(human): add the hosted URL. Until then run it yourself: `make web-dev`.
-- Demo contract (testnet): `tremor.rounds-indep-5928.testnet`
+- Live contract (testnet, real 24 h and 48 h windows, kept busy by a bot): `tremor-live.rounds-fund-5928.testnet`
+- Demo contract (testnet, 2 and 3 minute windows so a whole round takes minutes): `tremor.rounds-indep-5928.testnet`
 - Demo video and X post: TODO(human): add the links.
 - Built for the NEAR HACKATHON, track **Memecoins With Mechanics**. All code was written from Nov 7, 2026.
 
@@ -14,10 +15,11 @@
 Every number below is read from `results/results.json`, which `make results` fills by running the commands. `make check-readme` fails if this README is out of date.
 
 - `make test`: 3 Python tests pass (2026-11-07), including the three golden vectors.
-- `make conformance`: the Rust contract logic and the Python reference agree on 200 seeded random scenarios, 24,222 steps, 0 mismatches (2026-11-07).
-- `make sandbox-test`: 7 simulated-network tests pass, 0 fail (2026-11-07). One open event costs about 303 bytes of storage; `report_event` burns about 3 Tgas with 63 events open.
+- `make conformance`: the Rust contract logic and the Python reference agree on 200 seeded random scenarios, 24,529 steps, 0 mismatches (2026-11-07).
+- `make sandbox-test`: 8 simulated-network tests pass, 0 fail (2026-11-07). One open event costs about 303 bytes of storage; `report_event` burns about 3 Tgas with 63 events open.
 - `make replay` (offline): 14 checks pass, 0 fail (2026-11-07).
-- `make verify-onchain` (live testnet, `tremor.rounds-indep-5928.testnet`): 16 checks pass, 0 fail (2026-11-07). The contract still has 1 access key; every key is deleted only as the very last step, on the human's word, and `python3 scripts/verify_onchain.py --final` then demands an empty list.
+- `make verify-onchain` (demo, `tremor.rounds-indep-5928.testnet`): 12 checks pass, 0 fail (2026-11-07). The contract still has 1 access key; every key is deleted only as the very last step, on the human's word, and `python3 scripts/verify_onchain.py --net demo --final` then demands an empty list.
+- `make verify-onchain` (live, `tremor-live.rounds-fund-5928.testnet`): 14 checks pass, 0 fail (2026-11-07). The contract still has 1 access key; every key is deleted only as the very last step, on the human's word, and `python3 scripts/verify_onchain.py --net live --final` then demands an empty list.
 - `make demo` (testnet): 13 of 13 checks matched the reference's expected values (2026-11-07).
 - `make sim`: 243 parameter combinations were tried on 352 real events (28 of M6.0 or more); 45 passed every threshold that was written down before the run (`docs/DECISIONS.md`). Chosen: 0.25% base share, 1.5% weekly cap, 5% monthly cap, 20% penalty, 0.2% minimum turnout. A passive holder is diluted by 6.43% over the 60 real days. See `results/sim/SUMMARY.md`.
 
@@ -32,6 +34,18 @@ Every number below is read from `results/results.json`, which `make results` fil
 | `make replay` | An offline recomputation of a saved testnet log (`fixtures/testnet-demo.json`): every check PASS. |
 | `make verify-onchain` | The live contract is read and compared with the reference: every check PASS, plus an INFO line about the access key. |
 | `make demo` | The scripted scene on testnet with the reference's expected value next to the real one at each step. Needs your own funded testnet accounts in `.state/`; takes about 10 minutes because the demo windows are 120 s and 180 s. |
+
+## Take part as a judge
+
+You can go through the whole process on the real testnet contract, with no real money and no command line:
+
+1. Open the page and pick **Demo** (2 and 3 minute windows) or **Live** (the real windows) in the top bar.
+2. Connect a free testnet wallet (Meteor, set to testnet). Logging in gives the page a key that can call Tremor and nothing else.
+3. Press **Get starter TREM**. The tap pays 5,000 TREM once per account from a pool the launcher filled; it creates no new coins.
+4. Deposit some into your bond balance, then report a real quake from the list, or report a made-up one and watch the page flag it red.
+5. Challenge a report with a second account, vote with locked coins, finalize when the window is over, and claim your payout.
+
+On Live, a bot (`keeper/keeper.mjs`, run every 20 minutes by `.github/workflows/keeper.yml`) reports real M6+ quakes from USGS and finalizes events whose window has ended, so the board is alive. Details and limits are in `docs/LIVE.md`.
 
 ## The mechanic in brief
 
@@ -67,7 +81,7 @@ The contract cannot check that an earthquake happened. The design rule is that a
 | Duplicate or aftershock spam | An event ID mints once, ever; a cooldown scales aftershock mints down | The cooldown is a time rule, not geography. |
 | Report spam | A bond per report and a limit of 64 open events | Bonded spam can fill the limit for a while. |
 | Many wallets | Votes and bonds are weighted by coins, so splitting gains nothing | One actor can still run many reporters. |
-| Nobody reports a real quake | `scripts/reporter.py` posts unreported USGS events | There is no reward for reporting, by design. |
+| Nobody reports a real quake | `keeper/keeper.mjs` posts unreported USGS events on Live | There is no reward for reporting, by design. |
 
 ## Honest limits
 
@@ -80,7 +94,9 @@ The contract cannot check that an earthquake happened. The design rule is that a
 - The chosen parameters pass the cap-binding threshold (25% of weeks against a 25% limit) with no margin. The spec's own default 0.5% base share fails it (62.5% of weeks).
 - The contract keeps all state in one Borsh blob, which is fine for a demo and would not scale to a real launch.
 - `make replay` and `make verify-onchain` check supply, mints, caps, event outcomes, vote payouts and relief balances. The on-chain log does not record plain transfers or bond deposits, so they do not check every holder's balance.
-- The web page is read-only. Depositing a bond, reporting, challenging and voting are done from the command line (`scripts/tn.sh`, `scripts/reporter.py`, `scripts/demo.py`); wallet buttons are not built.
+- The page's wallet buttons (Meteor wallet, testnet) call only contract functions that the tests above exercise, but the author has not completed a full wallet round trip in a real browser session. If a button misbehaves, the command-line path (`scripts/tn.sh`, `scripts/demo.py`) does the same calls.
+- The tap pool is finite and any account can use it; anyone can also report made-up events on the contracts. Both are deliberate on testnet and written up in `docs/LIVE.md`.
+- The keeper runs on GitHub's scheduled jobs, which can be delayed or paused, and it stops if its small gas allowance or bond balance runs out.
 - The USGS licence terms were not verified (their policy page blocked automated access). Read them before making this repo public.
 - Public testnet RPC endpoints rate-limit. The page and the check scripts try `test.rpc.fastnear.com` first and fall back to `rpc.testnet.near.org`.
 
@@ -100,7 +116,10 @@ Why it is still worth building: it is a small, fully specified mechanic whose wo
 | `vectors/` | Golden vectors and the 200-scenario conformance set |
 | `sim/`, `results/sim/` | The simulation and its committed output |
 | `data/usgs_60d.csv` | The committed 60-day USGS catalog extract (M5+) with query URL and retrieval date |
-| `scripts/` | Demo, reporter, replay, verify-onchain, README generation and checks |
+| `scripts/` | Deploy, demo, replay, verify-onchain, README generation and checks |
+| `keeper/` | The bot that reports real quakes and finalizes events on the Live contract |
+| `deployments.json`, `docs/LIVE.md` | Which contracts the page and tools use, and how Live and Demo differ |
+| `.github/workflows/` | The keeper schedule and the page hosting |
 | `web/` | The static page (Vite and TypeScript; reads the chain and USGS in the browser) |
 | `docs/NOTES.md`, `docs/DECISIONS.md` | What was learned, and every departure from the spec |
 | `AGENTS.md` | Rules for coding agents working in this repo |
@@ -112,7 +131,7 @@ Other NEAR HACKATHON project by the same entrant: Rounds (TODO(human): add the l
 ## AI assistance, libraries, licence, data
 
 - Written with Claude Code (Anthropic) working from a build spec, with a human making the decisions at each checkpoint. Check the claims by running the commands, not by trusting this README.
-- Libraries and tools: near-sdk 5.30.1, near-workspaces 0.24.0, cargo-near, NEAR CLI, Vite 5.4.21, TypeScript 5.6.3. The Python code uses only the standard library.
+- Libraries and tools: near-sdk 5.30.1, near-workspaces 0.24.0, cargo-near, NEAR CLI, Vite 5.4.21, TypeScript 5.6.3, near-wallet-selector 10.1.4, near-api-js 5.1.1 (keeper). The Python code uses only the standard library.
 - Licence: MIT (`LICENSE`).
 - Earthquake data: U.S. Geological Survey, Earthquake Hazards Program, ANSS ComCat (FDSN event web service). Please credit the USGS when reusing it.
 - Testnet keys are throwaway and live in `.state/`, which is gitignored. Never commit keys.

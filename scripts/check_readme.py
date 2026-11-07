@@ -32,7 +32,8 @@ banned = [r"\bsecure\b", r"\baudited\b", r"production[- ]ready", r"\bguarantee",
 hits = [b for b in banned if re.search(b, re.sub(r"^.*(no casualty figures).*$", "", readme, flags=re.M | re.I), re.I)]
 check("no security guarantees, value claims or casualty figures", not hits, f"found: {hits}" if hits else "")
 res = json.loads((ROOT / "results/results.json").read_text())
-bad = [k for k, v in res.items() if isinstance(v, dict) and v.get("ok") is False or isinstance(v, dict) and (v.get("fail") or v.get("failed") or v.get("mismatches"))]
+flat = {f"{k}.{n}" if k == "verify_onchain" else k: w for k, v in res.items() if isinstance(v, dict) for n, w in ([(n, w) for n, w in v.items()] if k == "verify_onchain" else [(None, v)])}
+bad = [k for k, v in flat.items() if isinstance(v, dict) and (v.get("ok") is False or v.get("fail") or v.get("failed") or v.get("mismatches"))]
 check("every recorded check in results/results.json passed", not bad, f"failing: {bad}" if bad else "")
 for m in re.finditer(r"TODO\(human\)[^.\n]*", readme): warns.append(m.group(0))
 for w in warns: print(f"WARN  {w}")
