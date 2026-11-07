@@ -15,3 +15,5 @@ test-rust:
 	cd contract && cargo test -- --nocapture
 build-wasm:
 	cd contract && cargo build --target wasm32-unknown-unknown --release
+sandbox-test:
+	cd contract && cargo near build non-reproducible-wasm --no-abi && cd sandbox && cargo test -- --nocapture --test-threads=1

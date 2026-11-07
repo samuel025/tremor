@@ -20,3 +20,9 @@ near-contract-standards minting, sandbox time travel, storage per event, gas, no
 - Live demo contract: tremor.rounds-indep-5928.testnet, demo windows 120 s / 180 s, max_age 60 days.
 - Verified on testnet: real event us7000twg9 (M6.1) reported, counted after 120 s: minted 2,750 TREM (same as the Python reference), 550 to each relief account. Fake event fake-001 (M7.4) challenged and voted down: supply unchanged, reporter lost its 1,000 bond and 1,000 (20% of 5,000) of its stake, Ada got 31,500 and Chidi 10,500 (1,500 + 500 from the pot), Bayo's challenger bond returned.
 - Not done yet: near-workspaces sandbox tests, on-chain cap-clipping test, reporter function-call key, make demo, make verify-onchain, gas and storage measurements.
+
+## M3 measurements (near-workspaces sandbox, 2026-11-07)
+- Q5 answered: block timestamps follow wall-clock time in the sandbox and `fast_forward(100)` advances them about 30 s (about 0.3 s per block), so short real windows work (tests use 6 s / 10 s).
+- Q6 answered: one open event costs about 303 bytes of contract storage (about 0.003 NEAR). 64 open events fit easily.
+- Q7 answered: gas is tiny. report_event 2-3 Tgas even with 63 open events; finalize (mint to 5 accounts) 2 Tgas; claim_vote 2 Tgas. The 64-event limit is not gas-bound; it only bounds spam. Kept at 64.
+- Sandbox suite (`make sandbox-test`): init once, no parameter/owner/upgrade/mint method callable, bad reports, unchallenged mint to five accounts, GV-2, GV-3, cap clipping, 64-open-event gas and storage. 7 passed.

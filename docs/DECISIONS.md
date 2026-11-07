@@ -30,3 +30,5 @@ base_ppm 2500 (0.25% at M6.0, 2x at M7, 3x at M8, max 1.5%), weekly cap 15000 pp
 - D-11: hand-written token (see NOTES). All state is one Borsh blob (`Core`) plus an on-chain log vector: simple and exact, but gas grows with the number of events. Fine for a demo, would not scale to a real launch; the README must say so.
 - D-12: `vote` side is the string "real" or "not_real" on chain; ft_transfer to yourself is rejected; ft_transfer_call refund is bounded by the receiver's remaining balance.
 - D-13: Python reference default base_ppm changed to the Gate A value (2500); golden vectors pin 5000 explicitly.
+- D-4 (update): MAX_OPEN_EVENTS stays 64; measured storage 303 B/event and 3 Tgas per report at the limit.
+- D-14: sandbox tests use 6 s / 10 s windows (2 s / 3 s was too tight for three sequential votes).
