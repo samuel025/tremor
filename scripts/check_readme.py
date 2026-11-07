@@ -24,7 +24,7 @@ used = set(re.findall(r"`make ([\w-]+)", readme))
 check("every `make` command in the README exists", used <= targets, f"missing: {sorted(used - targets)}" if not used <= targets else f"({len(used)} commands)")
 paths = {p for p in re.findall(r"`([^`\s]+)`", readme) if re.search(r"(^|/)[\w.-]+\.(md|py|json|csv|svg|rs|toml|sh|ts)$", p) or p.endswith("/")}
 paths = {p.rstrip("/") for p in paths if not p.startswith(("http", "<")) and "*" not in p and "<" not in p}
-ignored = lambda p: subprocess.run(["git", "check-ignore", "-q", p], cwd=ROOT).returncode == 0  # private paths (like .state/) are deliberately not in the repo
+ignored = lambda p: any(subprocess.run(["git", "check-ignore", "-q", q], cwd=ROOT).returncode == 0 for q in (p, p + "/"))  # private paths (like .state/) are deliberately not in the repo
 missing = sorted(p for p in paths if not (ROOT / p).exists() and not (ROOT / p.split(" ")[0]).exists() and not ignored(p))
 check("every backticked path in the README exists", not missing, f"missing: {missing}" if missing else f"({len(paths)} paths)")
 required = ["## Results", "## Try it in five minutes", "## The mechanic in brief", "## How events are confirmed and what a liar can do", "## Honest limits", "## The case against Tremor", "## Two projects, one entrant", "## AI assistance, libraries, licence, data"]
