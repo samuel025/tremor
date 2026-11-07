@@ -163,3 +163,12 @@ html{scroll-padding-top:130px}
 .bot.yes{background:var(--ink);border-color:var(--ink);color:#fff;animation:tick .5s}
 @keyframes tick{0%{transform:scale(.6)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
 .ev .bots{margin:2px 0 4px}
+
+/* make the Demo-versus-Live choice obvious */
+h2 .tag{display:inline-block;vertical-align:middle;font:600 14px/1 var(--text);letter-spacing:0;color:#fff;background:var(--ink);padding:7px 14px;border-radius:9999px;margin-left:10px}
+.modebar{margin:0 0 20px}.mode{display:flex;gap:18px;align-items:center;justify-content:space-between;border-radius:var(--r);padding:20px 28px;background:var(--white)}
+.mode b{font:600 21px/1.25 var(--display)}.mode p{margin:4px 0 0;color:var(--slate);font-size:15px}
+.mode.ok{box-shadow:0 0 0 2px var(--ink);justify-content:flex-start}.mode.ok .dot-live{flex:none;width:12px;height:12px;margin:0}
+.mode.warn{box-shadow:0 0 0 2px var(--orange)}.mode.warn b{color:var(--orange)}.mode.warn .blue.big{flex:none;margin:0;white-space:nowrap}
+@media(max-width:760px){.mode.warn{flex-direction:column;align-items:flex-start}h2 .tag{margin:8px 0 0}}
+.seg button{white-space:nowrap}

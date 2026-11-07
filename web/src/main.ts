@@ -197,6 +197,10 @@ function renderSteps() {
   $("#try-sub").textContent = demo
     ? "Four steps. You are on the Demo contract: the bots check every few seconds, so a whole round takes about a minute."
     : `Four steps. You are on the Live contract with real timing (${botTiming()}), so a result can take hours. Switch to Demo (top bar) for a result in seconds.`;
+  $("#try-tag").textContent = demo ? "on the Demo" : "switch to the Demo first";
+  $("#modebar").innerHTML = demo
+    ? `<div class="mode ok"><span class="dot-live"></span><div><b>You are on the Demo: this is the one to test.</b><p>The bots confirm your claim within seconds, so a whole round takes about a minute. Nothing here has any value.</p></div></div>`
+    : `<div class="mode warn"><div><b>You are on Live, not the Demo.</b><p>Live uses real timing: a quake is only confirmed after it is ${duration(params?.min_age_s ?? 21600)} old and the bots run every few minutes, so a result can take hours. To test, use the Demo.</p></div><button class="blue big" data-net="demo" data-hash="#try">Switch to the Demo to test</button></div>`;
   $("#netnote").innerHTML = demo
     ? `Viewing the <b>Demo</b> contract: the bots confirm visitors' claims within seconds. <a href="#" data-net="live">Switch to Live</a> for the real timing.`
     : `Viewing the <b>Live</b> contract: real timing (${botTiming()}), kept up to date by the five bots. <a href="#" data-net="demo">Switch to Demo</a> to try a whole round in about a minute.`;
@@ -242,7 +246,7 @@ async function act(label: string, fn: () => Promise<unknown>) {
 }
 
 document.addEventListener("click", (ev) => {
-  const t = ev.target as HTMLElement; const el = t.closest<HTMLElement>("button,a[data-net],a[data-j]"); if (!el) return;
+  const t = ev.target as HTMLElement; const el = t.closest<HTMLElement>("button,a[data-net],a[data-j],a.go-test"); if (!el) return;
   const j = el.dataset.j;
   if (j) {
     ev.preventDefault();
@@ -253,8 +257,9 @@ document.addEventListener("click", (ev) => {
     if (j === "again") { ignoreBefore = nowS(); try { sessionStorage.setItem("tremor-ignore", String(ignoreBefore)); } catch { /* ignore */ } return void renderJourneyNow(); }
     return;
   }
-  if (el.dataset.net && el.tagName === "A") { ev.preventDefault(); switchNet(el.dataset.net as "live" | "demo"); return; }
-  if (el.dataset.net) { switchNet(el.dataset.net as "live" | "demo"); return; }
+  if (el.classList.contains("go-test") && NET === "live") { ev.preventDefault(); switchNet("demo", "#try"); return; } // "Test it" always lands on the Demo
+  if (el.dataset.net && el.tagName === "A") { ev.preventDefault(); switchNet(el.dataset.net as "live" | "demo", el.dataset.hash ?? ""); return; }
+  if (el.dataset.net) { switchNet(el.dataset.net as "live" | "demo", el.dataset.hash ?? ""); return; }
   if (el.id === "w-out") return void wallet().then((w) => w.disconnectWallet()).then(() => { me = null; loadMine(); boardSig = ""; renderBoardFlags(); });
   if (el.id === "w-tap") return void registered(me!).then((reg) => act("Starter coins", () => send("tap", {}, reg ? "0" : "1250000000000000000000")));
   if (el.id === "w-fake") { const id = ($("#w-fid") as HTMLInputElement).value.trim(), m = Math.round(Number(($("#w-fmag") as HTMLInputElement).value) * 10);

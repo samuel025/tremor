@@ -12,7 +12,7 @@ export async function loadDeployments() {
   NET = want === "live" && ALL.live?.contract ? "live" : "demo";
   DEP = ALL[NET];
 }
-export function switchNet(net: "live" | "demo") {
+export function switchNet(net: "live" | "demo", hash = "") {
   try { localStorage.setItem("tremor-net", net); } catch { /* ignore */ }
-  const u = new URL(location.href); u.searchParams.set("net", net); u.hash = ""; location.href = u.toString();
+  const u = new URL(location.href); u.searchParams.set("net", net); u.hash = hash; location.href = u.toString();
 }
