@@ -14,9 +14,8 @@ a = ap.parse_args()
 RPCS = ["https://test.rpc.fastnear.com", "https://rpc.testnet.near.org"]  # the official one rate-limits
 C = a.contract or json.loads((ROOT / "deployments.json").read_text())[a.net or "live"]["contract"]  # public file: works in a fresh clone
 fails = 0
-ALLOWED = {"bond_balance_of", "challenge", "claim_vote", "contract_source_metadata", "deposit_bond", "finalize", "ft_balance_of", "ft_metadata",
-           "ft_resolve_transfer", "ft_total_supply", "ft_transfer", "ft_transfer_call", "get_event", "get_log", "get_params", "get_state",
-           "list_events", "memory", "new", "report_event", "storage_balance_bounds", "storage_balance_of", "storage_deposit", "vote", "withdraw_bond", "tap", "has_tapped"}
+ALLOWED = {"attest", "submit_claim", "contract_source_metadata", "ft_balance_of", "ft_metadata", "ft_resolve_transfer", "ft_total_supply", "ft_transfer", "ft_transfer_call",
+           "get_event", "get_log", "get_params", "get_state", "list_events", "memory", "new", "storage_balance_bounds", "storage_balance_of", "storage_deposit", "tap", "has_tapped"}
 
 def rpc(method, params):
     for url in RPCS:
@@ -48,7 +47,7 @@ while True:
     if len(page) < 100: break
 ref, bad = replay(prm, log)
 check("log fully read", len(log) == st["log_len"], f"({len(log)} lines)")
-check("replaying the on-chain log reproduces every mint, clipped flag, outcome and claim payout", not bad, "; ".join(bad[:3]))
+check("replaying the on-chain log reproduces every claim, attestation, mint, clipped flag and supply", not bad, "; ".join(bad[:3]))
 check("total supply equals the reference", int(view("ft_total_supply")) == ref.supply, f"({ref.supply})")
 check("supply = initial supply + all mints", ref.supply == int(prm["s0"]) + sum(int(e["minted"]) for e in events))
 relief = {}
@@ -57,8 +56,8 @@ for r in prm["relief_accounts"]:
 s = ref.state(st["now_s"])
 check("weekly and monthly allowance left match the reference", (s["week_left"], s["month_left"]) == (int(st["week_left"]), int(st["month_left"])))
 for e in events:
-    r = ref.ev.get(e["event_id"]); check(f"event {e['event_id']} ({e['status']})", bool(r) and r.status == e["status"] and r.minted == int(e["minted"]))
-check("parameters are internally valid (nonzero caps, 5 distinct relief accounts, slash <= 100)", len(set(prm["relief_accounts"])) == 5 and prm["week_cap_ppm"] > 0 and prm["month_cap_ppm"] > 0 and prm["slash_pct"] <= 100)
+    r = ref.ev.get(e["event_id"]); check(f"event {e['event_id']} ({e['status']}, {e['attestations']}/{e['needed']} attestations)", bool(r) and r.status == e["status"] and r.minted == int(e["minted"]))
+check("parameters are internally valid (nonzero caps, 5 distinct publishers, 5 distinct relief accounts, threshold 1 to 5)", len(set(prm["relief_accounts"])) == 5 and len(set(prm["publisher_accounts"])) == 5 and 1 <= prm["threshold"] <= 5 and prm["week_cap_ppm"] > 0 and prm["month_cap_ppm"] > 0)
 code = base64.b64decode(rpc("query", {"request_type": "view_code", "finality": "final", "account_id": C})["code_base64"])
 def leb(b, i):
     r = sh = 0
@@ -74,7 +73,7 @@ while i < len(code):
             l, j = leb(code, j); exports.append(code[j:j + l].decode()); j += l + 1; _, j = leb(code, j)
         break
     i += ln
-check("deployed code exports only the intended methods (no owner, admin, upgrade, set_* or free-mint method)", set(exports) <= ALLOWED and exports, f"(extra: {sorted(set(exports) - ALLOWED)})")
+check("deployed code exports only the intended methods (no owner, admin, upgrade, set_* or free-mint method, and nothing that changes a publisher)", set(exports) <= ALLOWED and exports, f"(extra: {sorted(set(exports) - ALLOWED)})")
 keys = rpc("query", {"request_type": "view_access_key_list", "finality": "final", "account_id": C})["keys"]
 if a.final: check("access-key list is EMPTY", len(keys) == 0, f"({len(keys)} keys)")
 else: print(f"INFO  access keys on the contract: {len(keys)} (they are deleted only as the very last step; use --final after that)")

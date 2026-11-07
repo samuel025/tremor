@@ -157,3 +157,9 @@ details.more{margin-top:8px}details.more summary{font-weight:600}details.more>*{
 .lnav .out,.lnav .blue{font-size:15px;line-height:20px;padding:8px 18px}
 html{scroll-padding-top:130px}
 @media(max-width:760px){.gnav-in{gap:16px}.lnav b{font-size:20px}.lnav .out{display:none}.seg button{padding:5px 12px}}
+/* the five bots: a numbered dot per bot, ticked when it has attested */
+.bots{display:inline-flex;gap:6px;margin:4px 0}
+.bot{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--steel);color:var(--slate);display:inline-flex;align-items:center;justify-content:center;font:600 12px/1 var(--text);transition:background .4s,color .4s,border-color .4s,transform .4s}
+.bot.yes{background:var(--ink);border-color:var(--ink);color:#fff;animation:tick .5s}
+@keyframes tick{0%{transform:scale(.6)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
+.ev .bots{margin:2px 0 4px}

@@ -3,11 +3,11 @@ import { esc } from "./util";
 
 interface Series { name: string; label: string; vals: number[] }
 const PANELS: { title: string; note: string; series: [string, string][] }[] = [
-  { title: "1 · Real quakes", note: "28 real M6+ events, everyone honest", series: [["scenario1_real", "real catalog"]] },
+  { title: "1 · Real quakes", note: "28 real M6+ events, five honest bots", series: [["scenario1_real", "real catalog"]] },
   { title: "2 · Swarm", note: "12 extra events in 36 hours: the caps hold", series: [["scenario1_real", "real only"], ["scenario2_swarm", "with swarm"]] },
-  { title: "3 · A liar", note: "10 fakes in a week; watchers challenge 0 / 50 / 100%", series: [["scenario3_liar_watch0", "nobody watches"], ["scenario3_liar_watch50", "half watch"], ["scenario3_liar_watch100", "all watch"]] },
-  { title: "4 · A 40% holder", note: "blocks real events, or backs fakes", series: [["scenario4_whale_block", "blocks real"], ["scenario4_whale_fakes", "backs fakes"]] },
-  { title: "5 · Selfish voters", note: "30% of voting coins vote no", series: [["scenario5_selfish30_pen20", "30% selfish"]] },
+  { title: "3 · Bad bots", note: "10 made-up quakes; 2 bad bots (none count) or 3 (all count, capped)", series: [["scenario3_badbots_k2", "2 bad bots"], ["scenario3_badbots_k3", "3 bad bots"]] },
+  { title: "4 · Bots offline", note: "2 offline: nothing changes. 3 offline: nothing is created", series: [["scenario4_offline_m2", "2 offline"], ["scenario4_offline_m3", "3 offline"]] },
+  { title: "5 · Claim spam", note: "6 made-up claims an hour: real quakes still count", series: [["scenario5_claimspam", "under spam"]] },
 ];
 
 async function load(name: string, label: string, s0: number): Promise<Series> {

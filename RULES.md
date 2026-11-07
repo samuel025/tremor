@@ -1,6 +1,14 @@
 # RULES: source of truth for Tremor's math
 Exact integer arithmetic; every division floors. TREM has 6 decimals; amounts are base units; ppm = parts per million; time in whole seconds.
-Implemented in `reference/tremor_ref.py`; golden vectors in `vectors/` (generated from numbers typed here, never hand-edited, never produced by the reference).
+Implemented in `reference/tremor_ref.py` and `contract/src/engine.rs`; golden vectors in `vectors/` (numbers typed here, never hand-edited, never produced by the reference).
+
+## Who decides that a quake happened
+Five fixed publisher accounts (set at launch, never changed) are bots that read USGS. A quake is a record `(event_id, mag_x10, origin_s)`.
+- `attest(event_id, mag_x10, origin_s)` is allowed only for a publisher, once per publisher per event id, and only if: `min_mag_x10 <= mag_x10 <= 100`; the origin is not in the future; `now - origin_s <= max_age_s`; `now - origin_s >= min_age_s` (the finality delay: USGS revises fresh events); the id is 1 to 32 ASCII characters.
+- An event counts when `threshold` (3) DIFFERENT publishers have attested exactly the same record. Because a publisher attests an id once, two different records cannot both reach 3 of 5. Counting happens in the attestation that completes the set, at that block time. An event id mints at most once, ever.
+- `submit_claim(event_id, mag_x10, origin_s)` is open to anyone so visitors can try the system. It checks the same record rules except the minimum age, refuses an existing id, allows one open claim per account and at most `max_claims` open at once (a claim is open for `claim_wait_s`). A claim creates a pending event with no attestations; it mints only if publishers attest it. Bots attest what USGS itself says, so a made-up claim stays pending and never mints.
+- Bot-started pending events are limited to `max_open` (still within `max_age_s`), separately from claims, so claim spam cannot block real quakes.
+- No coins are locked, deposited, staked or voted with. Nothing in the rules gives a coin holder any say.
 
 ## Mint for one counted event
 - `share_ppm = min(max_event_ppm, base_ppm * max(0, mag_x10 - 50) / 10)`  (base at M6.0, 2x at M7.0, 3x at M8.0)
@@ -10,24 +18,18 @@ Implemented in `reference/tremor_ref.py`; golden vectors in `vectors/` (generate
 - `week_left = max(0, S * week_cap_ppm / 10^6 - m7)`, `month_left = max(0, S * month_cap_ppm / 10^6 - m30)`
 - `mint = min(raw, week_left, month_left)`; `clipped = mint < raw`. S is the supply just before this mint.
 - Split: each relief account gets `mint / 5`; the remainder (< 5 base units) goes to the first account.
-- An event_id mints at most once, ever.
 
-## Bonds and stakes
-- report locks `bond` from the reporter's bond balance; challenge locks `bond` from the challenger (not the reporter). Any lock (report, challenge, vote) first tops the deposit balance up from the account's wallet if it is short, so no separate deposit step is needed; it fails only if wallet plus deposit balance are not enough.
-- Unchallenged at `reported_at + window_s`: counts, reporter's bond returned.
-- Challenged: vote runs `vote_s` from the challenge. One vote per account per event (any amount, one side).
-- `turnout < S * quorum_ppm / 10^6` or a tie: rejected, every bond and stake returned (DECISIONS D-1).
-- Otherwise the side with more locked coins wins. Winning bonder gets its bond back. Pot = losing bond + `stake * slash_pct / 100` from each losing voter, paid to winning voters on claim: `pot_left * stake / win_stake_left` (in sequence, no dust). If "real" wins the event counts and mints at finalize time.
+## Starter coins
+`tap()`: once per account, moves `tap_amount` from the pool (coins the launcher sent to the contract's own account) to the caller. It mints nothing.
 
 ## Invariants (checked in every test)
-1. `S = S0 + sum(mints)`, and token balances + bond balances + locked + open pots = S.
+1. `S = S0 + sum(mints)`, and the sum of all token balances = S.
 2. No mint exceeds the weekly or monthly allowance at that moment.
-3. An event_id mints at most once, and only after it counted.
-4. Escrow conserved.
-5. Parameters never change after init.
-6. Replaying the log reproduces supply, balances and buckets exactly.
+3. An event id mints at most once, and only after `threshold` different publishers attested the same record.
+4. Parameters, publishers and relief accounts never change after init.
+5. Replaying the event log reproduces supply, mints, caps and every event exactly.
 
-## Golden vectors (defaults, S0 = 1,000,000 TREM)
-GV-1: E1 M6.0 -> 5,000 (supply 1,005,000; 1,000 each). E2 M7.0, 48h later -> 10,050 (1,015,050; 2,010 each). E3 M6.0, 12h after E2 -> raw 2,537.625, weekly allowance 15,225.75 - 15,050 = 175.75 minted, clipped (35.15 each; relief account total 3,045.15; a 1% holder's share falls 1.4997%).
-GV-2: S = 1,015,225.75, min turnout 2,030.4515. Ada 3,000 real; Bayo 1,000 and Chidi 500 not real. Real wins 3,000 to 1,500. Pot 1,300 (1,000 + 200 + 100) all to Ada: Ada 4,300, Bayo 800, Chidi 400, reporter bond returned, escrow 6,500 before and after.
-GV-3: only Ada, 1,000 real, under quorum: rejected, no mint, everything returned.
+## Golden vectors (S0 = 1,000,000 TREM, spec-default 0.5% base share for these numbers)
+GV-1: each event is confirmed by 3 bots at its own origin time. E1 M6.0 -> 5,000 (supply 1,005,000; 1,000 each). E2 M7.0, 48h later -> 10,050 (1,015,050; 2,010 each). E3 M6.0, 12h after E2 -> raw 2,537.625, weekly allowance 15,225.75 - 15,050 = 175.75 minted, clipped (35.15 each; relief account total 3,045.15; a 1% holder's share falls 1.4997%).
+GV-2: a visitor claims a quake. After two publisher attestations nothing has minted; a non-publisher's attestation is refused; the third attestation mints 5,000 (1,000 each); a fourth is refused ("already counted").
+GV-3: two bots attest M6.0 and one attests M6.1 for the same id: nothing mints; the third bot cannot attest twice; a fourth bot attesting M6.0 completes three matching attestations and it mints 5,000 as M6.0. A made-up claim stays pending with no mint. A magnitude below 6.0 is refused.

@@ -1,0 +1,23 @@
+# LIVE contract: the five publisher bots run once every 20 minutes. Each reads USGS and attests new M6+ quakes (and pending claims USGS confirms)
+# once they are old enough; a quake counts when three bots attest the same record. TESTNET ONLY. Each bot signs with its own function-call key
+# limited to `attest`; the coins involved have no value.
+# Setup: repo Settings > Secrets and variables > Actions > secret BOT_KEYS_LIVE = the contents of .state/bot_keys_live.json
+# (a JSON object {"bot1.<parent>": "ed25519:...", ...}). Never commit it.
+name: bots-live
+on:
+  schedule: [{ cron: "*/20 * * * *" }]
+  workflow_dispatch: {}
+concurrency: bots-live
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci
+        working-directory: bots
+      - run: node bots.mjs --net live --days 13
+        working-directory: bots
+        env:
+          BOT_KEYS: ${{ secrets.BOT_KEYS_LIVE }}

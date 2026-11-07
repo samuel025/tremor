@@ -6,7 +6,7 @@
  },
  "conformance": {
   "scenarios": 200,
-  "steps": 24529,
+  "steps": 28021,
   "mismatches": 0,
   "tests_passed": 2,
   "ok": true,
@@ -20,7 +20,7 @@
  },
  "verify_onchain": {
   "demo": {
-   "pass_": 13,
+   "pass_": 15,
    "fail": 0,
    "ok": true,
    "date": "2026-11-07",
@@ -37,37 +37,40 @@
   }
  },
  "simulation": {
-  "grid": 243,
-  "passing": 45,
+  "grid": 27,
+  "passing": 5,
   "chosen": {
    "base_ppm": 2500,
    "week_ppm": 15000,
-   "month_ppm": 50000,
-   "slash_pct": 20,
-   "quorum_ppm": 2000
+   "month_ppm": 50000
   },
-  "passive_dilution": 0.06425951978625155,
+  "passive_dilution": 0.06425936225168316,
   "clipped_weeks": 0.25,
-  "fakes_rejected_half_watch": 0.9916666666666667,
-  "real_events_count_30pct_selfish": 0.9672619047619048,
-  "whale_blocks_pct": 48.2,
-  "fakes_rejected_50_pct": 96.8,
-  "selfish30_pen20_counted_pct": 94.9,
   "default_clipped_weeks_pct": 62.5,
-  "fake_extra_supply_nobody_watching_pct": 1.22,
+  "bad2_fakes_counted": 0.0,
+  "bad3_fakes_counted": 10.0,
+  "bad3_extra_supply_pct": 1.24,
+  "offline2_real_counted_pct": 100.0,
+  "offline3_real_counted_pct": 0.0,
+  "spam_real_counted_pct": 100.0,
+  "spam_fakes_counted": 0,
+  "spam_fakes_total": 8640,
+  "spam_max_open": 32,
+  "spam_limit": 32,
+  "spam_refused": 4842,
   "catalog_events": 352,
   "catalog_m6": 28
  },
  "sandbox": {
-  "passed": 9,
+  "passed": 8,
   "failed": 0,
   "ok": true,
-  "storage_per_event_bytes": 303,
-  "report_gas_tgas": 3,
+  "storage_per_event_bytes": 308,
+  "attest_gas_tgas": 3,
   "date": "2026-11-07"
  },
  "demo": {
-  "pass_": 13,
+  "pass_": 27,
   "fail": 0,
   "ok": true,
   "date": "2026-11-07"

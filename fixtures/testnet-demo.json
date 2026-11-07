@@ -8,12 +8,20 @@
   "cooldown_s": 86400,
   "week_cap_ppm": 15000,
   "month_cap_ppm": 50000,
-  "bond": "1000000000",
-  "window_s": 120,
-  "vote_s": 180,
-  "slash_pct": 20,
-  "quorum_ppm": 2000,
+  "min_age_s": 10,
   "max_age_s": 5184000,
+  "max_open": 64,
+  "max_claims": 32,
+  "claim_wait_s": 120,
+  "threshold": 3,
+  "tap_amount": "5000000000",
+  "publisher_accounts": [
+   "bot1.rounds-indep-5928.testnet",
+   "bot2.rounds-indep-5928.testnet",
+   "bot3.rounds-indep-5928.testnet",
+   "bot4.rounds-indep-5928.testnet",
+   "bot5.rounds-indep-5928.testnet"
+  ],
   "relief_accounts": [
    "relief1.rounds-indep-5928.testnet",
    "relief2.rounds-indep-5928.testnet",
@@ -23,90 +31,126 @@
   ]
  },
  "state": {
-  "supply": "1008766500000",
+  "supply": "1011540545000",
   "initial_supply": "1000000000000",
-  "minted_7d": "8766500000",
-  "minted_30d": "8766500000",
-  "week_left": "6364997500",
-  "month_left": "41671825000",
-  "open_events": 0,
-  "log_len": 13,
-  "now_s": 1794074330
+  "minted_7d": "11540545000",
+  "minted_30d": "11540545000",
+  "week_left": "3632563175",
+  "month_left": "39036482250",
+  "pending_events": 0,
+  "tap_pool": "300000000000",
+  "log_len": 15,
+  "now_s": 1794092097
  },
- "supply": "1008766500000",
+ "supply": "1011540545000",
  "log": [
-  "{\"event\":\"event_posted\",\"data\":{\"event_id\":\"us7000twg9\",\"mag_x10\":61,\"origin_s\":1793961567,\"reporter\":\"dayo.rounds-indep-5928.testnet\",\"time\":1794073820}}",
-  "{\"event\":\"event_counted\",\"data\":{\"event_id\":\"us7000twg9\",\"minted\":\"2750000000\",\"clipped\":false,\"supply\":\"1002750000000\",\"time\":1794073945}}",
-  "{\"event\":\"event_posted\",\"data\":{\"event_id\":\"fake-001\",\"mag_x10\":74,\"origin_s\":1794073851,\"reporter\":\"dayo.rounds-indep-5928.testnet\",\"time\":1794073957}}",
-  "{\"event\":\"event_challenged\",\"data\":{\"event_id\":\"fake-001\",\"challenger\":\"bayo.rounds-indep-5928.testnet\",\"time\":1794073964}}",
-  "{\"event\":\"vote_cast\",\"data\":{\"event_id\":\"fake-001\",\"voter\":\"ada.rounds-indep-5928.testnet\",\"side\":\"not\",\"amount\":\"30000000000\"}}",
-  "{\"event\":\"vote_cast\",\"data\":{\"event_id\":\"fake-001\",\"voter\":\"chidi.rounds-indep-5928.testnet\",\"side\":\"not\",\"amount\":\"10000000000\"}}",
-  "{\"event\":\"vote_cast\",\"data\":{\"event_id\":\"fake-001\",\"voter\":\"dayo.rounds-indep-5928.testnet\",\"side\":\"real\",\"amount\":\"5000000000\"}}",
-  "{\"event\":\"event_rejected\",\"data\":{\"event_id\":\"fake-001\",\"reason\":\"voted_down\",\"time\":1794074150}}",
-  "{\"event\":\"claimed\",\"data\":{\"event_id\":\"fake-001\",\"account\":\"ada.rounds-indep-5928.testnet\",\"paid\":\"31500000000\"}}",
-  "{\"event\":\"claimed\",\"data\":{\"event_id\":\"fake-001\",\"account\":\"chidi.rounds-indep-5928.testnet\",\"paid\":\"10500000000\"}}",
-  "{\"event\":\"claimed\",\"data\":{\"event_id\":\"fake-001\",\"account\":\"dayo.rounds-indep-5928.testnet\",\"paid\":\"4000000000\"}}",
-  "{\"event\":\"event_posted\",\"data\":{\"event_id\":\"fake-002\",\"mag_x10\":74,\"origin_s\":1794074081,\"reporter\":\"dayo.rounds-indep-5928.testnet\",\"time\":1794074187}}",
-  "{\"event\":\"event_counted\",\"data\":{\"event_id\":\"fake-002\",\"minted\":\"6016500000\",\"clipped\":false,\"supply\":\"1008766500000\",\"time\":1794074312}}"
+  "{\"event\":\"claim_submitted\",\"data\":{\"event_id\":\"us7000tupl\",\"claimer\":\"dayo.rounds-indep-5928.testnet\",\"mag_x10\":60,\"origin_s\":1793533623,\"time\":1794091992}}",
+  "{\"event\":\"attested\",\"data\":{\"event_id\":\"us7000tupl\",\"publisher\":\"bot1.rounds-indep-5928.testnet\",\"mag_x10\":60,\"origin_s\":1793533623,\"attestations\":1,\"time\":1794092001}}",
+  "{\"event\":\"attested\",\"data\":{\"event_id\":\"us7000tupl\",\"publisher\":\"bot2.rounds-indep-5928.testnet\",\"mag_x10\":60,\"origin_s\":1793533623,\"attestations\":2,\"time\":1794092008}}",
+  "{\"event\":\"attested\",\"data\":{\"event_id\":\"us7000tupl\",\"publisher\":\"bot3.rounds-indep-5928.testnet\",\"mag_x10\":60,\"origin_s\":1793533623,\"attestations\":3,\"time\":1794092017}}",
+  "{\"event\":\"event_counted\",\"data\":{\"event_id\":\"us7000tupl\",\"mag_x10\":60,\"origin_s\":1793533623,\"minted\":\"2500000000\",\"clipped\":false,\"supply\":\"1002500000000\",\"time\":1794092017}}",
+  "{\"event\":\"claim_submitted\",\"data\":{\"event_id\":\"fake-001\",\"claimer\":\"bayo.rounds-indep-5928.testnet\",\"mag_x10\":74,\"origin_s\":1794091913,\"time\":1794092039}}",
+  "{\"event\":\"attested\",\"data\":{\"event_id\":\"us7000tu4f\",\"publisher\":\"bot1.rounds-indep-5928.testnet\",\"mag_x10\":62,\"origin_s\":1793310404,\"attestations\":1,\"time\":1794092050}}",
+  "{\"event\":\"attested\",\"data\":{\"event_id\":\"us7000tu4f\",\"publisher\":\"bot2.rounds-indep-5928.testnet\",\"mag_x10\":62,\"origin_s\":1793310404,\"attestations\":2,\"time\":1794092056}}",
+  "{\"event\":\"attested\",\"data\":{\"event_id\":\"us7000tu4f\",\"publisher\":\"bot3.rounds-indep-5928.testnet\",\"mag_x10\":63,\"origin_s\":1793310404,\"attestations\":1,\"time\":1794092062}}",
+  "{\"event\":\"attested\",\"data\":{\"event_id\":\"us7000tu4f\",\"publisher\":\"bot4.rounds-indep-5928.testnet\",\"mag_x10\":62,\"origin_s\":1793310404,\"attestations\":3,\"time\":1794092071}}",
+  "{\"event\":\"event_counted\",\"data\":{\"event_id\":\"us7000tu4f\",\"mag_x10\":62,\"origin_s\":1793310404,\"minted\":\"3007500000\",\"clipped\":false,\"supply\":\"1005507500000\",\"time\":1794092071}}",
+  "{\"event\":\"attested\",\"data\":{\"event_id\":\"fake-001\",\"publisher\":\"bot1.rounds-indep-5928.testnet\",\"mag_x10\":74,\"origin_s\":1794091921,\"attestations\":1,\"time\":1794092077}}",
+  "{\"event\":\"attested\",\"data\":{\"event_id\":\"fake-001\",\"publisher\":\"bot2.rounds-indep-5928.testnet\",\"mag_x10\":74,\"origin_s\":1794091921,\"attestations\":2,\"time\":1794092084}}",
+  "{\"event\":\"attested\",\"data\":{\"event_id\":\"fake-001\",\"publisher\":\"bot3.rounds-indep-5928.testnet\",\"mag_x10\":74,\"origin_s\":1794091921,\"attestations\":3,\"time\":1794092091}}",
+  "{\"event\":\"event_counted\",\"data\":{\"event_id\":\"fake-001\",\"mag_x10\":74,\"origin_s\":1794091921,\"minted\":\"6033045000\",\"clipped\":false,\"supply\":\"1011540545000\",\"time\":1794092091}}"
  ],
  "events": [
   {
    "event_id": "fake-001",
+   "status": "counted",
+   "claimer": "bayo.rounds-indep-5928.testnet",
+   "created_at": 1794092039,
    "mag_x10": 74,
-   "origin_s": 1794073851,
-   "reporter": "dayo.rounds-indep-5928.testnet",
-   "reported_at": 1794073957,
-   "status": "rejected",
-   "challenger": "bayo.rounds-indep-5928.testnet",
-   "challenged_at": 1794073964,
-   "window_ends": 1794074077,
-   "vote_ends": 1794074144,
-   "real_locked": "5000000000",
-   "not_real_locked": "40000000000",
-   "minted": "0",
-   "clipped": false,
-   "pot": "0"
+   "origin_s": 1794091921,
+   "attestations": 3,
+   "needed": 3,
+   "versions": [
+    {
+     "mag_x10": 74,
+     "origin_s": 1794091913,
+     "attesters": []
+    },
+    {
+     "mag_x10": 74,
+     "origin_s": 1794091921,
+     "attesters": [
+      "bot1.rounds-indep-5928.testnet",
+      "bot2.rounds-indep-5928.testnet",
+      "bot3.rounds-indep-5928.testnet"
+     ]
+    }
+   ],
+   "claim_open_until": 1794092159,
+   "minted": "6033045000",
+   "clipped": false
   },
   {
-   "event_id": "fake-002",
-   "mag_x10": 74,
-   "origin_s": 1794074081,
-   "reporter": "dayo.rounds-indep-5928.testnet",
-   "reported_at": 1794074187,
+   "event_id": "us7000tu4f",
    "status": "counted",
-   "challenger": null,
-   "challenged_at": 0,
-   "window_ends": 1794074307,
-   "vote_ends": null,
-   "real_locked": "0",
-   "not_real_locked": "0",
-   "minted": "6016500000",
-   "clipped": false,
-   "pot": "0"
+   "claimer": null,
+   "created_at": 1794092050,
+   "mag_x10": 62,
+   "origin_s": 1793310404,
+   "attestations": 3,
+   "needed": 3,
+   "versions": [
+    {
+     "mag_x10": 62,
+     "origin_s": 1793310404,
+     "attesters": [
+      "bot1.rounds-indep-5928.testnet",
+      "bot2.rounds-indep-5928.testnet",
+      "bot4.rounds-indep-5928.testnet"
+     ]
+    },
+    {
+     "mag_x10": 63,
+     "origin_s": 1793310404,
+     "attesters": [
+      "bot3.rounds-indep-5928.testnet"
+     ]
+    }
+   ],
+   "claim_open_until": null,
+   "minted": "3007500000",
+   "clipped": false
   },
   {
-   "event_id": "us7000twg9",
-   "mag_x10": 61,
-   "origin_s": 1793961567,
-   "reporter": "dayo.rounds-indep-5928.testnet",
-   "reported_at": 1794073820,
+   "event_id": "us7000tupl",
    "status": "counted",
-   "challenger": null,
-   "challenged_at": 0,
-   "window_ends": 1794073940,
-   "vote_ends": null,
-   "real_locked": "0",
-   "not_real_locked": "0",
-   "minted": "2750000000",
-   "clipped": false,
-   "pot": "0"
+   "claimer": "dayo.rounds-indep-5928.testnet",
+   "created_at": 1794091992,
+   "mag_x10": 60,
+   "origin_s": 1793533623,
+   "attestations": 3,
+   "needed": 3,
+   "versions": [
+    {
+     "mag_x10": 60,
+     "origin_s": 1793533623,
+     "attesters": [
+      "bot1.rounds-indep-5928.testnet",
+      "bot2.rounds-indep-5928.testnet",
+      "bot3.rounds-indep-5928.testnet"
+     ]
+    }
+   ],
+   "claim_open_until": 1794092112,
+   "minted": "2500000000",
+   "clipped": false
   }
  ],
  "relief_balances": {
-  "relief1.rounds-indep-5928.testnet": "1753300000",
-  "relief2.rounds-indep-5928.testnet": "1753300000",
-  "relief3.rounds-indep-5928.testnet": "1753300000",
-  "relief4.rounds-indep-5928.testnet": "1753300000",
-  "relief5.rounds-indep-5928.testnet": "1753300000"
+  "relief1.rounds-indep-5928.testnet": "2308109000",
+  "relief2.rounds-indep-5928.testnet": "2308109000",
+  "relief3.rounds-indep-5928.testnet": "2308109000",
+  "relief4.rounds-indep-5928.testnet": "2308109000",
+  "relief5.rounds-indep-5928.testnet": "2308109000"
  }
 }

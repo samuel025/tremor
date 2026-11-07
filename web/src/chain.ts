@@ -3,15 +3,17 @@ import { DEP } from "./deployment";
 
 export interface Params {
   s0: string; min_mag_x10: number; base_ppm: number; max_event_ppm: number; cooldown_s: number; week_cap_ppm: number; month_cap_ppm: number;
-  bond: string; window_s: number; vote_s: number; slash_pct: number; quorum_ppm: number; max_age_s: number; tap_amount: string; relief_accounts: string[];
+  min_age_s: number; max_age_s: number; max_open: number; max_claims: number; claim_wait_s: number; threshold: number; tap_amount: string;
+  publisher_accounts: string[]; relief_accounts: string[];
 }
 export interface State {
-  supply: string; initial_supply: string; minted_7d: string; minted_30d: string; week_left: string; month_left: string; open_events: number; tap_pool: string; log_len: number; now_s: number;
+  supply: string; initial_supply: string; minted_7d: string; minted_30d: string; week_left: string; month_left: string; pending_events: number;
+  tap_pool: string; log_len: number; now_s: number;
 }
+export interface Version { mag_x10: number; origin_s: number; attesters: string[] }
 export interface Ev {
-  event_id: string; mag_x10: number; origin_s: number; reporter: string; reported_at: number; status: "waiting" | "challenged" | "counted" | "rejected";
-  challenger: string | null; challenged_at: number; window_ends: number; vote_ends: number | null; real_locked: string; not_real_locked: string;
-  minted: string; clipped: boolean; pot: string;
+  event_id: string; status: "pending" | "counted"; claimer: string | null; created_at: number; mag_x10: number; origin_s: number; attestations: number; needed: number;
+  versions: Version[]; claim_open_until: number | null; minted: string; clipped: boolean;
 }
 
 async function rpc<T>(method: string, params: unknown): Promise<T> {
@@ -51,3 +53,6 @@ export async function listEvents(): Promise<Ev[]> {
 }
 
 export async function registered(account: string): Promise<boolean> { return (await view<unknown>("storage_balance_of", { account_id: account })) !== null; }
+
+/** An open claim nobody has confirmed after its time is up is shown as "not confirmed". */
+export const unconfirmed = (e: Ev, now: number): boolean => e.status === "pending" && !!e.claim_open_until && now >= e.claim_open_until && e.attestations === 0;

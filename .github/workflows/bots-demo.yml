@@ -1,0 +1,22 @@
+# DEMO contract: the demo's waiting time is seconds, so the bots run as a loop (poll every 4 s) for about 55 minutes per run.
+# MANUAL START ONLY (Actions tab > bots-demo > Run workflow), meant for judging days; GitHub may delay runs and its terms are meant for project
+# automation, so it is not scheduled. Or run `node bots/bots.mjs --net demo --loop 4` on any machine that stays on.
+# Setup: secret BOT_KEYS_DEMO = the contents of .state/bot_keys_demo.json. TESTNET ONLY.
+name: bots-demo
+on:
+  workflow_dispatch: {}
+concurrency: { group: bots-demo, cancel-in-progress: false }
+jobs:
+  loop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci
+        working-directory: bots
+      - run: node bots.mjs --net demo --claims-only --loop 4 --for 55
+        working-directory: bots
+        env:
+          BOT_KEYS: ${{ secrets.BOT_KEYS_DEMO }}

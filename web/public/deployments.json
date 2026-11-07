@@ -1,17 +1,29 @@
 {
-  "_note": "Testnet only. 'demo' uses 20 second and 30 second windows so a judge sees a result at once; 'live' uses the real 24 h and 48 h windows. A bot (keeper/keeper.mjs) watches both.",
+  "_note": "Testnet only. Five fixed publisher bots confirm quakes from USGS; three must agree. 'demo' confirms after 10 seconds so a judge sees a result at once; 'live' waits the real 6 hours.",
   "demo": {
     "contract": "tremor.rounds-indep-5928.testnet",
-    "label": "Demo (20 s and 30 s windows)",
-    "window_s": 20,
-    "vote_s": 30,
-    "keeper": "watcher.rounds-indep-5928.testnet"
+    "label": "Demo (10 second finality, 2 minute claims)",
+    "bots": [
+      "bot1.rounds-indep-5928.testnet",
+      "bot2.rounds-indep-5928.testnet",
+      "bot3.rounds-indep-5928.testnet",
+      "bot4.rounds-indep-5928.testnet",
+      "bot5.rounds-indep-5928.testnet"
+    ],
+    "min_age_s": 10,
+    "claim_wait_s": 120
   },
   "live": {
     "contract": "tremor-live.rounds-fund-5928.testnet",
-    "label": "Live (24 h and 48 h windows)",
-    "window_s": 86400,
-    "vote_s": 172800,
-    "keeper": "keeper.rounds-fund-5928.testnet"
+    "label": "Live (real timing: quakes confirmed after 6 hours)",
+    "bots": [
+      "bot1.rounds-fund-5928.testnet",
+      "bot2.rounds-fund-5928.testnet",
+      "bot3.rounds-fund-5928.testnet",
+      "bot4.rounds-fund-5928.testnet",
+      "bot5.rounds-fund-5928.testnet"
+    ],
+    "min_age_s": 21600,
+    "claim_wait_s": 43200
   }
 }
