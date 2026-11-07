@@ -13,7 +13,7 @@ Implemented in `reference/tremor_ref.py`; golden vectors in `vectors/` (generate
 - An event_id mints at most once, ever.
 
 ## Bonds and stakes
-- report locks `bond` from the reporter's bond balance; challenge locks `bond` from the challenger (not the reporter).
+- report locks `bond` from the reporter's bond balance; challenge locks `bond` from the challenger (not the reporter). Any lock (report, challenge, vote) first tops the deposit balance up from the account's wallet if it is short, so no separate deposit step is needed; it fails only if wallet plus deposit balance are not enough.
 - Unchallenged at `reported_at + window_s`: counts, reporter's bond returned.
 - Challenged: vote runs `vote_s` from the challenge. One vote per account per event (any amount, one side).
 - `turnout < S * quorum_ppm / 10^6` or a tie: rejected, every bond and stake returned (DECISIONS D-1).

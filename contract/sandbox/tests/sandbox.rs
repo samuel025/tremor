@@ -213,3 +213,23 @@ async fn tap_gives_starter_coins_once_and_mints_nothing() -> anyhow::Result<()> 
     judges[0].call(e.c.id(), "deposit_bond").args_json(json!({"amount": (500 * U).to_string()})).deposit(Y1).max_gas().transact().await?.into_result()?;
     Ok(())
 }
+
+#[tokio::test]
+async fn report_and_challenge_pull_the_deposit_from_the_wallet() -> anyhow::Result<()> {
+    // an account that never called deposit_bond can report: the contract tops up its deposit balance from its wallet
+    let e = setup(json!({})).await?;
+    let newbie = e.root.create_subaccount("newbie").initial_balance(NearToken::from_near(2)).transact().await?.into_result()?;
+    newbie.call(e.c.id(), "storage_deposit").args_json(json!({})).deposit(NearToken::from_millinear(2)).max_gas().transact().await?.into_result()?;
+    e.who("ada").call(e.c.id(), "ft_transfer").args_json(json!({"receiver_id": newbie.id(), "amount": (1500 * U).to_string()})).deposit(Y1).max_gas().transact().await?.into_result()?;
+    let n = e.now().await;
+    newbie.call(e.c.id(), "report_event").args_json(json!({"event_id": "auto1", "mag_x10": 65, "origin_s": n - 5})).max_gas().transact().await?.into_result()?;
+    assert_eq!(e.tok(newbie.id().as_str()).await, 500 * U, "1,000 moved from the wallet into the locked deposit");
+    // with only 500 left in total it cannot report again
+    let r = newbie.call(e.c.id(), "report_event").args_json(json!({"event_id": "auto2", "mag_x10": 65, "origin_s": n - 5})).max_gas().transact().await?;
+    assert!(r.is_failure(), "wallet plus deposit balance are not enough");
+    // after the window the deposit comes back to the deposit balance
+    e.wait(7).await; e.ok("bayo", "finalize", json!({"event_id": "auto1"})).await?;
+    let b: String = e.view("bond_balance_of", json!({"account_id": newbie.id()})).await?.as_str().unwrap().to_string();
+    assert_eq!(b, (1000 * U).to_string());
+    Ok(())
+}

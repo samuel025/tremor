@@ -1,6 +1,7 @@
-# Keeps the LIVE testnet contract busy: every 20 minutes it reports new real M6+ quakes from USGS and finalizes events whose window is over.
-# TESTNET ONLY. The key below is a function-call key that can only call report_event and finalize on the contract; it holds coins with no value.
-# Setup: repo Settings > Secrets and variables > Actions > New repository secret named KEEPER_PRIVATE_KEY (value from .state/keeper_key.json).
+# LIVE contract bot, every 20 minutes: reports new real M6+ quakes from USGS, challenges reports USGS does not confirm, votes, finalizes
+# events whose window is over, and claims payouts. TESTNET ONLY. The key is a function-call key limited to report_event, challenge, vote,
+# finalize and claim_vote on the contract; it holds coins with no value.
+# Setup: repo Settings > Secrets and variables > Actions > secret KEEPER_PRIVATE_KEY (the private_key in .state/keeper_key_live.json).
 name: keeper
 on:
   schedule: [{ cron: "*/20 * * * *" }]
@@ -15,7 +16,7 @@ jobs:
         with: { node-version: 20 }
       - run: npm ci
         working-directory: keeper
-      - run: node keeper.mjs --net live --days 3
+      - run: node keeper.mjs --net live --watch --days 3
         working-directory: keeper
         env:
           KEEPER_PRIVATE_KEY: ${{ secrets.KEEPER_PRIVATE_KEY }}

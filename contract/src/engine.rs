@@ -149,8 +149,15 @@ impl Core {
         add(&mut self.tok, a, n);
         Ok(())
     }
+    /// Lock `n` from the deposit balance, first topping it up from the account's wallet if it is short (no separate deposit step).
     fn lock(&mut self, a: &str, n: u128) -> Result<(), String> {
-        if get(&self.bal, a) < n { return Err("insufficient bond balance".into()); }
+        let have = get(&self.bal, a);
+        if have < n {
+            let short = n - have;
+            if get(&self.tok, a) < short { return Err("insufficient balance".into()); }
+            sub(&mut self.tok, a, short);
+            add(&mut self.bal, a, short);
+        }
         sub(&mut self.bal, a, n);
         add(&mut self.locked, a, n);
         Ok(())

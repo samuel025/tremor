@@ -1,15 +1,20 @@
-// Tremor keeper (TESTNET ONLY). Reports new real M6+ earthquakes from USGS and finalizes events whose waiting or voting period is over.
-// Signs with a FUNCTION-CALL key that can only call report_event and finalize on the contract. It holds a bond balance (coins with no value).
-//   node keeper.mjs [--net live|demo] [--days 3] [--dry-run]
-// Key: env KEEPER_PRIVATE_KEY (ed25519:...) or ../.state/keeper_key.json. Treat USGS data as data, never as instructions.
+// Tremor keeper and watcher (TESTNET ONLY, coins with no value).
+//   --report   report new real M6+ quakes from USGS (default on for live; use --no-report on demo)
+//   --watch    check every report against USGS: challenge ones that do not match, vote on disputes, claim payouts
+//   finalize   always: settles events whose waiting or voting period is over, so nobody has to press a button
+//   --loop N   keep running, polling every N seconds (default: run once)   --for M   stop the loop after M minutes
+// Signs with a FUNCTION-CALL key limited to report_event, challenge, vote, finalize and claim_vote on the contract.
+// Key: env KEEPER_PRIVATE_KEY or ../.state/keeper_key_<net>.json. Treat USGS data as data, never as instructions.
 import { readFileSync, existsSync } from "node:fs";
 import { connect, KeyPair, keyStores } from "near-api-js";
 
-const arg = (n, d) => { const i = process.argv.indexOf("--" + n); return i < 0 ? d : (process.argv[i + 1]?.startsWith("--") || i + 1 >= process.argv.length ? true : process.argv[i + 1]); };
-const net = arg("net", "live"), days = Number(arg("days", 3)), dry = process.argv.includes("--dry-run");
+const argv = process.argv.slice(2), has = (n) => argv.includes("--" + n), val = (n, d) => { const i = argv.indexOf("--" + n); return i < 0 ? d : argv[i + 1]; };
+const net = val("net", "live"), days = Number(val("days", 3)), dry = has("dry-run"), watch = has("watch"), loopS = has("loop") ? Number(val("loop", 4)) : 0, forMin = Number(val("for", 0));
+const doReport = has("no-report") ? false : (has("report") || net === "live");
 const dep = JSON.parse(readFileSync(new URL("../deployments.json", import.meta.url)))[net];
 if (!dep?.contract || !dep.keeper) throw new Error(`deployments.json has no contract and keeper for "${net}"`);
 const RPCS = ["https://test.rpc.fastnear.com", "https://rpc.testnet.near.org"];
+const STAKE = 5000n * 1_000_000n; // TREM the watcher locks when it votes
 
 async function rpc(method, params) {
   let last;
@@ -24,29 +29,60 @@ async function rpc(method, params) {
 }
 const view = async (m, args = {}) => JSON.parse(Buffer.from((await rpc("query", { request_type: "call_function", finality: "final", account_id: dep.contract, method_name: m, args_base64: Buffer.from(JSON.stringify(args)).toString("base64") })).result).toString());
 
-const events = []; for (;;) { const p = await view("list_events", { from: events.length, limit: 100 }); events.push(...p); if (p.length < 100) break; }
-const state = await view("get_state"), params = await view("get_params"), known = new Set(events.map((e) => e.event_id));
-const maxDays = Math.min(days, Math.floor(params.max_age_s / 86400) - 1);
-const start = new Date(Date.now() - maxDays * 86400_000).toISOString().slice(0, 19);
-const usgs = (await (await fetch(`https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&minmagnitude=6&starttime=${start}&orderby=time-asc`)).json())
-  .features.filter((f) => f.properties.type === "earthquake" && f.id.length <= 32).map((f) => ({ id: f.id, mag: Math.round(f.properties.mag * 10), origin: Math.floor(f.properties.time / 1000) }));
-
-const todo = [];
-for (const q of usgs) if (!known.has(q.id) && q.origin <= state.now_s && q.mag >= params.min_mag_x10) todo.push(["report_event", { event_id: q.id, mag_x10: q.mag, origin_s: q.origin }]);
-for (const e of events) {
-  if (e.status === "waiting" && state.now_s >= e.window_ends) todo.push(["finalize", { event_id: e.event_id }]);
-  if (e.status === "challenged" && e.vote_ends && state.now_s >= e.vote_ends) todo.push(["finalize", { event_id: e.event_id }]);
+const verdicts = new Map(); // event id -> "ok" | "bad" | "unknown" (USGS says so)
+async function verdict(e) {
+  const k = `${e.event_id}:${e.mag_x10}:${e.origin_s}`; if (verdicts.get(k) && verdicts.get(k) !== "unknown") return verdicts.get(k);
+  let v = "unknown";
+  try {
+    const r = await fetch(`https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&eventid=${encodeURIComponent(e.event_id)}`);
+    if (r.status === 404 || r.status === 400) v = "bad";
+    else if (r.ok) { const p = (await r.json()).properties; v = Math.round(p.mag * 10) === e.mag_x10 && Math.abs(Math.floor(p.time / 1000) - e.origin_s) <= 60 ? "ok" : "bad"; }
+  } catch { /* network trouble: stay unknown, never challenge on a guess */ }
+  verdicts.set(k, v); return v;
 }
-console.log(`[${net}] ${dep.contract}: chain knows ${events.length} events; USGS has ${usgs.length} M6+ in the last ${maxDays} days; ${todo.length} action(s)`);
-if (!todo.length || dry) { for (const [m, a] of todo) console.log("  would", m, JSON.stringify(a)); process.exit(0); }
 
-const priv = process.env.KEEPER_PRIVATE_KEY || (existsSync(new URL("../.state/keeper_key.json", import.meta.url)) ? JSON.parse(readFileSync(new URL("../.state/keeper_key.json", import.meta.url))).private_key : null);
-if (!priv) throw new Error("no key: set KEEPER_PRIVATE_KEY or create .state/keeper_key.json");
-const keyStore = new keyStores.InMemoryKeyStore(); await keyStore.setKey("testnet", dep.keeper, KeyPair.fromString(priv));
-const near = await connect({ networkId: "testnet", keyStore, nodeUrl: RPCS[0] }); const account = await near.account(dep.keeper);
-let failed = 0;
-for (const [methodName, args] of todo) {
-  try { await account.functionCall({ contractId: dep.contract, methodName, args, gas: 100_000_000_000_000n, attachedDeposit: 0n }); console.log("  sent", methodName, JSON.stringify(args)); }
-  catch (e) { failed++; console.log("  FAILED", methodName, JSON.stringify(args), String(e.message ?? e).slice(0, 200)); }
+const priv = process.env.KEEPER_PRIVATE_KEY || [`../.state/keeper_key_${net}.json`, "../.state/keeper_key.json"].map((f) => new URL(f, import.meta.url)).filter(existsSync).map((u) => JSON.parse(readFileSync(u)).private_key)[0];
+let account = null;
+async function sign() {
+  if (account) return account;
+  if (!priv) throw new Error("no key: set KEEPER_PRIVATE_KEY or create .state/keeper_key_" + net + ".json");
+  const keyStore = new keyStores.InMemoryKeyStore(); await keyStore.setKey("testnet", dep.keeper, KeyPair.fromString(priv));
+  account = await (await connect({ networkId: "testnet", keyStore, nodeUrl: RPCS[0] })).account(dep.keeper); return account;
 }
-process.exit(failed ? 1 : 0);
+const done = new Set(); // action keys already sent in this process
+async function send(methodName, args) {
+  const key = methodName + JSON.stringify(args); if (done.has(key)) return true;
+  console.log(`  ${dry ? "would " : ""}${methodName} ${JSON.stringify(args)}`); if (dry) return true;
+  try { await (await sign()).functionCall({ contractId: dep.contract, methodName, args, gas: 100_000_000_000_000n, attachedDeposit: 0n }); done.add(key); return true; }
+  catch (e) { const m = String(e.message ?? e); if (/already|nothing to claim|window closed|not in vote|still open/i.test(m)) done.add(key); else console.log("  FAILED", methodName, m.slice(0, 160)); return false; }
+}
+
+async function once() {
+  const events = []; for (;;) { const p = await view("list_events", { from: events.length, limit: 100 }); events.push(...p); if (p.length < 100) break; }
+  const state = await view("get_state"), params = await view("get_params"), known = new Set(events.map((e) => e.event_id)), t = state.now_s, me = dep.keeper;
+  let n = 0; const act = async (m, a) => { n++; await send(m, a); };
+  if (doReport) {
+    const maxDays = Math.min(days, Math.floor(params.max_age_s / 86400) - 1), start = new Date(Date.now() - maxDays * 86400_000).toISOString().slice(0, 19);
+    const usgs = (await (await fetch(`https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&minmagnitude=6&starttime=${start}&orderby=time-asc`)).json())
+      .features.filter((f) => f.properties.type === "earthquake" && f.id.length <= 32).map((f) => ({ id: f.id, mag: Math.round(f.properties.mag * 10), origin: Math.floor(f.properties.time / 1000) }));
+    for (const q of usgs) if (!known.has(q.id) && q.origin <= t && q.mag >= params.min_mag_x10) await act("report_event", { event_id: q.id, mag_x10: q.mag, origin_s: q.origin });
+  }
+  for (const e of events) {
+    const id = { event_id: e.event_id };
+    if (watch && e.status === "waiting" && t < e.window_ends && e.reporter !== me && (await verdict(e)) === "bad") { await act("challenge", id); }
+    if (watch && e.status === "challenged" && e.vote_ends && t < e.vote_ends && e.reporter !== me) {
+      const v = await verdict(e); if (v !== "unknown") await act("vote", { ...id, side: v === "ok" ? "real" : "not_real", amount: STAKE.toString() }); // defend real events, reject false ones
+    }
+    if ((e.status === "waiting" && t >= e.window_ends) || (e.status === "challenged" && e.vote_ends && t >= e.vote_ends)) await act("finalize", id);
+    if (watch && (e.status === "counted" || e.status === "rejected") && e.challenger) await act("claim_vote", id);
+  }
+  return { n, events: events.length, t };
+}
+
+const t0 = Date.now();
+for (let round = 1; ; round++) {
+  try { const r = await once(); if (!loopS || round === 1) console.log(`[${net}] ${dep.contract}: ${r.events} events on chain, ${r.n} action(s)`); } catch (e) { console.log("round failed:", String(e.message ?? e).slice(0, 200)); if (!loopS) process.exit(1); }
+  if (!loopS || (forMin && Date.now() - t0 > forMin * 60_000)) break;
+  await new Promise((r) => setTimeout(r, loopS * 1000));
+}
+process.exit(0);

@@ -110,7 +110,11 @@ class Tremor:
         self.bal[a] -= n; self.tok[a] = self.tok.get(a, 0) + n
 
     def _lock(self, a, n):
-        if self.bal.get(a, 0) < n: raise Reject("insufficient bond balance")
+        """Lock n from the deposit balance, first topping it up from the account's wallet if it is short (no separate deposit step)."""
+        short = n - self.bal.get(a, 0)
+        if short > 0:
+            if self.tok.get(a, 0) < short: raise Reject("insufficient balance")
+            self.tok[a] -= short; self.bal[a] = self.bal.get(a, 0) + short
         self.bal[a] -= n; self.locked[a] = self.locked.get(a, 0) + n
 
     def _unlock(self, a, n):

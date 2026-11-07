@@ -211,11 +211,11 @@ const win = () => (params ? `${duration(params.window_s)} to challenge, ${durati
 function renderSteps() {
   const demo = NET === "demo";
   $("#try-sub").textContent = demo
-    ? `Seven steps, one button each. You are on the Demo contract, so the waiting window is ${duration(params?.window_s ?? 120)} and a whole round takes about five minutes.`
-    : `Seven steps, one button each. You are on the Live contract with the real ${duration(params?.window_s ?? 86400)} window, so a result takes a day. Switch to Demo (top bar) for a result in minutes.`;
+    ? `Five steps. You are on the Demo contract, so the waiting window is only ${duration(params?.window_s ?? 20)} and a bot settles the result for you: a whole round takes about a minute.`
+    : `Five steps. You are on the Live contract with the real ${duration(params?.window_s ?? 86400)} window, so a result takes a day. Switch to Demo (top bar) for a result in minutes.`;
   $("#netnote").innerHTML = demo
     ? `Viewing the <b>Demo</b> contract: ${win()}. <a href="#" data-net="live">Switch to Live</a> for the real timing.`
-    : `Viewing the <b>Live</b> contract: real timing (${win()}), kept busy by a bot that reports real quakes. <a href="#" data-net="demo">Switch to Demo</a> to try a whole round in about five minutes.`;
+    : `Viewing the <b>Live</b> contract: real timing (${win()}), kept busy by a bot that reports real quakes. <a href="#" data-net="demo">Switch to Demo</a> to try a whole round in about a minute.`;
 }
 
 // what we know about the connected account, and the guided path built from it
