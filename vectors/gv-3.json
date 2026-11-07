@@ -1,0 +1,23 @@
+{
+ "name": "GV-3 too little turnout",
+ "params": {
+  "s0": 1015225750000
+ },
+ "scenario": "challenge",
+ "votes": [
+  [
+   "Ada",
+   "real",
+   1000000000
+  ]
+ ],
+ "expect": {
+  "outcome": "rejected",
+  "minted": 0,
+  "final_bond": {
+   "Ada": 1000000000
+  },
+  "reporter_bond_returned": 1000000000,
+  "challenger_bond_returned": 1000000000
+ }
+}

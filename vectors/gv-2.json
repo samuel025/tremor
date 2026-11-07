@@ -1,0 +1,37 @@
+{
+ "name": "GV-2 a challenge the event survives",
+ "params": {
+  "s0": 1015225750000
+ },
+ "scenario": "challenge",
+ "votes": [
+  [
+   "Ada",
+   "real",
+   3000000000
+  ],
+  [
+   "Bayo",
+   "not",
+   1000000000
+  ],
+  [
+   "Chidi",
+   "not",
+   500000000
+  ]
+ ],
+ "expect": {
+  "outcome": "counted",
+  "pot": 1300000000,
+  "final_bond": {
+   "Ada": 4300000000,
+   "Bayo": 800000000,
+   "Chidi": 400000000
+  },
+  "reporter_bond_returned": 1000000000,
+  "escrow_before": 6500000000,
+  "escrow_after": 6500000000,
+  "turnout_min": 2030451500
+ }
+}
