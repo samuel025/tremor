@@ -95,7 +95,7 @@
   <details class="card full"><summary>Full simulation results</summary><div id="summary" class="md"></div></details>
 </div></section>
 
-<section id="check" class="band mist"><div class="wrap reveal">
+<section id="check" class="band"><div class="wrap reveal">
   <h2>How to check me</h2>
   <p class="sub">Do not trust this page. Run the checks yourself.</p>
   <div class="card code"><pre><code>git clone &lt;repo&gt; &amp;&amp; cd tremor
@@ -106,20 +106,6 @@ make replay            # recompute the chain log offline
 make verify-onchain    # read the live contract and compare</code></pre></div>
 </div></section>
 
-<section id="limits" class="band"><div class="wrap reveal">
-  <h2>What it does not solve</h2>
-  <div class="grid2"><div class="card"><h3>Honest limits</h3><ul>
-    <li>Nobody can prove an earthquake on chain. A fake nobody challenges still mints, up to the caps.</li>
-    <li>Whoever holds most of the coins controls challenge votes. In the simulation a 40% holder blocked about half of real events.</li>
-    <li>USGS revises events; the waiting window is the delay for that.</li>
-    <li>On testnet the coins are free, so bonds and penalties show the rules but deter no one.</li>
-  </ul></div><div class="card"><h3>The case against Tremor</h3><ul>
-    <li>A coin that dilutes its holders gives no one a reason to hold it.</li>
-    <li>The relief is symbolic here; the five accounts are stand-ins.</li>
-    <li>Once a cap is hit, a big event can mint nothing.</li>
-    <li>It depends on one data source.</li>
-  </ul></div></div>
-</div></section>
 </main>
 <footer class="foot"><div class="wrap">
   <p><b>Tremor is a testnet prototype.</b> It has no value and promises none. Holding it dilutes you when quakes happen. The relief accounts donate nothing real, and nothing here claims real-world impact.</p>
