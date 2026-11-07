@@ -7,7 +7,7 @@
   5. no risky wording (security guarantees, value claims, casualty figures)
   6. results.json says every recorded check passed
 TODO(human) markers are reported as warnings: they are for the human to fill before submission."""
-import json, pathlib, re, sys
+import json, pathlib, re, subprocess, sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 from make_readme import build
@@ -24,7 +24,8 @@ used = set(re.findall(r"`make ([\w-]+)", readme))
 check("every `make` command in the README exists", used <= targets, f"missing: {sorted(used - targets)}" if not used <= targets else f"({len(used)} commands)")
 paths = {p for p in re.findall(r"`([^`\s]+)`", readme) if re.search(r"(^|/)[\w.-]+\.(md|py|json|csv|svg|rs|toml|sh|ts)$", p) or p.endswith("/")}
 paths = {p.rstrip("/") for p in paths if not p.startswith(("http", "<")) and "*" not in p and "<" not in p}
-missing = sorted(p for p in paths if not (ROOT / p).exists() and not (ROOT / p.split(" ")[0]).exists())
+ignored = lambda p: subprocess.run(["git", "check-ignore", "-q", p], cwd=ROOT).returncode == 0  # private paths (like .state/) are deliberately not in the repo
+missing = sorted(p for p in paths if not (ROOT / p).exists() and not (ROOT / p.split(" ")[0]).exists() and not ignored(p))
 check("every backticked path in the README exists", not missing, f"missing: {missing}" if missing else f"({len(paths)} paths)")
 required = ["## Results", "## Try it in five minutes", "## The mechanic in brief", "## How events are confirmed and what a liar can do", "## Honest limits", "## The case against Tremor", "## Two projects, one entrant", "## AI assistance, libraries, licence, data"]
 check("required sections present", all(h in readme for h in required), str([h for h in required if h not in readme]))
