@@ -27,3 +27,11 @@ web-dev:
 	cd web && npm install && npm run dev
 web-build:
 	cd web && npm install && npm run build
+results:
+	python3 scripts/gen_results.py --live
+results-full:
+	python3 scripts/gen_results.py --live --sandbox
+readme:
+	python3 scripts/make_readme.py
+check-readme:
+	python3 scripts/check_readme.py

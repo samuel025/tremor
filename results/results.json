@@ -1,0 +1,65 @@
+{
+ "python_tests": {
+  "passed": 3,
+  "ok": true,
+  "date": "2026-11-07"
+ },
+ "conformance": {
+  "scenarios": 200,
+  "steps": 24222,
+  "mismatches": 0,
+  "tests_passed": 2,
+  "ok": true,
+  "date": "2026-11-07"
+ },
+ "replay": {
+  "pass_": 14,
+  "fail": 0,
+  "ok": true,
+  "date": "2026-11-07"
+ },
+ "verify_onchain": {
+  "pass_": 16,
+  "fail": 0,
+  "ok": true,
+  "date": "2026-11-07",
+  "contract": "tremor.rounds-indep-5928.testnet",
+  "keys": 1
+ },
+ "simulation": {
+  "grid": 243,
+  "passing": 45,
+  "chosen": {
+   "base_ppm": 2500,
+   "week_ppm": 15000,
+   "month_ppm": 50000,
+   "slash_pct": 20,
+   "quorum_ppm": 2000
+  },
+  "passive_dilution": 0.06425951978625155,
+  "clipped_weeks": 0.25,
+  "fakes_rejected_half_watch": 0.9916666666666667,
+  "real_events_count_30pct_selfish": 0.9672619047619048,
+  "whale_blocks_pct": 48.2,
+  "fakes_rejected_50_pct": 96.8,
+  "selfish30_pen20_counted_pct": 94.9,
+  "default_clipped_weeks_pct": 62.5,
+  "fake_extra_supply_nobody_watching_pct": 1.22,
+  "catalog_events": 352,
+  "catalog_m6": 28
+ },
+ "sandbox": {
+  "passed": 7,
+  "failed": 0,
+  "ok": true,
+  "storage_per_event_bytes": 303,
+  "report_gas_tgas": 3,
+  "date": "2026-11-07"
+ },
+ "demo": {
+  "pass_": 13,
+  "fail": 0,
+  "ok": true,
+  "date": "2026-11-07"
+ }
+}

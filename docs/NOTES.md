@@ -49,3 +49,8 @@ near-contract-standards minting, sandbox time travel, storage per event, gas, no
 - One deliberate addition to the palette: Launch Orange (#b64400) is the "seismic energy" accent (P and S wave markers, epicentre rings, warnings, rejected events).
 - Earthquake motion: hero seismogram replays real M6+ catalog events (P wave, then S wave); when the S wave arrives the headline, capsule and page shake with a damped oscillation scaled by magnitude; "Feel a replay" button; nav trace reacts to scroll speed; headings wobble and settle on reveal; event cards tremble (waiting), emit epicentre rings (counted, challenged) or shake once (rejected); the map replay sends P and S rings from each epicentre and shakes the map card. All motion is off with prefers-reduced-motion.
 - Bug found by a headless run with a long virtual clock: the shake used rAF timestamps that could precede its start time, making the damping term explode (translate of billions of px). Fixed by clamping to performance.now().
+
+## README (2026-11-07)
+- README.md is generated: `make results` (or `make results-full` with the slow sandbox suite) records command output in results/results.json; `make readme` renders README.tmpl.md; `make check-readme` fails if the README is stale, names a missing make target or path, drops a required section, or uses risky wording. Edit README.tmpl.md, never README.md.
+- Correction: I told the human the demo had 12 checks; the generated count is 13 (counted by hand before).
+- Left for the human (marked TODO(human) in the template): hosted URL, demo video and X post links, Rounds link.
