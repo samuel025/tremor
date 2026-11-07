@@ -29,3 +29,10 @@ near-contract-standards minting, sandbox time travel, storage per event, gas, no
 
 ## make demo (2026-11-07, testnet)
 `scripts/demo.py` resets the contract account, then runs PRD section 13 steps 1-7 against testnet, printing the Python reference's expected value beside the chain's. Result: 12 PASS, 0 FAIL. Real M6.1 event minted 2,750 TREM; fake-001 rejected by vote; fake-002 (unchallenged) minted 6,016.50 TREM, the honest worst case. The CLI prints the bare JSON result on stdout and its labels on stderr (the first version of the script merged them and crashed). Step 8 (make verify-onchain) is not built yet. The contract account still has 1 access key; keys are deleted last, only on the human's word.
+
+## M4 checking tools (2026-11-07)
+- Contract change: event_counted and event_rejected log lines now include the finalize `time`, so the log alone is enough to replay the caps.
+- `make replay` (offline, fixtures/testnet-demo.json): 14 checks PASS. `make verify-onchain` (testnet): 15 checks PASS, 1 INFO (the contract still has 1 access key; `--final` will demand an empty list). Replay limits: the log has events, votes and claims but no plain transfers or bond deposits, so it checks supply, mints, caps, outcomes, claim payouts and relief balances, not every holder's balance.
+- verify-onchain also parses the deployed wasm's export list and fails if any method outside the intended list exists (no owner, admin, upgrade, set_* or free mint).
+- Reporter: `scripts/reporter.py` signs with a function-call key on dayo limited to report_event and finalize (0.25 NEAR allowance); a real report succeeded and `challenge` / `vote` with that key are refused. The key is in .state/reporter_key.json (gitignored); its secret is passed on the command line, fine for a throwaway testnet key, not for anything real. One earlier throwaway key's seed phrase was printed in the session by mistake; that key was deleted from the account.
+- The live demo contract now also holds us7000tw8r, reported by the reporter script (so it differs from fixtures/testnet-demo.json; `make demo` resets it).

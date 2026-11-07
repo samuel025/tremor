@@ -1,0 +1,112 @@
+{
+ "contract": "tremor.rounds-indep-5928.testnet",
+ "params": {
+  "s0": "1000000000000",
+  "min_mag_x10": 60,
+  "base_ppm": 2500,
+  "max_event_ppm": 15000,
+  "cooldown_s": 86400,
+  "week_cap_ppm": 15000,
+  "month_cap_ppm": 50000,
+  "bond": "1000000000",
+  "window_s": 120,
+  "vote_s": 180,
+  "slash_pct": 20,
+  "quorum_ppm": 2000,
+  "max_age_s": 5184000,
+  "relief_accounts": [
+   "relief1.rounds-indep-5928.testnet",
+   "relief2.rounds-indep-5928.testnet",
+   "relief3.rounds-indep-5928.testnet",
+   "relief4.rounds-indep-5928.testnet",
+   "relief5.rounds-indep-5928.testnet"
+  ]
+ },
+ "state": {
+  "supply": "1008766500000",
+  "initial_supply": "1000000000000",
+  "minted_7d": "8766500000",
+  "minted_30d": "8766500000",
+  "week_left": "6364997500",
+  "month_left": "41671825000",
+  "open_events": 0,
+  "log_len": 13,
+  "now_s": 1794074330
+ },
+ "supply": "1008766500000",
+ "log": [
+  "{\"event\":\"event_posted\",\"data\":{\"event_id\":\"us7000twg9\",\"mag_x10\":61,\"origin_s\":1793961567,\"reporter\":\"dayo.rounds-indep-5928.testnet\",\"time\":1794073820}}",
+  "{\"event\":\"event_counted\",\"data\":{\"event_id\":\"us7000twg9\",\"minted\":\"2750000000\",\"clipped\":false,\"supply\":\"1002750000000\",\"time\":1794073945}}",
+  "{\"event\":\"event_posted\",\"data\":{\"event_id\":\"fake-001\",\"mag_x10\":74,\"origin_s\":1794073851,\"reporter\":\"dayo.rounds-indep-5928.testnet\",\"time\":1794073957}}",
+  "{\"event\":\"event_challenged\",\"data\":{\"event_id\":\"fake-001\",\"challenger\":\"bayo.rounds-indep-5928.testnet\",\"time\":1794073964}}",
+  "{\"event\":\"vote_cast\",\"data\":{\"event_id\":\"fake-001\",\"voter\":\"ada.rounds-indep-5928.testnet\",\"side\":\"not\",\"amount\":\"30000000000\"}}",
+  "{\"event\":\"vote_cast\",\"data\":{\"event_id\":\"fake-001\",\"voter\":\"chidi.rounds-indep-5928.testnet\",\"side\":\"not\",\"amount\":\"10000000000\"}}",
+  "{\"event\":\"vote_cast\",\"data\":{\"event_id\":\"fake-001\",\"voter\":\"dayo.rounds-indep-5928.testnet\",\"side\":\"real\",\"amount\":\"5000000000\"}}",
+  "{\"event\":\"event_rejected\",\"data\":{\"event_id\":\"fake-001\",\"reason\":\"voted_down\",\"time\":1794074150}}",
+  "{\"event\":\"claimed\",\"data\":{\"event_id\":\"fake-001\",\"account\":\"ada.rounds-indep-5928.testnet\",\"paid\":\"31500000000\"}}",
+  "{\"event\":\"claimed\",\"data\":{\"event_id\":\"fake-001\",\"account\":\"chidi.rounds-indep-5928.testnet\",\"paid\":\"10500000000\"}}",
+  "{\"event\":\"claimed\",\"data\":{\"event_id\":\"fake-001\",\"account\":\"dayo.rounds-indep-5928.testnet\",\"paid\":\"4000000000\"}}",
+  "{\"event\":\"event_posted\",\"data\":{\"event_id\":\"fake-002\",\"mag_x10\":74,\"origin_s\":1794074081,\"reporter\":\"dayo.rounds-indep-5928.testnet\",\"time\":1794074187}}",
+  "{\"event\":\"event_counted\",\"data\":{\"event_id\":\"fake-002\",\"minted\":\"6016500000\",\"clipped\":false,\"supply\":\"1008766500000\",\"time\":1794074312}}"
+ ],
+ "events": [
+  {
+   "event_id": "fake-001",
+   "mag_x10": 74,
+   "origin_s": 1794073851,
+   "reporter": "dayo.rounds-indep-5928.testnet",
+   "reported_at": 1794073957,
+   "status": "rejected",
+   "challenger": "bayo.rounds-indep-5928.testnet",
+   "challenged_at": 1794073964,
+   "window_ends": 1794074077,
+   "vote_ends": 1794074144,
+   "real_locked": "5000000000",
+   "not_real_locked": "40000000000",
+   "minted": "0",
+   "clipped": false,
+   "pot": "0"
+  },
+  {
+   "event_id": "fake-002",
+   "mag_x10": 74,
+   "origin_s": 1794074081,
+   "reporter": "dayo.rounds-indep-5928.testnet",
+   "reported_at": 1794074187,
+   "status": "counted",
+   "challenger": null,
+   "challenged_at": 0,
+   "window_ends": 1794074307,
+   "vote_ends": null,
+   "real_locked": "0",
+   "not_real_locked": "0",
+   "minted": "6016500000",
+   "clipped": false,
+   "pot": "0"
+  },
+  {
+   "event_id": "us7000twg9",
+   "mag_x10": 61,
+   "origin_s": 1793961567,
+   "reporter": "dayo.rounds-indep-5928.testnet",
+   "reported_at": 1794073820,
+   "status": "counted",
+   "challenger": null,
+   "challenged_at": 0,
+   "window_ends": 1794073940,
+   "vote_ends": null,
+   "real_locked": "0",
+   "not_real_locked": "0",
+   "minted": "2750000000",
+   "clipped": false,
+   "pot": "0"
+  }
+ ],
+ "relief_balances": {
+  "relief1.rounds-indep-5928.testnet": "1753300000",
+  "relief2.rounds-indep-5928.testnet": "1753300000",
+  "relief3.rounds-indep-5928.testnet": "1753300000",
+  "relief4.rounds-indep-5928.testnet": "1753300000",
+  "relief5.rounds-indep-5928.testnet": "1753300000"
+ }
+}

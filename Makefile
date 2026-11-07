@@ -19,3 +19,7 @@ sandbox-test:
 	cd contract && cargo near build non-reproducible-wasm --no-abi && cd sandbox && cargo test -- --nocapture --test-threads=1
 demo:
 	python3 scripts/demo.py
+replay:
+	python3 scripts/replay.py
+verify-onchain:
+	python3 scripts/verify_onchain.py

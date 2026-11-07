@@ -183,7 +183,7 @@ impl Core {
         if self.recent.len() > 16 { self.recent.remove(0); }
         let e = self.ev.get_mut(eid).unwrap();
         e.status = Status::Counted; e.minted = m; e.clipped = clipped;
-        self.emit("event_counted", format!("{{\"event_id\":{},\"minted\":\"{}\",\"clipped\":{},\"supply\":\"{}\"}}", q(eid), m, clipped, self.supply));
+        self.emit("event_counted", format!("{{\"event_id\":{},\"minted\":\"{}\",\"clipped\":{},\"supply\":\"{}\",\"time\":{}}}", q(eid), m, clipped, self.supply, now));
         (m, raw, clipped)
     }
 
@@ -251,7 +251,7 @@ impl Core {
                     ev.status = Status::Rejected; ev.winner = None;
                     self.unlock(&e.reporter, p.bond);
                     self.unlock(&challenger, p.bond);
-                    self.emit("event_rejected", format!("{{\"event_id\":{},\"reason\":\"no_quorum_or_tie\"}}", q(eid)));
+                    self.emit("event_rejected", format!("{{\"event_id\":{},\"reason\":\"no_quorum_or_tie\",\"time\":{}}}", q(eid), now));
                     return Ok(None);
                 }
                 let win_real = real > no;
@@ -272,7 +272,7 @@ impl Core {
                 }
                 if win_real { return Ok(Some(self.count(eid, now))); }
                 self.ev.get_mut(eid).unwrap().status = Status::Rejected;
-                self.emit("event_rejected", format!("{{\"event_id\":{},\"reason\":\"voted_down\"}}", q(eid)));
+                self.emit("event_rejected", format!("{{\"event_id\":{},\"reason\":\"voted_down\",\"time\":{}}}", q(eid), now));
                 Ok(None)
             }
             _ => Err("already final".into()),
