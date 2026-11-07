@@ -23,6 +23,7 @@ pub struct Params {
     pub slash_pct: u128,
     pub quorum_ppm: u128,
     pub max_age_s: u64,
+    pub tap_amount: u128, // starter coins each account may take once from the pool; 0 disables the tap
     pub relief: Vec<String>,
 }
 
@@ -101,6 +102,7 @@ pub struct Core {
     pub ev: BTreeMap<String, Ev>,
     pub recent: Vec<u64>,               // last 16 counted origin times
     pub buckets: BTreeMap<u64, u128>,   // day -> minted
+    pub tapped: BTreeSet<String>,       // accounts that already took their starter coins
     #[borsh(skip)]
     pub pending_log: Vec<(String, String)>, // (event, json data); drained by the contract after every call
 }
@@ -120,7 +122,7 @@ impl Core {
         tok.insert(launcher.to_string(), p.s0);
         for a in &p.relief { tok.entry(a.clone()).or_insert(0); }
         Ok(Core { supply: p.s0, p, tok, bal: BTreeMap::new(), locked: BTreeMap::new(), ev: BTreeMap::new(),
-                  recent: vec![], buckets: BTreeMap::new(), pending_log: vec![] })
+                  recent: vec![], buckets: BTreeMap::new(), tapped: BTreeSet::new(), pending_log: vec![] })
     }
 
     fn emit(&mut self, event: &str, data: String) { self.pending_log.push((event.to_string(), data)); }
@@ -156,6 +158,19 @@ impl Core {
     fn unlock(&mut self, a: &str, n: u128) {
         sub(&mut self.locked, a, n);
         add(&mut self.bal, a, n);
+    }
+
+    /// Once per account: move `tap_amount` from `pool` (coins the launcher put there) to `a`. Mints nothing.
+    pub fn tap(&mut self, a: &str, pool: &str) -> Result<(), String> {
+        let amt = self.p.tap_amount;
+        if amt == 0 { return Err("tap disabled".into()); }
+        if a == pool || self.tapped.contains(a) { return Err("already tapped".into()); }
+        if get(&self.tok, pool) < amt { return Err("tap pool empty".into()); }
+        sub(&mut self.tok, pool, amt);
+        add(&mut self.tok, a, amt);
+        self.tapped.insert(a.to_string());
+        self.emit("tapped", format!("{{\"account\":{},\"amount\":\"{}\"}}", q(a), amt));
+        Ok(())
     }
 
     // ---- caps

@@ -43,13 +43,9 @@ def acct(n): return f"{n}.{P}"
 
 
 def reset():
-    print("Step 0: reset: delete and recreate the contract account so the scene starts clean (testnet only)")
-    sh("near", "account", "delete-account", C, "beneficiary", P, "network-config", "testnet", "sign-with-legacy-keychain", "send", check=False)
-    sh("near", "account", "create-account", "fund-myself", C, "3.2 NEAR", "autogenerate-new-keypair", "save-to-legacy-keychain", "sign-as", P,
-       "network-config", "testnet", "sign-with-legacy-keychain", "send")
-    sh("near", "contract", "deploy", C, "use-file", str(ROOT / "contract/target/near/tremor.wasm"), "with-init-call", "new", "json-args",
-       (ROOT / ".state/init_args.json").read_text(), "prepaid-gas", "100 Tgas", "attached-deposit", "0 NEAR", "network-config", "testnet",
-       "sign-with-legacy-keychain", "send")
+    print("Step 0: reset: delete, recreate and redeploy the demo contract so the scene starts clean (testnet only)")
+    out = subprocess.run([sys.executable, str(ROOT / "scripts/deploy.py"), "demo", "--reset"], capture_output=True, text=True, env=ENV)
+    if out.returncode: raise SystemExit("reset failed:\n" + (out.stdout + out.stderr)[-600:])
 
 
 if "--no-reset" not in sys.argv: reset()

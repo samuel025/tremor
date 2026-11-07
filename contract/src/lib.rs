@@ -39,6 +39,7 @@ pub struct ParamsArg {
     pub slash_pct: u32,
     pub quorum_ppm: u32,
     pub max_age_s: u64,
+    pub tap_amount: U128, // starter coins per account from the tap pool; "0" disables the tap
     pub relief_accounts: Option<Vec<AccountId>>, // only filled by get_params
 }
 
@@ -51,6 +52,7 @@ pub struct StateView {
     pub week_left: U128,
     pub month_left: U128,
     pub open_events: u32,
+    pub tap_pool: U128,
     pub log_len: u64,
     pub now_s: u64,
 }
@@ -106,13 +108,14 @@ impl Contract {
             max_event_ppm: params.max_event_ppm as u128, cooldown_s: params.cooldown_s,
             week_cap_ppm: params.week_cap_ppm as u128, month_cap_ppm: params.month_cap_ppm as u128, bond: params.bond.0,
             window_s: params.window_s, vote_s: params.vote_s, slash_pct: params.slash_pct as u128,
-            quorum_ppm: params.quorum_ppm as u128, max_age_s: params.max_age_s,
+            quorum_ppm: params.quorum_ppm as u128, max_age_s: params.max_age_s, tap_amount: params.tap_amount.0,
             relief: relief_accounts.iter().map(|a| a.to_string()).collect(),
         };
         let core = unwrap_or_panic(Core::new(p, launcher.as_str()));
         let mut registered = LookupSet::new(b"r");
         let launcher_s = launcher.to_string();
         registered.insert(launcher);
+        registered.insert(env::current_account_id()); // the contract holds the tap pool, so it must be able to receive coins
         for a in relief_accounts { registered.insert(a); }
         let s0 = core.supply;
         let c = Self { core, log: Vector::new(b"l"), registered };
@@ -227,19 +230,38 @@ impl Contract {
         U128(out)
     }
 
+    /// Starter coins for judges and newcomers: once per account, paid from the pool the launcher filled by sending coins to this
+    /// contract's own account. Mints nothing and gives nobody any power. An unregistered caller attaches the flat storage deposit (the excess is refunded).
+    #[payable]
+    pub fn tap(&mut self) {
+        let who = env::predecessor_account_id();
+        let dep = env::attached_deposit();
+        if self.registered.contains(&who) {
+            if dep.as_yoctonear() > 0 { let _ = Promise::new(who.clone()).transfer(dep); }
+        } else {
+            require!(dep >= STORAGE_MIN, "Attach at least 0.00125 NEAR to register for storage");
+            self.registered.insert(who.clone());
+            let refund = dep.saturating_sub(STORAGE_MIN);
+            if refund.as_yoctonear() > 0 { let _ = Promise::new(who.clone()).transfer(refund); }
+        }
+        unwrap_or_panic(self.core.tap(who.as_str(), env::current_account_id().as_str()));
+        self.flush();
+    }
+    pub fn has_tapped(&self, account_id: AccountId) -> bool { self.core.tapped.contains(account_id.as_str()) }
+
     // ---------------- views
     pub fn get_params(&self) -> ParamsArg {
         let p = &self.core.p;
         ParamsArg { s0: U128(p.s0), min_mag_x10: p.min_mag_x10, base_ppm: p.base_ppm as u32, max_event_ppm: p.max_event_ppm as u32,
             cooldown_s: p.cooldown_s, week_cap_ppm: p.week_cap_ppm as u32, month_cap_ppm: p.month_cap_ppm as u32, bond: U128(p.bond),
-            window_s: p.window_s, vote_s: p.vote_s, slash_pct: p.slash_pct as u32, quorum_ppm: p.quorum_ppm as u32, max_age_s: p.max_age_s,
+            window_s: p.window_s, vote_s: p.vote_s, slash_pct: p.slash_pct as u32, quorum_ppm: p.quorum_ppm as u32, max_age_s: p.max_age_s, tap_amount: U128(p.tap_amount),
             relief_accounts: Some(p.relief.iter().map(|a| a.parse().unwrap()).collect()) }
     }
     pub fn get_state(&self) -> StateView {
         let now = now_s();
         let (m7, m30, wl, ml) = self.core.state(now);
         StateView { supply: U128(self.core.supply), initial_supply: U128(self.core.p.s0), minted_7d: U128(m7), minted_30d: U128(m30),
-            week_left: U128(wl), month_left: U128(ml),
+            week_left: U128(wl), month_left: U128(ml), tap_pool: U128(self.core.ft_balance_of(env::current_account_id().as_str())),
             open_events: self.core.ev.values().filter(|e| matches!(e.status, Status::Waiting | Status::Challenged)).count() as u32,
             log_len: self.log.len() as u64, now_s: now }
     }

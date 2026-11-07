@@ -15,7 +15,7 @@ C = a.contract or f"tremor.{(ROOT / '.state/parent_account').read_text().strip()
 fails = 0
 ALLOWED = {"bond_balance_of", "challenge", "claim_vote", "contract_source_metadata", "deposit_bond", "finalize", "ft_balance_of", "ft_metadata",
            "ft_resolve_transfer", "ft_total_supply", "ft_transfer", "ft_transfer_call", "get_event", "get_log", "get_params", "get_state",
-           "list_events", "memory", "new", "report_event", "storage_balance_bounds", "storage_balance_of", "storage_deposit", "vote", "withdraw_bond"}
+           "list_events", "memory", "new", "report_event", "storage_balance_bounds", "storage_balance_of", "storage_deposit", "vote", "withdraw_bond", "tap", "has_tapped"}
 
 def rpc(method, params):
     for url in RPCS:

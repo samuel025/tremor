@@ -1,0 +1,17 @@
+{
+  "_note": "Testnet only. 'demo' uses 2 and 3 minute windows so a judge can see a result at once; 'live' uses the real 24 h and 48 h windows and is kept busy by scripts/keeper.py.",
+  "demo": {
+    "contract": "tremor.rounds-indep-5928.testnet",
+    "label": "Demo (2 and 3 minute windows)",
+    "window_s": 120,
+    "vote_s": 180,
+    "keeper": "dayo.rounds-indep-5928.testnet"
+  },
+  "live": {
+    "contract": "tremor-live.rounds-fund-5928.testnet",
+    "label": "Live (24 h and 48 h windows)",
+    "window_s": 86400,
+    "vote_s": 172800,
+    "keeper": "keeper.rounds-fund-5928.testnet"
+  }
+}

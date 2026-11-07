@@ -16,7 +16,7 @@ impl Env {
 fn params(over: Value) -> Value {
     let mut p = json!({"s0": (1_000_000 * U).to_string(), "min_mag_x10": 60, "base_ppm": 5000, "max_event_ppm": 15000, "cooldown_s": 86400,
         "week_cap_ppm": 15000, "month_cap_ppm": 50000, "bond": (1000 * U).to_string(), "window_s": 6, "vote_s": 10, "slash_pct": 20,
-        "quorum_ppm": 2000, "max_age_s": 5_184_000, "relief_accounts": null});
+        "quorum_ppm": 2000, "max_age_s": 5_184_000, "tap_amount": "0", "relief_accounts": null});
     for (k, v) in over.as_object().unwrap() { p[k] = v.clone(); }
     p
 }
@@ -189,5 +189,27 @@ async fn gas_and_storage_with_many_open_events() -> anyhow::Result<()> {
     eprintln!("GAS report_event with 0 open: {} Tgas ; with 63 open: {} Tgas", first / 1_000_000_000_000, last / 1_000_000_000_000);
     e.fails("ada", "report_event", json!({"event_id":"overflow","mag_x10":60,"origin_s": e.now().await - 5}), "too many open events").await?;
     assert!(last < 250_000_000_000_000, "report must fit in 250 Tgas at the open-event limit");
+    Ok(())
+}
+
+#[tokio::test]
+async fn tap_gives_starter_coins_once_and_mints_nothing() -> anyhow::Result<()> {
+    let e = setup(json!({"tap_amount": (500 * U).to_string()})).await?;
+    // the launcher fills the pool by sending coins to the contract's own account (2 taps' worth)
+    e.who("ada").call(e.c.id(), "ft_transfer").args_json(json!({"receiver_id": e.c.id(), "amount": (1000 * U).to_string()})).deposit(Y1).max_gas().transact().await?.into_result()?;
+    assert_eq!(e.view("get_state", json!({})).await?["tap_pool"], (1000 * U).to_string());
+    let mut judges = vec![];
+    for n in ["judge1", "judge2", "judge3"] { judges.push(e.root.create_subaccount(n).initial_balance(NearToken::from_near(2)).transact().await?.into_result()?); }
+    // no storage deposit attached: refused
+    let r = judges[0].call(e.c.id(), "tap").max_gas().transact().await?; assert!(r.is_failure(), "an unregistered account must attach the storage deposit");
+    judges[0].call(e.c.id(), "tap").deposit(NearToken::from_millinear(2)).max_gas().transact().await?.into_result()?;
+    assert_eq!(e.tok(judges[0].id().as_str()).await, 500 * U);
+    assert!(e.view("has_tapped", json!({"account_id": judges[0].id()})).await?.as_bool().unwrap());
+    let again = judges[0].call(e.c.id(), "tap").max_gas().transact().await?; assert!(again.is_failure(), "second tap must fail");
+    judges[1].call(e.c.id(), "tap").deposit(NearToken::from_millinear(2)).max_gas().transact().await?.into_result()?;
+    let empty = judges[2].call(e.c.id(), "tap").deposit(NearToken::from_millinear(2)).max_gas().transact().await?; assert!(empty.is_failure(), "pool is empty");
+    assert_eq!(e.supply().await, 1_000_000 * U, "the tap mints nothing");
+    // the starter coins are usable: deposit a bond
+    judges[0].call(e.c.id(), "deposit_bond").args_json(json!({"amount": (500 * U).to_string()})).deposit(Y1).max_gas().transact().await?.into_result()?;
     Ok(())
 }

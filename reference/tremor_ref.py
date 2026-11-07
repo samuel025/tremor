@@ -25,6 +25,7 @@ class Params:
     slash_pct: int = 20
     quorum_ppm: int = 2000
     max_age_s: int = 30 * DAY
+    tap_amount: int = 0  # starter coins each account may take once from the pool; 0 disables the tap
     relief: tuple = ("relief1", "relief2", "relief3", "relief4", "relief5")
 
     def validate(self):
@@ -91,6 +92,7 @@ class Tremor:
         self.recent = []  # last 16 counted origin times
         self.buckets = {}  # day -> minted
         self.log = []
+        self.tapped = set()  # accounts that already took their starter coins
 
     # ---- token + escrow
     def ft_balance_of(self, a): return self.tok.get(a, 0)
@@ -113,6 +115,15 @@ class Tremor:
 
     def _unlock(self, a, n):
         self.locked[a] -= n; self.bal[a] = self.bal.get(a, 0) + n
+
+    def tap(self, a, pool):
+        """Once per account: move tap_amount from the pool (coins the launcher put there) to a. Mints nothing."""
+        if self.p.tap_amount == 0: raise Reject("tap disabled")
+        if a == pool or a in self.tapped: raise Reject("already tapped")
+        if self.tok.get(pool, 0) < self.p.tap_amount: raise Reject("tap pool empty")
+        self.tok[pool] -= self.p.tap_amount; self.tok[a] = self.tok.get(a, 0) + self.p.tap_amount
+        self.tapped.add(a)
+        self.log.append(("tapped", a, self.p.tap_amount))
 
     # ---- caps
     def minted_last(self, now, days):
@@ -247,4 +258,4 @@ class Tremor:
         nz = lambda d: {k: v for k, v in sorted(d.items()) if v}
         return dict(supply=self.supply, tok=nz(self.tok), bal=nz(self.bal), locked=nz(self.locked),
                     buckets=nz(self.buckets), recent=list(self.recent),
-                    events={k: [e.status, e.minted, e.pot, e.win_left, e.winner or "", e.clipped] for k, e in sorted(self.ev.items())})
+                    tapped=sorted(self.tapped), events={k: [e.status, e.minted, e.pot, e.win_left, e.winner or "", e.clipped] for k, e in sorted(self.ev.items())})

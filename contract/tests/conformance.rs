@@ -8,7 +8,7 @@ fn params(p: &Value, relief: &Value) -> Params {
     Params { s0: g("s0"), min_mag_x10: g("min_mag_x10") as u32, base_ppm: g("base_ppm"), max_event_ppm: g("max_event_ppm"),
         cooldown_s: g("cooldown_s") as u64, week_cap_ppm: g("week_cap_ppm"), month_cap_ppm: g("month_cap_ppm"), bond: g("bond"),
         window_s: g("window_s") as u64, vote_s: g("vote_s") as u64, slash_pct: g("slash_pct"), quorum_ppm: g("quorum_ppm"),
-        max_age_s: g("max_age_s") as u64, relief: relief.as_array().unwrap().iter().map(|v| v.as_str().unwrap().to_string()).collect() }
+        max_age_s: g("max_age_s") as u64, tap_amount: g("tap_amount"), relief: relief.as_array().unwrap().iter().map(|v| v.as_str().unwrap().to_string()).collect() }
 }
 
 fn nz(m: &std::collections::BTreeMap<String, u128>) -> Value {
@@ -22,7 +22,7 @@ fn snapshot(c: &Core) -> Value {
         (k.clone(), json!([e.status.as_str(), e.minted as u64, e.pot as u64, e.win_left as u64, w, e.clipped]))
     }).collect();
     json!({"supply": c.supply as u64, "tok": nz(&c.tok), "bal": nz(&c.bal), "locked": nz(&c.locked),
-           "buckets": buckets, "recent": c.recent, "events": events})
+           "buckets": buckets, "recent": c.recent, "tapped": c.tapped.iter().collect::<Vec<_>>(), "events": events})
 }
 
 #[test]
@@ -48,6 +48,7 @@ fn rust_matches_python_reference() {
                 "vote" => c.vote(&s(0), &s(1), match a[2].as_str().unwrap() { "real" => Some(true), "not" => Some(false), _ => None }, n(3) as u128, now).is_ok(),
                 "finalize" => c.finalize(&s(0), now).is_ok(),
                 "claim" => c.claim_vote(&s(0), &s(1)).is_ok(),
+                "tap" => c.tap(&s(0), "pool").is_ok(),
                 other => panic!("unknown op {other}"),
             };
             c.check_invariants();
@@ -66,7 +67,7 @@ fn rust_matches_python_reference() {
 fn golden_vector_one() {
     // GV-1 straight from RULES.md, independent of the Python reference.
     let p = Params { s0: 1_000_000_000_000, min_mag_x10: 60, base_ppm: 5000, max_event_ppm: 15000, cooldown_s: 86400, week_cap_ppm: 15000,
-        month_cap_ppm: 50000, bond: 1_000_000_000, window_s: 86400, vote_s: 172800, slash_pct: 20, quorum_ppm: 2000, max_age_s: 5_184_000,
+        month_cap_ppm: 50000, bond: 1_000_000_000, window_s: 86400, vote_s: 172800, slash_pct: 20, quorum_ppm: 2000, max_age_s: 5_184_000, tap_amount: 0,
         relief: (1..=5).map(|i| format!("r{i}")).collect() };
     let t0 = 20000 * DAY;
     let mut c = Core::new(p.clone(), "ada").unwrap();

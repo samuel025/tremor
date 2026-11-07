@@ -10,7 +10,7 @@ def params_from_chain(prm):
     return Params(s0=int(prm["s0"]), min_mag_x10=prm["min_mag_x10"], base_ppm=prm["base_ppm"], max_event_ppm=prm["max_event_ppm"],
                   cooldown_s=prm["cooldown_s"], week_cap_ppm=prm["week_cap_ppm"], month_cap_ppm=prm["month_cap_ppm"], bond=int(prm["bond"]),
                   window_s=prm["window_s"], vote_s=prm["vote_s"], slash_pct=prm["slash_pct"], quorum_ppm=prm["quorum_ppm"],
-                  max_age_s=prm["max_age_s"], relief=tuple(prm["relief_accounts"]))
+                  max_age_s=prm["max_age_s"], tap_amount=int(prm.get("tap_amount", 0)), relief=tuple(prm["relief_accounts"]))
 
 
 def replay(prm, log_lines):
@@ -39,6 +39,8 @@ def replay(prm, log_lines):
             elif k == "event_rejected":
                 r = ref.finalize(d["event_id"], d["time"])
                 if r is not None or ref.ev[d["event_id"]].status != "rejected": bad.append(f"log {i} {d['event_id']}: reference did not reject")
+            elif k == "tapped":
+                pass  # starter coins move plain token balances only; the replay checks events, mints and caps
             elif k == "claimed":
                 out = ref.claim_vote(d["account"], d["event_id"], 0)
                 if out != int(d["paid"]): bad.append(f"log {i} claim {d['account']}: paid {d['paid']} but reference {out}")
