@@ -16,15 +16,15 @@ code{font:.86em ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--mis
 :focus-visible{outline:2px solid var(--blue);outline-offset:3px;border-radius:8px}
 /* navigation: 44px global bar with a seismograph trace that shakes with your scrolling, then a local bar */
 .top{position:sticky;top:0;z-index:40}
-.gnav{position:relative;height:44px;background:rgba(255,255,255,.82);backdrop-filter:saturate(1.8) blur(20px);border-bottom:1px solid var(--ctl)}
+.gnav{position:relative;height:54px;background:rgba(255,255,255,.82);backdrop-filter:saturate(1.8) blur(20px);border-bottom:1px solid var(--ctl)}
 .gnav canvas{position:absolute;left:0;right:0;bottom:0;width:100%;height:16px;pointer-events:none}
-.gnav-in{position:relative;max-width:1080px;margin:0 auto;padding:0 22px;height:44px;display:flex;align-items:center;gap:28px}
-.glyph{color:var(--ink);display:flex}
-.gnav nav{display:flex;gap:28px;margin-left:auto}.gnav nav a{font-size:12px;letter-spacing:-.12px;color:rgba(0,0,0,.8)}.gnav nav a:hover{color:#000;text-decoration:none}
-.launch{font-size:12px;font-weight:600;letter-spacing:-.12px;color:var(--orange)}
+.gnav-in{position:relative;max-width:1080px;margin:0 auto;padding:0 22px;height:54px;display:flex;align-items:center;gap:32px}
+.glyph{color:var(--ink);display:flex}.glyph svg{width:24px;height:24px}
+.gnav nav{display:flex;gap:30px;margin-left:auto}.gnav nav a{font-size:16px;font-weight:500;letter-spacing:-.2px;color:rgba(0,0,0,.85)}.gnav nav a:hover{color:#000;text-decoration:none}
+.launch{font-size:14px;font-weight:600;letter-spacing:-.15px;color:var(--orange)}
 .lnav{background:rgba(255,255,255,.9);backdrop-filter:saturate(1.8) blur(20px);border-bottom:1px solid var(--ctl)}
-.lnav-in{max-width:1080px;margin:0 auto;padding:0 22px;height:52px;display:flex;align-items:center;gap:12px}
-.lnav b{font:600 19px/1.21 var(--display);letter-spacing:.228px}.sp{flex:1}
+.lnav-in{max-width:1080px;margin:0 auto;padding:0 22px;height:62px;display:flex;align-items:center;gap:12px}
+.lnav b{font:600 24px/1.2 var(--display);letter-spacing:.2px}.sp{flex:1}
 .out,.blue,.btn{font:400 12px/16px var(--text);letter-spacing:-.12px;border-radius:9999px;padding:6px 14px;cursor:pointer;display:inline-block;transition:background .2s,color .2s,transform .2s}
 .out{background:transparent;color:var(--ink);border:1px solid var(--steel)}.out:hover{background:var(--mist);text-decoration:none}
 .blue,.btn{background:var(--blue);color:#fff;border:1px solid var(--blue)}.blue:hover,.btn:hover{background:#0077ed;text-decoration:none}
@@ -126,7 +126,7 @@ details.full{margin-top:8px}summary{cursor:pointer;font-weight:600}.md{margin-to
 .foot{background:var(--mist);padding:44px 0 70px;color:var(--slate);font-size:12px;letter-spacing:-.12px}.foot p{margin:0 0 10px;max-width:60em}
 
 /* net switch, wallet, actions */
-.seg{display:inline-flex;background:var(--mist);border-radius:9999px;padding:2px;margin-left:12px}.seg button{border:0;background:none;font:400 12px/16px var(--text);padding:5px 14px;border-radius:9999px;cursor:pointer;color:var(--ink);letter-spacing:-.12px}.seg button.on{background:var(--white);font-weight:600;box-shadow:0 0 0 1px var(--ctl)}
+.seg{display:inline-flex;background:var(--mist);border-radius:9999px;padding:2px;margin-left:12px}.seg button{border:0;background:none;font:500 15px/20px var(--text);padding:6px 18px;border-radius:9999px;cursor:pointer;color:var(--ink);letter-spacing:-.12px}.seg button.on{background:var(--white);font-weight:600;box-shadow:0 0 0 1px var(--ctl)}
 .netnote{text-align:center;font-size:14px;color:var(--slate);margin:18px 0 0;letter-spacing:-.224px}
 .acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;align-items:center}.vote{display:inline-flex;flex-wrap:wrap;gap:8px;align-items:center}
 .acts input,.vote input{flex:none;width:110px;padding:6px 12px;font-size:14px}.acts button:disabled{opacity:.5;cursor:default}
@@ -152,3 +152,8 @@ details.more{margin-top:8px}details.more summary{font-weight:600}details.more>*{
 .rec-text small{color:var(--slate);font-size:12px}.rec-text h3{font:600 28px/1.15 var(--display);margin:6px 0 10px;letter-spacing:-.3px}.rec-text p{margin:0;font-size:17px}
 .rec-card{background:var(--white);border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:10px;animation:rise .5s both}.rec-card b{font:600 21px/1.2 var(--display)}
 .rec-card .pill{align-self:flex-start}
+
+/* larger navbar controls */
+.lnav .out,.lnav .blue{font-size:15px;line-height:20px;padding:8px 18px}
+html{scroll-padding-top:130px}
+@media(max-width:760px){.gnav-in{gap:16px}.lnav b{font-size:20px}.lnav .out{display:none}.seg button{padding:5px 12px}}

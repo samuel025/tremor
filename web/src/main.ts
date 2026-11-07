@@ -192,7 +192,7 @@ function initHero(cat: Quake[]) {
   let i = Math.floor(Math.random() * big.length), timer: number | undefined;
   const fire = (q: Quake) => { caption(q); seismo.burst(q.mag_x10); };
   const next = () => { fire(big[i++ % big.length]); };
-  const loop = () => { timer = window.setTimeout(() => { next(); loop(); }, 9000); };
+  const loop = () => { timer = window.setTimeout(() => { if (!document.hidden) next(); loop(); }, 9000); };
   new IntersectionObserver(([e]) => {
     if (e.isIntersecting) { seismo.start(); if (!timer) { timer = window.setTimeout(() => { next(); loop(); }, 1200); } }
     else { seismo.stop(); clearTimeout(timer); timer = undefined; }
@@ -298,5 +298,6 @@ async function start() {
   renderSteps(); renderWallet(); renderJourneyNow(); initDispute($("#dispute-host"));
   if (new URLSearchParams(location.search).has("transactionHashes")) { toast("Transaction sent from your wallet. Refreshing…"); const u = new URL(location.href); u.searchParams.delete("transactionHashes"); history.replaceState(null, "", u); }
   wallet().then((w) => w.initWallet(DEP.contract, (a) => { me = a; loadMine(); boardSig = ""; if (lastState) renderBoardFlags(); })).catch(() => ($("#wallet-card").innerHTML = "<h3>Your wallet</h3><p class='note'>The wallet library could not start in this browser.</p>"));
-  await refresh(); renderSteps(); loadMine(); initSim(); setInterval(refresh, POLL_MS); setInterval(tickCountdowns, 1000);
+  await refresh(); renderSteps(); loadMine(); initSim(); setInterval(() => { if (!document.hidden) refresh(); }, POLL_MS); setInterval(() => { if (!document.hidden) tickCountdowns(); }, 1000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) { refresh(); loadMine(); } }); // catch up once on return
 }

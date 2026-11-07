@@ -6,17 +6,22 @@ export interface SeismoOpts { speed: number; color: string; grid?: string; label
 /** A scrolling seismogram. burst() adds an event with a small fast P-wave, then a larger slower S-wave that decays (the coda).
  *  setExternal() adds continuous shaking (the nav trace uses it for scroll speed). Pure visual: not a real sensor. */
 export class Seismo {
-  private ctx: CanvasRenderingContext2D; private w = 0; private h = 0; private bursts: Burst[] = []; private ext = 0; private run = false; private raf = 0;
+  private ctx: CanvasRenderingContext2D; private w = 0; private h = 0; private bursts: Burst[] = []; private ext = 0; private run = false; private want = false; private raf = 0;
   private last = performance.now() / 1000; private buf: { t: number; y: number }[] = [];
   constructor(private cv: HTMLCanvasElement, private o: SeismoOpts) {
     this.ctx = cv.getContext("2d")!; this.size(); addEventListener("resize", () => this.size());
     if (reduced) this.drawStatic();
+    // a hidden tab gets no animation frames: stop completely, and restart from 'now' on return instead of replaying the gap
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) { this.run = false; cancelAnimationFrame(this.raf); }
+      else if (this.want && !reduced && !this.run) { this.run = true; this.buf = []; this.last = performance.now() / 1000; this.raf = requestAnimationFrame(() => this.frame()); }
+    });
   }
   private size() { const r = this.cv.getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 2); this.w = r.width; this.h = r.height; this.cv.width = this.w * d; this.cv.height = this.h * d; this.ctx.setTransform(d, 0, 0, d, 0, 0); if (reduced) this.drawStatic(); }
   setExternal(a: number) { this.ext = a; }
   burst(mag_x10: number) {
     const amp = Math.min(1, 0.28 + Math.max(0, mag_x10 - 60) / 26), t0 = performance.now() / 1000;
-    this.bursts.push({ t0, amp });
+    this.bursts = this.bursts.filter((b) => t0 - b.t0 < 14); this.bursts.push({ t0, amp }); // old ones can never matter again
     if (this.o.onS) { const cb = this.o.onS; setTimeout(() => cb(amp), 1400); }
     if (reduced) this.drawStatic();
   }
@@ -30,14 +35,15 @@ export class Seismo {
     }
     return y;
   }
-  start() { if (reduced || this.run) return; this.run = true; this.last = performance.now() / 1000; this.raf = requestAnimationFrame(() => this.frame()); }
-  stop() { this.run = false; cancelAnimationFrame(this.raf); }
+  start() { this.want = true; if (reduced || this.run || document.hidden) return; this.run = true; this.last = performance.now() / 1000; this.raf = requestAnimationFrame(() => this.frame()); }
+  stop() { this.want = false; this.run = false; cancelAnimationFrame(this.raf); }
   private frame() {
     if (!this.run) return;
-    const now = performance.now() / 1000, step = 1 / 120;
+    const now = performance.now() / 1000, step = 1 / 120, keep = this.w / this.o.speed + 1;
+    if (now - this.last > keep) this.last = now - keep; // after a long pause (sleep, throttling) only the visible window matters
     for (let t = this.last; t < now; t += step) this.buf.push({ t, y: this.value(t) });
     this.last = now;
-    const keep = this.w / this.o.speed + 1; while (this.buf.length && this.buf[0].t < now - keep) this.buf.shift();
+    let drop = 0; while (drop < this.buf.length && this.buf[drop].t < now - keep) drop++; if (drop) this.buf.splice(0, drop);
     this.bursts = this.bursts.filter((b) => now - b.t0 < 14);
     this.draw(now); this.raf = requestAnimationFrame(() => this.frame());
   }
