@@ -13,10 +13,10 @@
 <header class="top">
   <div class="gnav"><canvas id="navtrace" aria-hidden="true"></canvas><div class="gnav-in">
     <a class="glyph" href="#top" aria-label="Tremor home"><svg viewBox="0 0 32 32" width="18" height="18" aria-hidden="true"><path d="M2 17h6l4-10 6 18 4-11 2 3h6" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
-    <nav aria-label="Sections"><a href="#events">Events</a><a href="#map">Map</a><a href="#params">Rules</a><a href="#sim">Simulation</a><a href="#check">Check</a></nav>
+    <nav aria-label="Sections"><a href="#try">Try it</a><a href="#dispute">A challenge</a><a href="#events">Events</a><a href="#map">Map</a><a href="#params">Rules</a><a href="#sim">Simulation</a></nav>
     <span class="launch">Testnet · no value</span>
   </div></div>
-  <div class="lnav"><div class="lnav-in"><b>Tremor</b><div class="seg" id="netseg" role="group" aria-label="Which contract"><button type="button" data-net="live">Live</button><button type="button" data-net="demo">Demo</button></div><span class="sp"></span><a class="out" href="#map">Explore</a><a class="blue" href="#live">Live state</a></div></div>
+  <div class="lnav"><div class="lnav-in"><b>Tremor</b><div class="seg" id="netseg" role="group" aria-label="Which contract"><button type="button" data-net="live">Live</button><button type="button" data-net="demo">Demo</button></div><span class="sp"></span><a class="out" href="#dispute">Watch a challenge</a><a class="blue" href="#try">Try it</a></div></div>
 </header>
 <main id="top">
 <section class="hero" id="hero">
@@ -33,16 +33,32 @@
     <div class="cs"><small>Total supply</small><b id="c-supply" data-v="0">–</b><span id="c-supply-sub">TREM</span></div>
     <div class="cs"><small>New coins, last 7 days</small><b id="c-7d" data-v="0">–</b><span>TREM</span></div>
     <div class="cs"><small>Open events</small><b id="c-open" data-v="0">–</b><span id="c-live"><i class="dot-live"></i>live from testnet</span></div>
-    <div class="cbtns"><button class="out" id="feel" type="button">Feel a replay</button><a class="blue" href="#live">See the live state</a></div>
+    <div class="cbtns"><button class="out" id="feel" type="button">Feel a replay</button><a class="blue" href="#try">Try it yourself</a></div>
   </div>
   <p class="fine">The seismogram replays real events from the committed USGS catalog. It is an animation, not a live sensor.</p>
 </section>
 
 <div class="wrap"><p class="netnote" id="netnote"></p><div id="banner" class="banner" hidden></div></div>
 
+<section id="try" class="band mist"><div class="wrap">
+  <h2>Try it yourself</h2>
+  <p class="sub" id="try-sub">Seven steps, one button each. You will report a real earthquake, wait for the safety window, and see new coins appear.</p>
+  <div id="journey-host"><div class="skeleton tall"></div></div>
+  <details class="card more"><summary>More: your wallet, deposits, report a made-up quake, look up any account</summary>
+    <div id="wallet-card"></div>
+    <form id="lookup" class="lookup"><label for="acct">Look up any testnet account (no wallet needed)</label><div class="row"><input id="acct" placeholder="ada.example.testnet" autocomplete="off" spellcheck="false"><button class="btn" type="submit">Look up</button></div><p id="lookup-out" class="note" aria-live="polite"></p></form>
+  </details>
+</div></section>
+
+<section id="dispute" class="band"><div class="wrap reveal">
+  <h2>Watch a challenge play out</h2>
+  <p class="sub">Disputing your own report is not allowed, so this part needs two people. Here is a recording of a real run on testnet: a liar reports a quake that never happened, and holders vote it down.</p>
+  <div class="card" id="dispute-host"><div class="skeleton"></div></div>
+</div></section>
+
 <section id="live" class="band mist"><div class="wrap reveal">
-  <div class="head"><h2>The most it can ever dilute you</h2><a class="more" href="#params">The rules ›</a></div>
-  <p class="sub">New coins are capped for any 7 days and any 30 days. These meters show how much of each allowance is already used.</p>
+  <div class="head"><h2>What is on the chain right now</h2><a class="more" href="#params">The rules ›</a></div>
+  <p class="sub">New coins are capped for any 7 days and any 30 days, so nobody can be diluted past a fixed amount. These meters show how much of each allowance is used.</p>
   <div class="grid2">
     <div class="card meter"><div class="mh"><b>This week</b><span id="wk-t">–</span></div><div class="bar"><i id="wk-bar"></i></div><p class="note" id="wk-n"></p></div>
     <div class="card meter"><div class="mh"><b>This month</b><span id="mo-t">–</span></div><div class="bar"><i id="mo-bar"></i></div><p class="note" id="mo-n"></p></div>
@@ -74,13 +90,7 @@
   <div class="card" id="mapcard"><div class="skeleton tall"></div></div>
 </div></section>
 
-<section id="mine" class="band"><div class="wrap reveal">
-  <h2>Play the whole process</h2>
-  <p class="sub" id="mine-sub">Connect a free testnet wallet and go through every step on the real contract: starter coins, a bond, a report, a challenge, a vote, the result. Nothing here has any value.</p>
-  <div class="grid2"><div class="card" id="wallet-card"></div>
-  <div class="card"><h3>The steps</h3><ol class="steps" id="steps"></ol></div></div>
-  <form id="lookup" class="card lookup"><label for="acct">Or just look up any testnet account (no wallet needed)</label><div class="row"><input id="acct" placeholder="ada.example.testnet" autocomplete="off" spellcheck="false"><button class="btn" type="submit">Look up</button></div><p id="lookup-out" class="note" aria-live="polite"></p></form>
-</div></section>
+
 
 <section id="params" class="band mist"><div class="wrap reveal">
   <h2>The rules, fixed at launch</h2>

@@ -30,13 +30,17 @@ Every number below is read from `results/results.json`, which `make results` fil
 
 ## Take part as a judge
 
-You can go through the whole process on the real testnet contract, with no real money and no command line:
+The page opens on the **Demo** contract and walks you through the whole process in seven steps, one button each. The current step is worked out from the chain and your wallet, so it moves on by itself:
 
-1. Open the page and pick **Demo** (2 and 3 minute windows) or **Live** (the real windows) in the top bar.
-2. Connect a free testnet wallet (Meteor, set to testnet). Logging in gives the page a key that can call Tremor and nothing else.
-3. Press **Get starter TREM**. The tap pays {{tap}} TREM once per account from a pool the launcher filled; it creates no new coins.
-4. Deposit some into your bond balance, then report a real quake from the list, or report a made-up one and watch the page flag it red.
-5. Challenge a report with a second account, vote with locked coins, finalize when the window is over, and claim your payout.
+1. Connect a free testnet wallet (Meteor, set to testnet). Logging in gives the page a key that can call Tremor and nothing else.
+2. Get {{tap}} starter TREM from the tap (once per account; it comes from a pool the launcher filled and creates no new coins).
+3. Put a deposit down: reporting locks 1,000 TREM, returned if you are right.
+4. Report a real earthquake (picked for you from USGS) or make up a fake one.
+5. Wait out the safety window (2 minutes on Demo; the real 24 hours on Live), with a countdown.
+6. Finalize.
+7. See what it did: how many new coins were created and what each relief account received.
+
+Disputing your own report is not allowed, so one wallet cannot go through a challenge. The page therefore includes **Watch a challenge play out**, a narrated replay of a real recorded run on testnet (a liar reports a made-up quake, holders vote it down). With two wallets you can also challenge and vote on any event from the event board.
 
 On Live, a bot (`keeper/keeper.mjs`, run every 20 minutes by `.github/workflows/keeper.yml`) reports real M6+ quakes from USGS and finalizes events whose window has ended, so the board is alive. Details and limits are in `docs/LIVE.md`.
 

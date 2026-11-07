@@ -8,6 +8,8 @@ import { accessKeyCount, listEvents, registered, view, type Ev, type Params, typ
 import { checkEvent, loadCatalog, recentM6, usgsPage, type Flag, type Quake } from "./usgs";
 import { $, ago, countUp, duration, esc, mag, md, pct, reveal, short, trem } from "./util";
 import { renderCharts } from "./charts";
+import { renderJourney, type Ctx } from "./journey";
+import { initDispute } from "./dispute";
 import { initMap } from "./map";
 import { Seismo } from "./seismo";
 import { ampFor, shake } from "./shake";
@@ -95,7 +97,7 @@ function renderBoard(evs: Ev[], p: Params, s: State) {
 let lastEvs: Ev[] = [], lastState: State | null = null;
 function renderBoardFlags() { if (params && lastState) renderBoard(lastEvs, params, lastState); }
 
-function tickCountdowns() { document.querySelectorAll<HTMLElement>(".cd").forEach((n) => { const r = Number(n.dataset.end) - nowS(); n.textContent = duration(r); if (r <= 0 && !n.classList.contains("done")) { n.classList.add("done"); boardSig = ""; renderBoardFlags(); } }); }
+function tickCountdowns() { document.querySelectorAll<HTMLElement>(".cd").forEach((n) => { const r = Number(n.dataset.end) - nowS(); n.textContent = duration(r); if (r <= 0 && !n.classList.contains("done")) { n.classList.add("done"); boardSig = ""; renderBoardFlags(); renderJourneyNow(); } }); }
 
 async function renderRelief(p: Params) {
   const bals = await Promise.all(p.relief_accounts.map((a) => view<string>("ft_balance_of", { account_id: a })));
@@ -108,11 +110,12 @@ async function renderUnreported(evs: Ev[], p: Params) {
   try {
     const known = new Set(evs.map((e) => e.event_id));
     const qs = (await recentM6(Math.floor(p.max_age_s / 86400))).filter((q: Quake) => !known.has(q.id));
+    unreported = qs; checkingQuakes = false; renderJourneyNow();
     const rows = qs.map((q, i) => `<div class="row card slim${i >= 6 ? " extra" : ""}"${i >= 6 ? " hidden" : ""}><span class="mag sm">${mag(q.mag_x10)}</span><span>${esc(q.place || "Unnamed region")}</span><span class="note">${ago(nowS() - q.origin_s)} · USGS ${esc(q.status)}</span><a href="${usgsPage(q.id)}" target="_blank" rel="noopener">USGS ↗</a>${me ? `<button class="out" data-report="${esc(q.id)}" data-mag="${q.mag_x10}" data-origin="${q.origin_s}">Report</button>` : ""}</div>`).join("");
     host.innerHTML = qs.length ? rows + (qs.length > 6 ? `<button class="btn" id="more">Show all ${qs.length}</button>` : "") : `<div class="card slim">Every USGS event of M6+ in the last 60 days has been reported.</div>`;
     const more = host.querySelector<HTMLButtonElement>("#more");
     if (more) more.onclick = () => { host.querySelectorAll<HTMLElement>(".extra").forEach((n) => (n.hidden = false)); more.remove(); };
-  } catch { host.innerHTML = `<div class="card slim">Could not reach USGS right now.</div>`; }
+  } catch { checkingQuakes = false; host.innerHTML = `<div class="card slim">Could not reach USGS right now.</div>`; }
 }
 
 function renderParams(p: Params) {
@@ -131,7 +134,7 @@ async function refresh() {
     const [s, evs] = await Promise.all([view<State>("get_state"), listEvents()]);
     if (!params) { params = await view<Params>("get_params"); renderParams(params); renderRelief(params); }
     skew = s.now_s - Math.floor(Date.now() / 1000); lastEvs = evs; lastState = s; state0 = s;
-    banner(null); renderChips(s); renderMeters(s, params); renderBoard(evs, params, s); renderUnreported(evs, params); renderRelief(params);
+    banner(null); renderJourneyNow(); renderChips(s); renderMeters(s, params); renderBoard(evs, params, s); renderUnreported(evs, params); renderRelief(params);
     accessKeyCount().then((n) => { $("#keys-line").innerHTML = `<b>${n}</b> access key${n === 1 ? "" : "s"}`; }).catch(() => ($("#keys-line").textContent = "unavailable"));
   } catch (e) { banner("Could not read the testnet contract right now. This page is read-only and will retry. " + (e instanceof Error ? e.message.slice(0, 120) : "")); }
 }
@@ -207,53 +210,74 @@ const win = () => (params ? `${duration(params.window_s)} to challenge, ${durati
 
 function renderSteps() {
   const demo = NET === "demo";
-  $("#steps").innerHTML = [
-    "Connect a free testnet wallet. It only gets a key that can call Tremor, nothing else.",
-    `Take your ${params ? trem(params.tap_amount, 0) : "5,000"} starter TREM (once per account; it mints nothing, it comes from a pool the launcher filled).`,
-    `Deposit some into your bond balance: a report or challenge locks ${params ? trem(params.bond, 0) : "1,000"} TREM.`,
-    "Report a real quake from the list above, or report a made-up one to see how it gets caught.",
-    `Wait out the window (${win()}). Someone can challenge it; holders then lock coins on “real” or “not real”.`,
-    "Finalize it, then claim your vote payout. A counted event mints new coins to the five relief accounts.",
-  ].map((t) => `<li>${esc(t)}</li>`).join("");
+  $("#try-sub").textContent = demo
+    ? `Seven steps, one button each. You are on the Demo contract, so the waiting window is ${duration(params?.window_s ?? 120)} and a whole round takes about five minutes.`
+    : `Seven steps, one button each. You are on the Live contract with the real ${duration(params?.window_s ?? 86400)} window, so a result takes a day. Switch to Demo (top bar) for a result in minutes.`;
   $("#netnote").innerHTML = demo
-    ? `Viewing the <b>Demo</b> contract: ${win()}, so a whole round takes about five minutes. <a href="#" data-net="live">Switch to Live</a> for the real timing.`
+    ? `Viewing the <b>Demo</b> contract: ${win()}. <a href="#" data-net="live">Switch to Live</a> for the real timing.`
     : `Viewing the <b>Live</b> contract: real timing (${win()}), kept busy by a bot that reports real quakes. <a href="#" data-net="demo">Switch to Demo</a> to try a whole round in about five minutes.`;
 }
 
-async function renderWallet() {
-  const card = $("#wallet-card");
-  if (!me) {
-    card.innerHTML = `<h3>Your wallet</h3><p class="note">Not connected. You need a testnet account: it is free: create one in the Meteor wallet (switch it to testnet). The coins have no value.</p><button class="btn" id="w-connect">Connect wallet</button>`;
-    return;
-  }
-  card.innerHTML = `<h3>${esc(me)}</h3><p class="note">Reading your balances…</p>`;
+// what we know about the connected account, and the guided path built from it
+const mine = { tok: 0n, bond: 0n, tapped: false, reg: false };
+let unreported: Quake[] = [], checkingQuakes = true;
+let ignoreBefore = Number((() => { try { return sessionStorage.getItem("tremor-ignore"); } catch { return 0; } })() ?? 0);
+function renderJourneyNow() {
+  const c: Ctx = { me, params, state: state0, evs: lastEvs, now: nowS(), tok: mine.tok, bond: mine.bond, tapped: mine.tapped, unreported, net: NET, ignoreBefore, checking: checkingQuakes };
+  const host = $("#journey-host");
+  const active = document.activeElement as HTMLElement | null;
+  if (active && host.contains(active) && active.tagName === "INPUT") return; // do not rebuild under someone who is typing
+  host.innerHTML = renderJourney(c);
+}
+async function loadMine() {
+  if (!me) { Object.assign(mine, { tok: 0n, bond: 0n, tapped: false, reg: false }); renderWallet(); renderJourneyNow(); return; }
   try {
     const [bal, bond, tapped, reg] = await Promise.all([view<string>("ft_balance_of", { account_id: me }), view<string>("bond_balance_of", { account_id: me }), view<boolean>("has_tapped", { account_id: me }), registered(me)]);
-    const tapOn = params && BigInt(params.tap_amount) > 0n;
-    card.innerHTML = `<h3>${esc(me)}</h3>
-      <div class="two"><div><small>In your wallet</small><b>${trem(bal)}</b><span>TREM</span></div><div><small>Bond balance</small><b>${trem(bond)}</b><span>TREM</span></div></div>
-      <div class="acts">${tapOn ? `<button class="blue" id="w-tap" ${tapped ? "disabled" : ""}>${tapped ? "Starter coins taken" : `Get ${trem(params!.tap_amount, 0)} starter TREM`}</button>` : ""}
-      <span class="vote"><input id="w-amt" type="number" min="1" value="${params ? Number(BigInt(params.bond) / 1_000_000n) * 2 : 2000}" aria-label="TREM"><button class="out" id="w-dep">Deposit to bond balance</button><button class="out" id="w-wd">Withdraw</button></span></div>
-      <p class="note">${reg ? "" : "Your first action asks for a tiny storage deposit (0.00125 NEAR) so the contract can hold your coins. "}A pool of ${state0 ? trem(state0.tap_pool, 0) : "–"} TREM is left in the tap.</p>
-      <details class="mk"><summary>Report a made-up quake (to watch it get caught)</summary><div class="vote"><input id="w-fid" value="fake-${Math.floor(100 + Math.random() * 900)}" aria-label="Event id" spellcheck="false"><input id="w-fmag" type="number" step="0.1" min="6" max="10" value="7.4" aria-label="Magnitude"><button class="out" id="w-fake">Report it</button></div></details>
-      <button class="out" id="w-out">Disconnect</button>`;
-  } catch { card.innerHTML = `<h3>${esc(me)}</h3><p class="note">Could not read your balances right now.</p><button class="out" id="w-out">Disconnect</button>`; }
+    Object.assign(mine, { tok: BigInt(bal), bond: BigInt(bond), tapped, reg });
+  } catch { /* keep the last known values */ }
+  renderWallet(); renderJourneyNow();
+}
+
+function renderWallet() {
+  const card = $("#wallet-card");
+  if (!me) { card.innerHTML = `<h3>Your wallet</h3><p class="note">Not connected. Use step 1 above.</p>`; return; }
+  const tapOn = params && BigInt(params.tap_amount) > 0n;
+  card.innerHTML = `<h3>${esc(me)}</h3>
+    <div class="two"><div><small>In your wallet</small><b>${trem(mine.tok)}</b><span>TREM</span></div><div><small>Deposit balance</small><b>${trem(mine.bond)}</b><span>TREM</span></div></div>
+    <div class="acts">${tapOn ? `<button class="blue" id="w-tap" ${mine.tapped ? "disabled" : ""}>${mine.tapped ? "Starter coins taken" : `Get ${trem(params!.tap_amount, 0)} starter TREM`}</button>` : ""}
+    <span class="vote"><input id="w-amt" type="number" min="1" value="2000" aria-label="TREM"><button class="out" id="w-dep">Deposit</button><button class="out" id="w-wd">Withdraw</button></span></div>
+    <details class="mk" open><summary>Report a made-up quake (to watch it get flagged)</summary><div class="vote"><input id="w-fid" value="fake-${Math.floor(100 + Math.random() * 900)}" aria-label="Event id" spellcheck="false"><input id="w-fmag" type="number" step="0.1" min="6" max="10" value="7.4" aria-label="Magnitude"><button class="out" id="w-fake">Report it</button></div></details>
+    <button class="out" id="w-out">Disconnect</button>`;
 }
 let state0: State | null = null;
 
 async function act(label: string, fn: () => Promise<unknown>) {
   try { toast(`${label}: approve it in your wallet…`, 20000); await fn(); toast(`${label}: sent. Refreshing…`); }
   catch (e) { toast(`${label} did not go through: ${(e instanceof Error ? e.message : String(e)).slice(0, 160)}`, 9000); return; }
-  setTimeout(() => { refresh(); renderWallet(); }, 4000); setTimeout(() => { refresh(); renderWallet(); }, 10000);
+  for (const ms of [2500, 5000, 9000, 15000]) setTimeout(() => { refresh(); loadMine(); }, ms);
 }
 const base = (trems: string) => (BigInt(Math.round(Number(trems) * 1000)) * 1000n).toString();
 
 document.addEventListener("click", (ev) => {
-  const t = ev.target as HTMLElement; const el = t.closest<HTMLElement>("button,a[data-net]"); if (!el) return;
+  const t = ev.target as HTMLElement; const el = t.closest<HTMLElement>("button,a[data-net],a[data-j]"); if (!el) return;
+  const j = el.dataset.j;
+  if (j) {
+    ev.preventDefault();
+    if (j === "connect") return void wallet().then((w) => w.connectWallet());
+    if (j === "tap") return void registered(me!).then((reg) => act("Starter coins", () => send("tap", {}, reg ? "0" : "1250000000000000000000")));
+    if (j === "deposit") return void act("Deposit", () => send("deposit_bond", { amount: el.dataset.amt }, "1"));
+    if (j === "report") return void act("Report", () => send("report_event", { event_id: el.dataset.id, mag_x10: Number(el.dataset.mag), origin_s: Number(el.dataset.origin) }));
+    if (j === "fake") return void act("Report", () => send("report_event", { event_id: "fake-" + Math.floor(100 + Math.random() * 900), mag_x10: 74, origin_s: nowS() - 120 }));
+    if (j === "finalize") return void act("Finalize", () => send("finalize", { event_id: el.dataset.id }));
+    if (j === "claim") return void act("Claim", () => send("claim_vote", { event_id: el.dataset.id }));
+    if (j === "vote") { const amt = (el.parentElement!.querySelector("input") as HTMLInputElement).value; return void act("Vote", () => send("vote", { event_id: el.dataset.id, side: el.dataset.side, amount: base(amt) })); }
+    if (j === "again") { ignoreBefore = nowS(); try { sessionStorage.setItem("tremor-ignore", String(ignoreBefore)); } catch { /* ignore */ } return void renderJourneyNow(); }
+    return;
+  }
   if (el.dataset.net && el.tagName === "A") { ev.preventDefault(); switchNet(el.dataset.net as "live" | "demo"); return; }
   if (el.dataset.net) { switchNet(el.dataset.net as "live" | "demo"); return; }
   if (el.id === "w-connect") return void wallet().then((w) => w.connectWallet());
-  if (el.id === "w-out") return void wallet().then((w) => w.disconnectWallet()).then(() => { me = null; renderWallet(); boardSig = ""; renderBoardFlags(); });
+  if (el.id === "w-out") return void wallet().then((w) => w.disconnectWallet()).then(() => { me = null; loadMine(); boardSig = ""; renderBoardFlags(); });
   if (el.id === "w-tap") return void registered(me!).then((reg) => act("Starter coins", () => send("tap", {}, reg ? "0" : "1250000000000000000000")));
   if (el.id === "w-dep") return void act("Deposit", () => send("deposit_bond", { amount: base(($("#w-amt") as HTMLInputElement).value) }, "1"));
   if (el.id === "w-wd") return void act("Withdraw", () => send("withdraw_bond", { amount: base(($("#w-amt") as HTMLInputElement).value) }, "1"));
@@ -271,8 +295,8 @@ async function start() {
   await loadDeployments();
   $<HTMLElement>("#netseg").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.net === NET));
   $("#contract-link").setAttribute("href", EXPLORER + DEP.contract); $("#contract-link").textContent = DEP.contract;
-  renderSteps(); renderWallet();
+  renderSteps(); renderWallet(); renderJourneyNow(); initDispute($("#dispute-host"));
   if (new URLSearchParams(location.search).has("transactionHashes")) { toast("Transaction sent from your wallet. Refreshing…"); const u = new URL(location.href); u.searchParams.delete("transactionHashes"); history.replaceState(null, "", u); }
-  wallet().then((w) => w.initWallet(DEP.contract, (a) => { me = a; renderWallet(); boardSig = ""; if (lastState) renderBoardFlags(); })).catch(() => ($("#wallet-card").innerHTML = "<h3>Your wallet</h3><p class='note'>The wallet library could not start in this browser.</p>"));
-  await refresh(); renderSteps(); renderWallet(); initSim(); setInterval(refresh, POLL_MS); setInterval(tickCountdowns, 1000);
+  wallet().then((w) => w.initWallet(DEP.contract, (a) => { me = a; loadMine(); boardSig = ""; if (lastState) renderBoardFlags(); })).catch(() => ($("#wallet-card").innerHTML = "<h3>Your wallet</h3><p class='note'>The wallet library could not start in this browser.</p>"));
+  await refresh(); renderSteps(); loadMine(); initSim(); setInterval(refresh, POLL_MS); setInterval(tickCountdowns, 1000);
 }

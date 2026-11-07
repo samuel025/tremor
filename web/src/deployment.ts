@@ -8,8 +8,8 @@ export async function loadDeployments() {
   ALL = await (await fetch("deployments.json")).json();
   const q = new URLSearchParams(location.search).get("net");
   let saved: string | null = null; try { saved = localStorage.getItem("tremor-net"); } catch { /* private mode */ }
-  const want = q ?? saved ?? "live";
-  NET = want === "demo" && ALL.demo?.contract ? "demo" : ALL.live?.contract ? "live" : "demo";
+  const want = q ?? saved ?? "demo";
+  NET = want === "live" && ALL.live?.contract ? "live" : "demo";
   DEP = ALL[NET];
 }
 export function switchNet(net: "live" | "demo") {
