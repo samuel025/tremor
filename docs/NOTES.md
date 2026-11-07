@@ -26,3 +26,6 @@ near-contract-standards minting, sandbox time travel, storage per event, gas, no
 - Q6 answered: one open event costs about 303 bytes of contract storage (about 0.003 NEAR). 64 open events fit easily.
 - Q7 answered: gas is tiny. report_event 2-3 Tgas even with 63 open events; finalize (mint to 5 accounts) 2 Tgas; claim_vote 2 Tgas. The 64-event limit is not gas-bound; it only bounds spam. Kept at 64.
 - Sandbox suite (`make sandbox-test`): init once, no parameter/owner/upgrade/mint method callable, bad reports, unchallenged mint to five accounts, GV-2, GV-3, cap clipping, 64-open-event gas and storage. 7 passed.
+
+## make demo (2026-11-07, testnet)
+`scripts/demo.py` resets the contract account, then runs PRD section 13 steps 1-7 against testnet, printing the Python reference's expected value beside the chain's. Result: 12 PASS, 0 FAIL. Real M6.1 event minted 2,750 TREM; fake-001 rejected by vote; fake-002 (unchallenged) minted 6,016.50 TREM, the honest worst case. The CLI prints the bare JSON result on stdout and its labels on stderr (the first version of the script merged them and crashed). Step 8 (make verify-onchain) is not built yet. The contract account still has 1 access key; keys are deleted last, only on the human's word.
