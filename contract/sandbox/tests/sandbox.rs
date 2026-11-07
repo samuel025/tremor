@@ -1,8 +1,7 @@
 //! near-workspaces sandbox tests (RUN: `cargo near build non-reproducible-wasm --no-abi` in contract/ first).
-//! Windows are 6 s / 10 s; amounts follow RULES.md (6 decimals).
+//! Amounts follow RULES.md (6 decimals). Five fixed publisher accounts (bot1..bot5); an event counts when 3 of them attest the same record.
 use near_workspaces::{network::Sandbox, types::{Gas, NearToken}, Account, Contract, Worker};
 use serde_json::{json, Value};
-use std::time::Duration;
 
 const U: u128 = 1_000_000;
 const Y1: NearToken = NearToken::from_yoctonear(1);
@@ -15,13 +14,13 @@ impl Env {
 
 fn params(over: Value) -> Value {
     let mut p = json!({"s0": (1_000_000 * U).to_string(), "min_mag_x10": 60, "base_ppm": 5000, "max_event_ppm": 15000, "cooldown_s": 86400,
-        "week_cap_ppm": 15000, "month_cap_ppm": 50000, "bond": (1000 * U).to_string(), "window_s": 6, "vote_s": 10, "slash_pct": 20,
-        "quorum_ppm": 2000, "max_age_s": 5_184_000, "tap_amount": "0", "relief_accounts": null});
+        "week_cap_ppm": 15000, "month_cap_ppm": 50000, "min_age_s": 0, "max_age_s": 5_184_000, "max_open": 64, "max_claims": 32, "claim_wait_s": 3600,
+        "threshold": 3, "tap_amount": "0", "publisher_accounts": null, "relief_accounts": null});
     for (k, v) in over.as_object().unwrap() { p[k] = v.clone(); }
     p
 }
 
-/// Deploys, inits (launcher = ada), registers and funds ada, bayo, chidi, dayo, ngo and deposits bonds.
+/// Deploys and inits (launcher = ada; publishers bot1..bot5; five relief accounts) and registers judge and ada.
 async fn setup(over: Value) -> anyhow::Result<Env> {
     let w = near_workspaces::sandbox().await?;
     let wasm = std::fs::read(concat!(env!("CARGO_MANIFEST_DIR"), "/../target/near/tremor.wasm"))?;
@@ -31,18 +30,13 @@ async fn setup(over: Value) -> anyhow::Result<Env> {
     }
     let c = mk(&root, "tremor", 30).await?.deploy(&wasm).await?.into_result()?;
     let mut acc = vec![];
-    for n in ["ada", "bayo", "chidi", "dayo", "ngo"] { acc.push(mk(&root, n, 10).await?); }
+    for n in ["ada", "judge", "liar", "bot1", "bot2", "bot3", "bot4", "bot5"] { acc.push(mk(&root, n, 10).await?); }
     let mut relief = vec![];
     for i in 1..=5 { relief.push(root.create_subaccount(&format!("relief{i}")).initial_balance(NearToken::from_near(1)).transact().await?.into_result()?); }
-    let ids: Vec<String> = relief.iter().map(|a| a.id().to_string()).collect();
-    root.call(c.id(), "new").args_json(json!({"params": params(over), "relief_accounts": ids, "launcher": acc[0].id()})).max_gas().transact().await?.into_result()?;
-    let e = Env { w, c, root, acc, relief };
-    for n in ["bayo", "chidi", "dayo", "ngo"] {
-        e.who(n).call(e.c.id(), "storage_deposit").args_json(json!({})).deposit(NearToken::from_millinear(2)).max_gas().transact().await?.into_result()?;
-        e.who("ada").call(e.c.id(), "ft_transfer").args_json(json!({"receiver_id": e.who(n).id(), "amount": (100_000 * U).to_string()})).deposit(Y1).max_gas().transact().await?.into_result()?;
-    }
-    for n in ["ada", "bayo", "chidi", "dayo", "ngo"] { e.call(n, "deposit_bond", json!({"amount": (20_000 * U).to_string()}), Y1).await?.into_result()?; }
-    Ok(e)
+    let pubs: Vec<String> = (1..=5).map(|i| acc.iter().find(|a| a.id().as_str().starts_with(&format!("bot{i}."))).unwrap().id().to_string()).collect();
+    let rel: Vec<String> = relief.iter().map(|a| a.id().to_string()).collect();
+    root.call(c.id(), "new").args_json(json!({"params": params(over), "publisher_accounts": pubs, "relief_accounts": rel, "launcher": acc[0].id()})).max_gas().transact().await?.into_result()?;
+    Ok(Env { w, c, root, acc, relief })
 }
 
 impl Env {
@@ -54,28 +48,33 @@ impl Env {
     }
     async fn fails(&self, who: &str, m: &str, args: Value, needle: &str) -> anyhow::Result<()> {
         let r = self.call(who, m, args, NONE).await?;
-        assert!(r.is_failure(), "{m} should have failed");
+        assert!(r.is_failure(), "{m} by {who} should have failed");
         let msg = format!("{:?}", r.into_result().err().unwrap());
         assert!(msg.contains(needle), "expected '{needle}' in: {msg}");
         Ok(())
     }
     async fn view(&self, m: &str, args: Value) -> anyhow::Result<Value> { Ok(self.c.view(m).args_json(args).await?.json()?) }
     async fn now(&self) -> u64 { self.view("get_state", json!({})).await.unwrap()["now_s"].as_u64().unwrap() }
-    async fn bal(&self, who: &str) -> u128 { self.view("bond_balance_of", json!({"account_id": self.who(who).id()})).await.unwrap().as_str().unwrap().parse().unwrap() }
     async fn tok(&self, id: &str) -> u128 { self.view("ft_balance_of", json!({"account_id": id})).await.unwrap().as_str().unwrap().parse().unwrap() }
     async fn supply(&self) -> u128 { self.view("ft_total_supply", json!({})).await.unwrap().as_str().unwrap().parse().unwrap() }
-    async fn report(&self, who: &str, id: &str, mag: u32) -> anyhow::Result<Gas> { let n = self.now().await; self.ok(who, "report_event", json!({"event_id": id, "mag_x10": mag, "origin_s": n - 5})).await }
-    async fn wait(&self, s: u64) { tokio::time::sleep(Duration::from_secs(s)).await; self.w.fast_forward(2).await.unwrap(); }
+    /// publishers `bots` (1-based) attest the same record
+    async fn attest(&self, bots: &[u32], id: &str, mag: u32, origin: u64) -> anyhow::Result<Gas> {
+        let mut g = Gas::from_gas(0);
+        for b in bots { g = self.ok(&format!("bot{b}"), "attest", json!({"event_id": id, "mag_x10": mag, "origin_s": origin})).await?; }
+        Ok(g)
+    }
 }
 
 #[tokio::test]
-async fn init_once_and_no_parameter_methods() -> anyhow::Result<()> {
+async fn init_once_and_nobody_can_change_anything() -> anyhow::Result<()> {
     let e = setup(json!({})).await?;
-    let r = e.root.call(e.c.id(), "new").args_json(json!({"params": params(json!({})), "relief_accounts": e.relief.iter().map(|a| a.id().to_string()).collect::<Vec<_>>(), "launcher": e.who("ada").id()})).max_gas().transact().await?;
+    let r = e.root.call(e.c.id(), "new").args_json(json!({"params": params(json!({})), "publisher_accounts": [], "relief_accounts": [], "launcher": e.who("ada").id()})).max_gas().transact().await?;
     assert!(r.is_failure(), "second new must panic");
     let p = e.view("get_params", json!({})).await?;
-    assert_eq!(p["window_s"], 6); assert_eq!(p["relief_accounts"].as_array().unwrap().len(), 5);
-    for m in ["set_params", "update_params", "set_owner", "owner_id", "upgrade", "update_contract", "set_window", "set_caps", "set_relief", "mint", "ft_mint", "migrate"] {
+    assert_eq!(p["threshold"], 3); assert_eq!(p["publisher_accounts"].as_array().unwrap().len(), 5); assert_eq!(p["relief_accounts"].as_array().unwrap().len(), 5);
+    // no method exists to change parameters, publishers or recipients, to mint, to own, to upgrade, or the removed deposit / challenge / vote methods
+    for m in ["set_params", "set_publishers", "add_publisher", "remove_publisher", "set_threshold", "set_relief", "set_owner", "owner_id", "upgrade", "update_contract",
+              "migrate", "mint", "ft_mint", "report_event", "challenge", "vote", "claim_vote", "finalize", "deposit_bond", "withdraw_bond"] {
         let r = e.call("ada", m, json!({}), NONE).await?;
         assert!(r.is_failure(), "method {m} must not exist");
     }
@@ -83,78 +82,67 @@ async fn init_once_and_no_parameter_methods() -> anyhow::Result<()> {
 }
 
 #[tokio::test]
-async fn bad_reports_rejected() -> anyhow::Result<()> {
-    let e = setup(json!({})).await?; let n = e.now().await;
-    e.fails("dayo", "report_event", json!({"event_id":"a","mag_x10":59,"origin_s":n-5}), "magnitude").await?;
-    e.fails("dayo", "report_event", json!({"event_id":"a","mag_x10":101,"origin_s":n-5}), "magnitude").await?;
-    e.fails("dayo", "report_event", json!({"event_id":"a","mag_x10":65,"origin_s":n+1000}), "future").await?;
-    e.fails("dayo", "report_event", json!({"event_id":"a","mag_x10":65,"origin_s":n-6_000_000}), "too old").await?;
-    e.fails("dayo", "report_event", json!({"event_id":"","mag_x10":65,"origin_s":n-5}), "bad event id").await?;
-    e.fails("dayo", "report_event", json!({"event_id":"x".repeat(33),"mag_x10":65,"origin_s":n-5}), "bad event id").await?;
-    e.report("dayo", "dup1", 65).await?;
-    e.fails("bayo", "report_event", json!({"event_id":"dup1","mag_x10":65,"origin_s":n-5}), "already exists").await?;
-    assert_eq!(e.bal("dayo").await, 19_000 * U); // only the one good report locked a bond
+async fn only_publishers_attest_and_bad_records_are_refused() -> anyhow::Result<()> {
+    let e = setup(json!({"min_age_s": 3600})).await?; let n = e.now().await; let old = n - 7200;
+    e.fails("judge", "attest", json!({"event_id": "a", "mag_x10": 65, "origin_s": old}), "not a publisher").await?;
+    e.fails("ada", "attest", json!({"event_id": "a", "mag_x10": 65, "origin_s": old}), "not a publisher").await?; // not even the launcher
+    e.fails("bot1", "attest", json!({"event_id": "a", "mag_x10": 59, "origin_s": old}), "magnitude").await?;
+    e.fails("bot1", "attest", json!({"event_id": "a", "mag_x10": 101, "origin_s": old}), "magnitude").await?;
+    e.fails("bot1", "attest", json!({"event_id": "a", "mag_x10": 65, "origin_s": n + 1000}), "future").await?;
+    e.fails("bot1", "attest", json!({"event_id": "a", "mag_x10": 65, "origin_s": n - 6_000_000}), "too old").await?;
+    e.fails("bot1", "attest", json!({"event_id": "a", "mag_x10": 65, "origin_s": n - 5}), "too recent").await?; // finality delay (min_age_s)
+    e.fails("bot1", "attest", json!({"event_id": "", "mag_x10": 65, "origin_s": old}), "bad event id").await?;
+    e.fails("bot1", "attest", json!({"event_id": "x".repeat(33), "mag_x10": 65, "origin_s": old}), "bad event id").await?;
+    assert_eq!(e.view("get_state", json!({})).await?["pending_events"], 0, "none of the refused records left anything behind");
     Ok(())
 }
 
 #[tokio::test]
-async fn unchallenged_event_counts_and_mints_to_five() -> anyhow::Result<()> {
-    let e = setup(json!({})).await?;
-    e.report("dayo", "ok1", 60).await?;
-    e.fails("bayo", "finalize", json!({"event_id":"ok1"}), "window still open").await?;
-    e.wait(7).await;
-    let g = e.ok("bayo", "finalize", json!({"event_id":"ok1"})).await?;
-    eprintln!("GAS finalize (mint to 5): {} Tgas", g.as_gas() / 1_000_000_000_000);
+async fn three_of_five_mint_and_split() -> anyhow::Result<()> {
+    let e = setup(json!({})).await?; let o = e.now().await - 60;
+    e.attest(&[1, 2], "q1", 60, o).await?;
+    assert_eq!(e.supply().await, 1_000_000 * U, "two of five is not enough");
+    assert_eq!(e.view("get_event", json!({"event_id": "q1"})).await?["status"], "pending");
+    let g = e.attest(&[3], "q1", 60, o).await?;
+    eprintln!("GAS attest that mints (3rd of 5): {} Tgas", g.as_gas() / 1_000_000_000_000);
     assert_eq!(e.supply().await, 1_005_000 * U);
     for r in &e.relief { assert_eq!(e.tok(r.id().as_str()).await, 1000 * U); }
-    assert_eq!(e.bal("dayo").await, 20_000 * U); // bond returned
-    e.fails("bayo", "finalize", json!({"event_id":"ok1"}), "already final").await?;
-    let log = e.view("get_log", json!({"from":0,"limit":10})).await?;
-    assert!(log.as_array().unwrap().iter().any(|l| l.as_str().unwrap().contains("event_counted")));
-    Ok(())
-}
-
-async fn dispute(e: &Env, id: &str, votes: &[(&str, &str, u128)]) -> anyhow::Result<()> {
-    e.report("dayo", id, 60).await?;
-    e.ok("ngo", "challenge", json!({"event_id": id})).await?;
-    e.fails("dayo", "challenge", json!({"event_id": id}), "window closed").await?;
-    for (who, side, n) in votes { e.ok(who, "vote", json!({"event_id": id, "side": side, "amount": (n * U).to_string()})).await?; }
-    e.fails("ada", "vote", json!({"event_id": id, "side": "real", "amount": "1"}), "already voted").await.ok();
-    e.fails("bayo", "finalize", json!({"event_id": id}), "vote still open").await?;
-    e.wait(11).await;
+    e.fails("bot4", "attest", json!({"event_id": "q1", "mag_x10": 60, "origin_s": o}), "already counted").await?;
+    let log = e.view("get_log", json!({"from": 0, "limit": 20})).await?;
+    let text = log.as_array().unwrap().iter().map(|l| l.as_str().unwrap()).collect::<Vec<_>>().join("\n");
+    assert!(text.contains("attested") && text.contains("event_counted"));
     Ok(())
 }
 
 #[tokio::test]
-async fn gv2_challenge_survives() -> anyhow::Result<()> {
-    // Quorum in this test: 0.2% of supply (about 2,000 TREM). Ada 3,000 real; Bayo 1,000 and Chidi 500 not real.
-    let e = setup(json!({})).await?;
-    let before: [u128; 3] = [e.bal("ada").await, e.bal("bayo").await, e.bal("chidi").await];
-    dispute(&e, "gv2", &[("ada", "real", 3000), ("bayo", "not_real", 1000), ("chidi", "not_real", 500)]).await?;
-    let g = e.ok("bayo", "finalize", json!({"event_id":"gv2"})).await?;
-    eprintln!("GAS finalize after vote: {} Tgas", g.as_gas() / 1_000_000_000_000);
-    assert!(e.supply().await > 1_000_000 * U, "real wins, so it mints");
-    let mut gas = 0;
-    for w in ["ada", "bayo", "chidi"] { gas = gas.max(e.ok(w, "claim_vote", json!({"event_id":"gv2"})).await?.as_gas()); }
-    eprintln!("GAS claim_vote (max): {} Tgas", gas / 1_000_000_000_000);
-    assert_eq!(e.bal("ada").await, before[0] + 1300 * U, "Ada gets the whole 1,300 pot");
-    assert_eq!(e.bal("bayo").await, before[1] - 200 * U);
-    assert_eq!(e.bal("chidi").await, before[2] - 100 * U);
-    assert_eq!(e.bal("dayo").await, 20_000 * U, "reporter bond returned");
-    assert_eq!(e.bal("ngo").await, 19_000 * U, "challenger bond forfeited");
-    e.fails("ada", "claim_vote", json!({"event_id":"gv2"}), "nothing to claim").await?;
+async fn disagreement_and_repeats_do_not_mint() -> anyhow::Result<()> {
+    let e = setup(json!({})).await?; let o = e.now().await - 60;
+    e.attest(&[1, 2], "d1", 60, o).await?;
+    e.attest(&[3], "d1", 61, o).await?; // a different magnitude: a separate version with one attestation
+    assert_eq!(e.supply().await, 1_000_000 * U);
+    e.fails("bot3", "attest", json!({"event_id": "d1", "mag_x10": 60, "origin_s": o}), "already attested").await?; // one attestation per publisher
+    e.attest(&[4], "d1", 60, o).await?; // the third matching one counts
+    assert_eq!(e.supply().await, 1_005_000 * U);
+    let ev = e.view("get_event", json!({"event_id": "d1"})).await?; assert_eq!(ev["mag_x10"], 60);
     Ok(())
 }
 
 #[tokio::test]
-async fn gv3_too_little_turnout() -> anyhow::Result<()> {
-    let e = setup(json!({})).await?;
-    dispute(&e, "gv3", &[("ada", "real", 1000)]).await?;
-    e.ok("bayo", "finalize", json!({"event_id":"gv3"})).await?;
-    assert_eq!(e.supply().await, 1_000_000 * U, "no mint");
-    e.ok("ada", "claim_vote", json!({"event_id":"gv3"})).await?;
-    for w in ["ada", "dayo", "ngo"] { assert_eq!(e.bal(w).await, 20_000 * U, "{w} gets everything back"); }
-    let ev = e.view("get_event", json!({"event_id":"gv3"})).await?; assert_eq!(ev["status"], "rejected");
+async fn visitor_claims_need_bots_to_confirm_and_fakes_never_mint() -> anyhow::Result<()> {
+    let e = setup(json!({"max_claims": 2})).await?; let o = e.now().await - 60;
+    e.ok("judge", "submit_claim", json!({"event_id": "real-1", "mag_x10": 63, "origin_s": o})).await?;
+    e.ok("liar", "submit_claim", json!({"event_id": "fake-1", "mag_x10": 74, "origin_s": o})).await?;
+    e.fails("judge", "submit_claim", json!({"event_id": "real-2", "mag_x10": 63, "origin_s": o}), "already have an open claim").await?;
+    e.fails("bot1", "submit_claim", json!({"event_id": "real-3", "mag_x10": 63, "origin_s": o}), "too many open claims").await?; // limit of 2 open claims
+    e.fails("judge", "submit_claim", json!({"event_id": "real-1", "mag_x10": 63, "origin_s": o}), "already exists").await?;
+    assert_eq!(e.supply().await, 1_000_000 * U, "a claim alone mints nothing");
+    // the bots found real-1 in USGS and confirm it; nobody finds fake-1
+    e.attest(&[1, 2, 3], "real-1", 63, o).await?;
+    assert!(e.supply().await > 1_000_000 * U);
+    let real = e.view("get_event", json!({"event_id": "real-1"})).await?; assert_eq!(real["status"], "counted"); assert_eq!(real["claimer"], e.who("judge").id().as_str());
+    let fake = e.view("get_event", json!({"event_id": "fake-1"})).await?; assert_eq!(fake["status"], "pending"); assert_eq!(fake["attestations"], 0);
+    // a bot-started event is not blocked by claims: the limits are separate
+    e.attest(&[1], "bot-started", 65, o).await?;
     Ok(())
 }
 
@@ -162,45 +150,24 @@ async fn gv3_too_little_turnout() -> anyhow::Result<()> {
 async fn caps_clip_a_mint() -> anyhow::Result<()> {
     // Base 1% (2% at M7.0) is cut to the 1.5% per-event ceiling: 15,000 TREM. The weekly cap (1.5% of supply)
     // then leaves floor(1,015,000 * 1.5%) - 15,000 = 225 TREM for the second event, which is clipped.
-    let e = setup(json!({"base_ppm": 10000, "cooldown_s": 3})).await?;
-    e.report("dayo", "c1", 70).await?; e.wait(7).await; e.ok("bayo", "finalize", json!({"event_id":"c1"})).await?;
+    let e = setup(json!({"base_ppm": 10000, "cooldown_s": 3})).await?; let o = e.now().await - 60;
+    e.attest(&[1, 2, 3], "c1", 70, o).await?;
     assert_eq!(e.supply().await, 1_015_000 * U);
-    let st = e.view("get_state", json!({})).await?; assert_eq!(st["week_left"], (225 * U).to_string());
-    e.report("dayo", "c2", 70).await?; e.wait(7).await; e.ok("bayo", "finalize", json!({"event_id":"c2"})).await?;
+    assert_eq!(e.view("get_state", json!({})).await?["week_left"], (225 * U).to_string());
+    e.attest(&[1, 2, 3], "c2", 70, o + 30).await?;
     assert_eq!(e.supply().await, 1_015_225 * U, "the second event is cut to what the week still allows");
-    let ev = e.view("get_event", json!({"event_id":"c2"})).await?; assert_eq!(ev["status"], "counted"); assert_eq!(ev["clipped"], true);
-    // the allowance is recomputed on the grown supply: 1.5% of 1,015,225 = 15,228.375, minus 15,225 already minted
+    let ev = e.view("get_event", json!({"event_id": "c2"})).await?; assert_eq!(ev["status"], "counted"); assert_eq!(ev["clipped"], true);
     assert_eq!(e.view("get_state", json!({})).await?["week_left"], "3375000");
-    Ok(())
-}
-
-#[tokio::test]
-async fn gas_and_storage_with_many_open_events() -> anyhow::Result<()> {
-    let e = setup(json!({"window_s": 600})).await?;
-    let used = |e: &Env| { let c = e.c.id().clone(); let w = e.w.clone(); async move { w.view_account(&c).await.unwrap().storage_usage } };
-    let s0 = used(&e).await; let mut first = 0; let mut last = 0;
-    for i in 0..64u32 {
-        let who = ["dayo", "bayo", "chidi", "ngo"][(i % 4) as usize];
-        let g = e.report(who, &format!("ev-{i:04}"), 60).await?.as_gas();
-        if i == 0 { first = g; } last = g;
-    }
-    let s1 = used(&e).await;
-    eprintln!("STORAGE per open event: {} bytes (64 events)", (s1 - s0) / 64);
-    eprintln!("GAS report_event with 0 open: {} Tgas ; with 63 open: {} Tgas", first / 1_000_000_000_000, last / 1_000_000_000_000);
-    e.fails("ada", "report_event", json!({"event_id":"overflow","mag_x10":60,"origin_s": e.now().await - 5}), "too many open events").await?;
-    assert!(last < 250_000_000_000_000, "report must fit in 250 Tgas at the open-event limit");
     Ok(())
 }
 
 #[tokio::test]
 async fn tap_gives_starter_coins_once_and_mints_nothing() -> anyhow::Result<()> {
     let e = setup(json!({"tap_amount": (500 * U).to_string()})).await?;
-    // the launcher fills the pool by sending coins to the contract's own account (2 taps' worth)
     e.who("ada").call(e.c.id(), "ft_transfer").args_json(json!({"receiver_id": e.c.id(), "amount": (1000 * U).to_string()})).deposit(Y1).max_gas().transact().await?.into_result()?;
     assert_eq!(e.view("get_state", json!({})).await?["tap_pool"], (1000 * U).to_string());
     let mut judges = vec![];
     for n in ["judge1", "judge2", "judge3"] { judges.push(e.root.create_subaccount(n).initial_balance(NearToken::from_near(2)).transact().await?.into_result()?); }
-    // no storage deposit attached: refused
     let r = judges[0].call(e.c.id(), "tap").max_gas().transact().await?; assert!(r.is_failure(), "an unregistered account must attach the storage deposit");
     judges[0].call(e.c.id(), "tap").deposit(NearToken::from_millinear(2)).max_gas().transact().await?.into_result()?;
     assert_eq!(e.tok(judges[0].id().as_str()).await, 500 * U);
@@ -209,27 +176,23 @@ async fn tap_gives_starter_coins_once_and_mints_nothing() -> anyhow::Result<()> 
     judges[1].call(e.c.id(), "tap").deposit(NearToken::from_millinear(2)).max_gas().transact().await?.into_result()?;
     let empty = judges[2].call(e.c.id(), "tap").deposit(NearToken::from_millinear(2)).max_gas().transact().await?; assert!(empty.is_failure(), "pool is empty");
     assert_eq!(e.supply().await, 1_000_000 * U, "the tap mints nothing");
-    // the starter coins are usable: deposit a bond
-    judges[0].call(e.c.id(), "deposit_bond").args_json(json!({"amount": (500 * U).to_string()})).deposit(Y1).max_gas().transact().await?.into_result()?;
     Ok(())
 }
 
 #[tokio::test]
-async fn report_and_challenge_pull_the_deposit_from_the_wallet() -> anyhow::Result<()> {
-    // an account that never called deposit_bond can report: the contract tops up its deposit balance from its wallet
-    let e = setup(json!({})).await?;
-    let newbie = e.root.create_subaccount("newbie").initial_balance(NearToken::from_near(2)).transact().await?.into_result()?;
-    newbie.call(e.c.id(), "storage_deposit").args_json(json!({})).deposit(NearToken::from_millinear(2)).max_gas().transact().await?.into_result()?;
-    e.who("ada").call(e.c.id(), "ft_transfer").args_json(json!({"receiver_id": newbie.id(), "amount": (1500 * U).to_string()})).deposit(Y1).max_gas().transact().await?.into_result()?;
-    let n = e.now().await;
-    newbie.call(e.c.id(), "report_event").args_json(json!({"event_id": "auto1", "mag_x10": 65, "origin_s": n - 5})).max_gas().transact().await?.into_result()?;
-    assert_eq!(e.tok(newbie.id().as_str()).await, 500 * U, "1,000 moved from the wallet into the locked deposit");
-    // with only 500 left in total it cannot report again
-    let r = newbie.call(e.c.id(), "report_event").args_json(json!({"event_id": "auto2", "mag_x10": 65, "origin_s": n - 5})).max_gas().transact().await?;
-    assert!(r.is_failure(), "wallet plus deposit balance are not enough");
-    // after the window the deposit comes back to the deposit balance
-    e.wait(7).await; e.ok("bayo", "finalize", json!({"event_id": "auto1"})).await?;
-    let b: String = e.view("bond_balance_of", json!({"account_id": newbie.id()})).await?.as_str().unwrap().to_string();
-    assert_eq!(b, (1000 * U).to_string());
+async fn gas_and_storage_with_many_pending_events() -> anyhow::Result<()> {
+    let e = setup(json!({"max_open": 64})).await?; let o = e.now().await - 60;
+    let used = |e: &Env| { let c = e.c.id().clone(); let w = e.w.clone(); async move { w.view_account(&c).await.unwrap().storage_usage } };
+    let s0 = used(&e).await; let mut first = 0; let mut last = 0;
+    for i in 0..64u32 {
+        let g = e.attest(&[1], &format!("ev-{i:04}"), 60, o - i as u64).await?.as_gas();
+        if i == 0 { first = g; } last = g;
+    }
+    let s1 = used(&e).await;
+    eprintln!("STORAGE per pending event: {} bytes (64 events)", (s1 - s0) / 64);
+    eprintln!("GAS attest with 0 pending: {} Tgas ; with 63 pending: {} Tgas", first / 1_000_000_000_000, last / 1_000_000_000_000);
+    e.fails("bot1", "attest", json!({"event_id": "overflow", "mag_x10": 60, "origin_s": o}), "too many pending").await?; // fails safe: nothing new starts
+    e.ok("judge", "submit_claim", json!({"event_id": "still-ok", "mag_x10": 60, "origin_s": o})).await?; // claims have their own limit
+    assert!(last < 250_000_000_000_000, "attest must fit in 250 Tgas at the pending-event limit");
     Ok(())
 }

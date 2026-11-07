@@ -1,38 +1,69 @@
 {
- "name": "GV-2 a challenge the event survives",
+ "name": "GV-2 three of five publishers must agree",
  "params": {
-  "s0": 1015225750000,
-  "base_ppm": 5000
+  "s0": 1000000000000,
+  "base_ppm": 5000,
+  "min_age_s": 0
  },
- "scenario": "challenge",
- "votes": [
-  [
-   "Ada",
-   "real",
-   3000000000
-  ],
-  [
-   "Bayo",
-   "not",
-   1000000000
-  ],
-  [
-   "Chidi",
-   "not",
-   500000000
-  ]
- ],
- "expect": {
-  "outcome": "counted",
-  "pot": 1300000000,
-  "final_bond": {
-   "Ada": 4300000000,
-   "Bayo": 800000000,
-   "Chidi": 400000000
+ "steps": [
+  {
+   "op": "claim",
+   "who": "judge",
+   "event_id": "q1",
+   "mag_x10": 60,
+   "origin_s": 1728000000,
+   "now": 1728000000,
+   "expect_ok": true
   },
-  "reporter_bond_returned": 1000000000,
-  "escrow_before": 6500000000,
-  "escrow_after": 6500000000,
-  "turnout_min": 2030451500
- }
+  {
+   "op": "attest",
+   "who": "bot1",
+   "event_id": "q1",
+   "mag_x10": 60,
+   "origin_s": 1728000000,
+   "now": 1728000005,
+   "expect_ok": true,
+   "expect_supply": 1000000000000
+  },
+  {
+   "op": "attest",
+   "who": "bot2",
+   "event_id": "q1",
+   "mag_x10": 60,
+   "origin_s": 1728000000,
+   "now": 1728000006,
+   "expect_ok": true,
+   "expect_supply": 1000000000000
+  },
+  {
+   "op": "attest",
+   "who": "nobody",
+   "event_id": "q1",
+   "mag_x10": 60,
+   "origin_s": 1728000000,
+   "now": 1728000007,
+   "expect_ok": false,
+   "expect_supply": 1000000000000
+  },
+  {
+   "op": "attest",
+   "who": "bot3",
+   "event_id": "q1",
+   "mag_x10": 60,
+   "origin_s": 1728000000,
+   "now": 1728000008,
+   "expect_ok": true,
+   "expect_supply": 1005000000000
+  },
+  {
+   "op": "attest",
+   "who": "bot4",
+   "event_id": "q1",
+   "mag_x10": 60,
+   "origin_s": 1728000000,
+   "now": 1728000009,
+   "expect_ok": false,
+   "expect_supply": 1005000000000
+  }
+ ]
 }

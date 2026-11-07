@@ -1,10 +1,10 @@
 //! Pure Tremor logic: a line-for-line port of reference/tremor_ref.py (RULES.md is the source of truth).
+//! Quakes are published by five fixed bots; an event counts when `threshold` different publishers attest the same record.
 //! No NEAR types here, so it is tested natively against the Python reference.
 use near_sdk::borsh::{BorshDeserialize, BorshSerialize};
 use std::collections::{BTreeMap, BTreeSet};
 
 pub const DAY: u64 = 86_400;
-pub const MAX_OPEN_EVENTS: usize = 64; // PLACEHOLDER until measured (DECISIONS D-4)
 const MILLION: u128 = 1_000_000;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug)]
@@ -17,53 +17,48 @@ pub struct Params {
     pub cooldown_s: u64,
     pub week_cap_ppm: u128,
     pub month_cap_ppm: u128,
-    pub bond: u128,
-    pub window_s: u64,
-    pub vote_s: u64,
-    pub slash_pct: u128,
-    pub quorum_ppm: u128,
+    pub min_age_s: u64,     // finality delay: an attestation is refused until the event is this old
     pub max_age_s: u64,
-    pub tap_amount: u128, // starter coins each account may take once from the pool; 0 disables the tap
+    pub max_open: u32,      // pending events started by bots
+    pub max_claims: u32,    // open visitor claims
+    pub claim_wait_s: u64,  // how long a claim stays open
+    pub threshold: u32,
+    pub tap_amount: u128,   // starter coins each account may take once from the pool; 0 disables the tap
+    pub publishers: Vec<String>,
     pub relief: Vec<String>,
 }
 
 impl Params {
     pub fn validate(&self) -> Result<(), String> {
-        if self.week_cap_ppm == 0 || self.month_cap_ppm == 0 || self.base_ppm == 0 || self.max_event_ppm == 0
-            || self.cooldown_s == 0 || self.bond == 0 {
+        if self.week_cap_ppm == 0 || self.month_cap_ppm == 0 || self.base_ppm == 0 || self.max_event_ppm == 0 || self.cooldown_s == 0 {
             return Err("caps and shares must be nonzero".into());
         }
-        if self.slash_pct > 100 { return Err("slash_pct must be 0..100".into()); }
-        let set: BTreeSet<&String> = self.relief.iter().collect();
-        if self.relief.len() != 5 || set.len() != 5 { return Err("need 5 distinct relief accounts".into()); }
+        let rel: BTreeSet<&String> = self.relief.iter().collect();
+        if self.relief.len() != 5 || rel.len() != 5 { return Err("need 5 distinct relief accounts".into()); }
+        let pubs: BTreeSet<&String> = self.publishers.iter().collect();
+        if self.publishers.len() != 5 || pubs.len() != 5 { return Err("need 5 distinct publishers".into()); }
+        if self.threshold < 1 || self.threshold > 5 { return Err("threshold must be 1..5".into()); }
         Ok(())
     }
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Copy, PartialEq, Eq, Debug)]
 #[borsh(crate = "near_sdk::borsh")]
-pub enum Status { Waiting, Challenged, Counted, Rejected }
+pub enum Status { Pending, Counted }
 impl Status {
-    pub fn as_str(&self) -> &'static str {
-        match self { Status::Waiting => "waiting", Status::Challenged => "challenged", Status::Counted => "counted", Status::Rejected => "rejected" }
-    }
+    pub fn as_str(&self) -> &'static str { match self { Status::Pending => "pending", Status::Counted => "counted" } }
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug)]
 #[borsh(crate = "near_sdk::borsh")]
 pub struct Ev {
+    pub created_at: u64,
+    pub claimer: Option<String>,
+    pub versions: BTreeMap<(u32, u64), BTreeSet<String>>, // (magnitude x10, origin) -> publishers that attested exactly that
+    pub attested: BTreeSet<String>,                        // publishers that already attested this id (any version)
+    pub status: Status,
     pub mag_x10: u32,
     pub origin_s: u64,
-    pub reporter: String,
-    pub reported_at: u64,
-    pub status: Status,
-    pub challenger: Option<String>,
-    pub challenged_at: u64,
-    pub votes: BTreeMap<String, (bool, u128)>, // account -> (side is "real", amount)
-    pub pot: u128,
-    pub win_left: u128,
-    pub winner: Option<bool>, // Some(true) = "real", Some(false) = "not real", None = everything returned
-    pub claimed: BTreeSet<String>,
     pub minted: u128,
     pub clipped: bool,
 }
@@ -96,13 +91,11 @@ pub fn split(mint: u128) -> [u128; 5] {
 pub struct Core {
     pub p: Params,
     pub tok: BTreeMap<String, u128>,
-    pub bal: BTreeMap<String, u128>,    // unlocked bond balance (escrowed in the contract)
-    pub locked: BTreeMap<String, u128>, // locked bonds and stakes
     pub supply: u128,
     pub ev: BTreeMap<String, Ev>,
-    pub recent: Vec<u64>,               // last 16 counted origin times
-    pub buckets: BTreeMap<u64, u128>,   // day -> minted
-    pub tapped: BTreeSet<String>,       // accounts that already took their starter coins
+    pub recent: Vec<u64>,              // last 16 counted origin times
+    pub buckets: BTreeMap<u64, u128>,  // day -> minted
+    pub tapped: BTreeSet<String>,      // accounts that already took their starter coins
     #[borsh(skip)]
     pub pending_log: Vec<(String, String)>, // (event, json data); drained by the contract after every call
 }
@@ -121,50 +114,19 @@ impl Core {
         let mut tok = BTreeMap::new();
         tok.insert(launcher.to_string(), p.s0);
         for a in &p.relief { tok.entry(a.clone()).or_insert(0); }
-        Ok(Core { supply: p.s0, p, tok, bal: BTreeMap::new(), locked: BTreeMap::new(), ev: BTreeMap::new(),
-                  recent: vec![], buckets: BTreeMap::new(), tapped: BTreeSet::new(), pending_log: vec![] })
+        Ok(Core { supply: p.s0, p, tok, ev: BTreeMap::new(), recent: vec![], buckets: BTreeMap::new(), tapped: BTreeSet::new(), pending_log: vec![] })
     }
 
     fn emit(&mut self, event: &str, data: String) { self.pending_log.push((event.to_string(), data)); }
 
-    // ---- token + escrow
+    // ---- token
     pub fn ft_balance_of(&self, a: &str) -> u128 { get(&self.tok, a) }
-    pub fn bond_balance_of(&self, a: &str) -> u128 { get(&self.bal, a) }
 
     pub fn ft_transfer(&mut self, f: &str, t: &str, n: u128) -> Result<(), String> {
         if n == 0 || get(&self.tok, f) < n { return Err("insufficient balance".into()); }
         sub(&mut self.tok, f, n);
         add(&mut self.tok, t, n);
         Ok(())
-    }
-    pub fn deposit_bond(&mut self, a: &str, n: u128) -> Result<(), String> {
-        if n == 0 || get(&self.tok, a) < n { return Err("insufficient balance".into()); }
-        sub(&mut self.tok, a, n);
-        add(&mut self.bal, a, n);
-        Ok(())
-    }
-    pub fn withdraw_bond(&mut self, a: &str, n: u128) -> Result<(), String> {
-        if n == 0 || get(&self.bal, a) < n { return Err("insufficient bond balance".into()); }
-        sub(&mut self.bal, a, n);
-        add(&mut self.tok, a, n);
-        Ok(())
-    }
-    /// Lock `n` from the deposit balance, first topping it up from the account's wallet if it is short (no separate deposit step).
-    fn lock(&mut self, a: &str, n: u128) -> Result<(), String> {
-        let have = get(&self.bal, a);
-        if have < n {
-            let short = n - have;
-            if get(&self.tok, a) < short { return Err("insufficient balance".into()); }
-            sub(&mut self.tok, a, short);
-            add(&mut self.bal, a, short);
-        }
-        sub(&mut self.bal, a, n);
-        add(&mut self.locked, a, n);
-        Ok(())
-    }
-    fn unlock(&mut self, a: &str, n: u128) {
-        sub(&mut self.locked, a, n);
-        add(&mut self.bal, a, n);
     }
 
     /// Once per account: move `tap_amount` from `pool` (coins the launcher put there) to `a`. Mints nothing.
@@ -193,8 +155,7 @@ impl Core {
          (self.supply * self.p.month_cap_ppm / MILLION).saturating_sub(m30))
     }
 
-    fn count(&mut self, eid: &str, now: u64) -> (u128, u128, bool) {
-        let (mag, origin) = { let e = &self.ev[eid]; (e.mag_x10, e.origin_s) };
+    fn count(&mut self, eid: &str, mag: u32, origin: u64, now: u64) -> (u128, u128, bool) {
         let gap = cooldown_gap(origin, &self.recent, self.p.cooldown_s);
         let (m, raw, clipped) = mint_amount(&self.p, self.supply, mag, gap, self.minted_last(now, 7), self.minted_last(now, 30));
         let relief = self.p.relief.clone();
@@ -204,135 +165,74 @@ impl Core {
         self.recent.push(origin);
         if self.recent.len() > 16 { self.recent.remove(0); }
         let e = self.ev.get_mut(eid).unwrap();
-        e.status = Status::Counted; e.minted = m; e.clipped = clipped;
-        self.emit("event_counted", format!("{{\"event_id\":{},\"minted\":\"{}\",\"clipped\":{},\"supply\":\"{}\",\"time\":{}}}", q(eid), m, clipped, self.supply, now));
+        e.status = Status::Counted; e.minted = m; e.clipped = clipped; e.mag_x10 = mag; e.origin_s = origin;
+        self.emit("event_counted", format!("{{\"event_id\":{},\"mag_x10\":{},\"origin_s\":{},\"minted\":\"{}\",\"clipped\":{},\"supply\":\"{}\",\"time\":{}}}", q(eid), mag, origin, m, clipped, self.supply, now));
         (m, raw, clipped)
     }
 
-    fn get_ev(&self, eid: &str) -> Result<&Ev, String> { self.ev.get(eid).ok_or_else(|| "unknown event".to_string()) }
-
     // ---- events
-    pub fn report_event(&mut self, a: &str, eid: &str, mag_x10: u32, origin_s: u64, now: u64) -> Result<(), String> {
-        let p = self.p.clone();
-        if mag_x10 < p.min_mag_x10 || mag_x10 > 100 { return Err("magnitude out of range".into()); }
-        if origin_s > now { return Err("origin in the future".into()); }
-        if now - origin_s > p.max_age_s { return Err("origin too old".into()); }
+    fn check(&self, eid: &str, mag: u32, origin: u64, now: u64, fresh_ok: bool) -> Result<(), String> {
+        let p = &self.p;
+        if mag < p.min_mag_x10 || mag > 100 { return Err("magnitude out of range".into()); }
+        if origin > now { return Err("origin in the future".into()); }
+        if now - origin > p.max_age_s { return Err("origin too old".into()); }
+        if !fresh_ok && now - origin < p.min_age_s { return Err("too recent".into()); }
         if eid.is_empty() || eid.len() > 32 || !eid.is_ascii() { return Err("bad event id".into()); }
+        Ok(())
+    }
+
+    /// pending events started by bots that can still be attested
+    fn open_pending(&self, now: u64) -> u32 {
+        self.ev.values().filter(|e| e.status == Status::Pending && e.claimer.is_none()
+            && now.saturating_sub(e.versions.keys().map(|k| k.1).min().unwrap_or(0)) <= self.p.max_age_s).count() as u32
+    }
+    fn open_claims(&self, now: u64) -> Vec<&Ev> {
+        self.ev.values().filter(|e| e.status == Status::Pending && e.claimer.is_some() && now < e.created_at + self.p.claim_wait_s).collect()
+    }
+
+    /// Anyone: tell the contract about a quake. It stays pending until publishers confirm it; a made-up claim never mints.
+    pub fn submit_claim(&mut self, a: &str, eid: &str, mag: u32, origin: u64, now: u64) -> Result<(), String> {
+        self.check(eid, mag, origin, now, true)?;
         if self.ev.contains_key(eid) { return Err("event id already exists".into()); }
-        let open = self.ev.values().filter(|e| matches!(e.status, Status::Waiting | Status::Challenged)).count();
-        if open >= MAX_OPEN_EVENTS { return Err("too many open events".into()); }
-        self.lock(a, p.bond)?;
-        self.ev.insert(eid.to_string(), Ev { mag_x10, origin_s, reporter: a.to_string(), reported_at: now, status: Status::Waiting,
-            challenger: None, challenged_at: 0, votes: BTreeMap::new(), pot: 0, win_left: 0, winner: None,
-            claimed: BTreeSet::new(), minted: 0, clipped: false });
-        self.emit("event_posted", format!("{{\"event_id\":{},\"mag_x10\":{},\"origin_s\":{},\"reporter\":{},\"time\":{}}}", q(eid), mag_x10, origin_s, q(a), now));
+        let open = self.open_claims(now);
+        if open.iter().any(|e| e.claimer.as_deref() == Some(a)) { return Err("you already have an open claim".into()); }
+        if open.len() as u32 >= self.p.max_claims { return Err("too many open claims".into()); }
+        let mut versions = BTreeMap::new(); versions.insert((mag, origin), BTreeSet::new());
+        self.ev.insert(eid.to_string(), Ev { created_at: now, claimer: Some(a.to_string()), versions, attested: BTreeSet::new(), status: Status::Pending, mag_x10: 0, origin_s: 0, minted: 0, clipped: false });
+        self.emit("claim_submitted", format!("{{\"event_id\":{},\"claimer\":{},\"mag_x10\":{},\"origin_s\":{},\"time\":{}}}", q(eid), q(a), mag, origin, now));
         Ok(())
     }
 
-    pub fn challenge(&mut self, a: &str, eid: &str, now: u64) -> Result<(), String> {
-        let (status, rep_at, reporter) = { let e = self.get_ev(eid)?; (e.status, e.reported_at, e.reporter.clone()) };
-        if status != Status::Waiting || now >= rep_at + self.p.window_s { return Err("window closed".into()); }
-        if a == reporter { return Err("reporter cannot challenge".into()); }
-        let bond = self.p.bond;
-        self.lock(a, bond)?;
+    /// A publisher confirms a quake it found in USGS. Counts (and mints) when `threshold` different publishers attest the same record.
+    pub fn attest(&mut self, publ: &str, eid: &str, mag: u32, origin: u64, now: u64) -> Result<Option<(u128, u128, bool)>, String> {
+        if !self.p.publishers.iter().any(|x| x == publ) { return Err("not a publisher".into()); }
+        self.check(eid, mag, origin, now, false)?;
+        if let Some(e) = self.ev.get(eid) {
+            if e.status == Status::Counted { return Err("already counted".into()); }
+            if e.attested.contains(publ) { return Err("already attested".into()); }
+        } else {
+            if self.open_pending(now) >= self.p.max_open { return Err("too many pending events".into()); }
+            self.ev.insert(eid.to_string(), Ev { created_at: now, claimer: None, versions: BTreeMap::new(), attested: BTreeSet::new(), status: Status::Pending, mag_x10: 0, origin_s: 0, minted: 0, clipped: false });
+        }
         let e = self.ev.get_mut(eid).unwrap();
-        e.status = Status::Challenged; e.challenger = Some(a.to_string()); e.challenged_at = now;
-        self.emit("event_challenged", format!("{{\"event_id\":{},\"challenger\":{},\"time\":{}}}", q(eid), q(a), now));
-        Ok(())
+        let set = e.versions.entry((mag, origin)).or_insert_with(BTreeSet::new);
+        set.insert(publ.to_string());
+        let n = set.len() as u32;
+        e.attested.insert(publ.to_string());
+        let threshold = self.p.threshold;
+        self.emit("attested", format!("{{\"event_id\":{},\"publisher\":{},\"mag_x10\":{},\"origin_s\":{},\"attestations\":{},\"time\":{}}}", q(eid), q(publ), mag, origin, n, now));
+        if n >= threshold { return Ok(Some(self.count(eid, mag, origin, now))); }
+        Ok(None)
     }
 
-    pub fn vote(&mut self, a: &str, eid: &str, real: Option<bool>, n: u128, now: u64) -> Result<(), String> {
-        let (status, ch_at, voted) = { let e = self.get_ev(eid)?; (e.status, e.challenged_at, e.votes.contains_key(a)) };
-        if status != Status::Challenged || now >= ch_at + self.p.vote_s { return Err("not in vote period".into()); }
-        let real = real.ok_or_else(|| "bad side".to_string())?;
-        if voted { return Err("already voted".into()); }
-        if n == 0 { return Err("zero amount".into()); }
-        self.lock(a, n)?;
-        self.ev.get_mut(eid).unwrap().votes.insert(a.to_string(), (real, n));
-        self.emit("vote_cast", format!("{{\"event_id\":{},\"voter\":{},\"side\":{},\"amount\":\"{}\"}}", q(eid), q(a), q(if real { "real" } else { "not" }), n));
-        Ok(())
-    }
-
-    /// Ok(None): no mint. Ok(Some((mint, raw, clipped))).
-    pub fn finalize(&mut self, eid: &str, now: u64) -> Result<Option<(u128, u128, bool)>, String> {
-        let p = self.p.clone();
-        let e = self.get_ev(eid)?.clone();
-        match e.status {
-            Status::Waiting => {
-                if now < e.reported_at + p.window_s { return Err("window still open".into()); }
-                self.unlock(&e.reporter, p.bond);
-                Ok(Some(self.count(eid, now)))
-            }
-            Status::Challenged => {
-                if now < e.challenged_at + p.vote_s { return Err("vote still open".into()); }
-                let real: u128 = e.votes.values().filter(|v| v.0).map(|v| v.1).sum();
-                let no: u128 = e.votes.values().filter(|v| !v.0).map(|v| v.1).sum();
-                let challenger = e.challenger.clone().unwrap();
-                if real + no < self.supply * p.quorum_ppm / MILLION || real == no {
-                    let ev = self.ev.get_mut(eid).unwrap();
-                    ev.status = Status::Rejected; ev.winner = None;
-                    self.unlock(&e.reporter, p.bond);
-                    self.unlock(&challenger, p.bond);
-                    self.emit("event_rejected", format!("{{\"event_id\":{},\"reason\":\"no_quorum_or_tie\",\"time\":{}}}", q(eid), now));
-                    return Ok(None);
-                }
-                let win_real = real > no;
-                let (win_bonder, lose_bonder) = if win_real { (e.reporter.clone(), challenger) } else { (challenger, e.reporter.clone()) };
-                self.unlock(&win_bonder, p.bond);
-                sub(&mut self.locked, &lose_bonder, p.bond); // forfeited into the pot
-                let mut pot = p.bond;
-                for (v, (side, n)) in e.votes.iter() {
-                    if *side != win_real {
-                        let pen = n * p.slash_pct / 100;
-                        sub(&mut self.locked, v, pen); // slashed coins move into the pot now
-                        pot += pen;
-                    }
-                }
-                {
-                    let ev = self.ev.get_mut(eid).unwrap();
-                    ev.winner = Some(win_real); ev.pot = pot; ev.win_left = if win_real { real } else { no };
-                }
-                if win_real { return Ok(Some(self.count(eid, now))); }
-                self.ev.get_mut(eid).unwrap().status = Status::Rejected;
-                self.emit("event_rejected", format!("{{\"event_id\":{},\"reason\":\"voted_down\",\"time\":{}}}", q(eid), now));
-                Ok(None)
-            }
-            _ => Err("already final".into()),
-        }
-    }
-
-    pub fn claim_vote(&mut self, a: &str, eid: &str) -> Result<u128, String> {
-        let p = self.p.clone();
-        let e = self.get_ev(eid)?.clone();
-        if !matches!(e.status, Status::Counted | Status::Rejected) { return Err("not final".into()); }
-        let (side, n) = match e.votes.get(a) { Some(v) if !e.claimed.contains(a) => *v, _ => return Err("nothing to claim".into()) };
-        let ev = self.ev.get_mut(eid).unwrap();
-        ev.claimed.insert(a.to_string());
-        let out;
-        match e.winner {
-            None => { sub(&mut self.locked, a, n); add(&mut self.bal, a, n); out = n; }
-            Some(w) if w == side => {
-                let share = e.pot * n / e.win_left;
-                ev.pot -= share; ev.win_left -= n;
-                sub(&mut self.locked, a, n); add(&mut self.bal, a, n + share); out = n + share;
-            }
-            Some(_) => {
-                let pen = n * p.slash_pct / 100;
-                sub(&mut self.locked, a, n - pen); add(&mut self.bal, a, n - pen); out = n - pen;
-            }
-        }
-        self.emit("claimed", format!("{{\"event_id\":{},\"account\":{},\"paid\":\"{}\"}}", q(eid), q(a), out));
-        Ok(out)
-    }
-
-    // ---- invariants (RULES.md section 6)
-    pub fn escrow(&self) -> u128 {
-        self.bal.values().sum::<u128>() + self.locked.values().sum::<u128>() + self.ev.values().map(|e| e.pot).sum::<u128>()
-    }
+    // ---- invariants (RULES.md)
     pub fn check_invariants(&self) {
         assert_eq!(self.supply, self.p.s0 + self.ev.values().map(|e| e.minted).sum::<u128>(), "supply = S0 + mints");
-        assert_eq!(self.supply, self.tok.values().sum::<u128>() + self.escrow(), "balances + escrow = supply");
-        for e in self.ev.values() { assert!(e.minted == 0 || e.status == Status::Counted); }
+        assert_eq!(self.supply, self.tok.values().sum::<u128>(), "balances = supply");
+        for e in self.ev.values() {
+            assert!(e.minted == 0 || e.status == Status::Counted);
+            if e.status == Status::Counted { assert!(e.versions[&(e.mag_x10, e.origin_s)].len() as u32 >= self.p.threshold); }
+        }
         for k in self.buckets.keys() {
             assert!(self.minted_last(k * DAY, 7) <= self.supply * self.p.week_cap_ppm / MILLION, "weekly cap");
             assert!(self.minted_last(k * DAY, 30) <= self.supply * self.p.month_cap_ppm / MILLION, "monthly cap");

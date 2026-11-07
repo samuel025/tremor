@@ -1,12 +1,12 @@
 {
- "name": "GV-1 minting and the split",
+ "name": "GV-1 minting and the split (each event is confirmed by 3 bots at its own origin time)",
  "params": {
   "s0": 1000000000000,
-  "base_ppm": 5000
+  "base_ppm": 5000,
+  "min_age_s": 0
  },
  "steps": [
   {
-   "op": "count",
    "event_id": "E1",
    "mag_x10": 60,
    "origin_s": 1728000000,
@@ -25,7 +25,6 @@
    }
   },
   {
-   "op": "count",
    "event_id": "E2",
    "mag_x10": 70,
    "origin_s": 1728172800,
@@ -44,7 +43,6 @@
    }
   },
   {
-   "op": "count",
    "event_id": "E3",
    "mag_x10": 60,
    "origin_s": 1728216000,

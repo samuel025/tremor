@@ -1,5 +1,5 @@
-//! Tremor: NEP-141 token + earthquake event system in one contract. No owner, no upgrade path,
-//! every parameter is fixed in `new`. Testnet prototype; the coin has no value.
+//! Tremor: NEP-141 token + earthquake event system in one contract. No owner, no upgrade path, every parameter (including the five
+//! publisher bots and the relief list) is fixed in `new`. Testnet prototype; the coin has no value.
 pub mod engine;
 
 use engine::{Core, Params, Status};
@@ -33,14 +33,15 @@ pub struct ParamsArg {
     pub cooldown_s: u64,
     pub week_cap_ppm: u32,
     pub month_cap_ppm: u32,
-    pub bond: U128,
-    pub window_s: u64,
-    pub vote_s: u64,
-    pub slash_pct: u32,
-    pub quorum_ppm: u32,
+    pub min_age_s: u64,
     pub max_age_s: u64,
+    pub max_open: u32,
+    pub max_claims: u32,
+    pub claim_wait_s: u64,
+    pub threshold: u32,
     pub tap_amount: U128, // starter coins per account from the tap pool; "0" disables the tap
-    pub relief_accounts: Option<Vec<AccountId>>, // only filled by get_params
+    pub publisher_accounts: Option<Vec<AccountId>>, // only filled by get_params
+    pub relief_accounts: Option<Vec<AccountId>>,    // only filled by get_params
 }
 
 #[near(serializers = [json])]
@@ -51,29 +52,29 @@ pub struct StateView {
     pub minted_30d: U128,
     pub week_left: U128,
     pub month_left: U128,
-    pub open_events: u32,
+    pub pending_events: u32,
     pub tap_pool: U128,
     pub log_len: u64,
     pub now_s: u64,
 }
 
 #[near(serializers = [json])]
+pub struct VersionView { pub mag_x10: u32, pub origin_s: u64, pub attesters: Vec<AccountId> }
+
+#[near(serializers = [json])]
 pub struct EventView {
     pub event_id: String,
-    pub mag_x10: u32,
+    pub status: String,            // pending | counted
+    pub claimer: Option<AccountId>, // set when a visitor submitted it
+    pub created_at: u64,
+    pub mag_x10: u32,              // the counted record, or the leading version while pending
     pub origin_s: u64,
-    pub reporter: AccountId,
-    pub reported_at: u64,
-    pub status: String,
-    pub challenger: Option<AccountId>,
-    pub challenged_at: u64,
-    pub window_ends: u64,
-    pub vote_ends: Option<u64>,
-    pub real_locked: U128,
-    pub not_real_locked: U128,
+    pub attestations: u32,         // for the leading version
+    pub needed: u32,
+    pub versions: Vec<VersionView>,
+    pub claim_open_until: Option<u64>,
     pub minted: U128,
     pub clipped: bool,
-    pub pot: U128,
 }
 
 #[near(serializers = [json])]
@@ -100,16 +101,15 @@ fn unwrap_or_panic<T>(r: Result<T, String>) -> T { match r { Ok(v) => v, Err(e) 
 
 #[near]
 impl Contract {
-    /// Fixed forever. There is no owner, no admin method and no way to change a parameter afterwards.
+    /// Fixed forever. There is no owner, no admin method and no way to change a parameter, a publisher or a relief account afterwards.
     #[init]
-    pub fn new(params: ParamsArg, relief_accounts: Vec<AccountId>, launcher: AccountId) -> Self {
+    pub fn new(params: ParamsArg, publisher_accounts: Vec<AccountId>, relief_accounts: Vec<AccountId>, launcher: AccountId) -> Self {
         let p = Params {
-            s0: params.s0.0, min_mag_x10: params.min_mag_x10, base_ppm: params.base_ppm as u128,
-            max_event_ppm: params.max_event_ppm as u128, cooldown_s: params.cooldown_s,
-            week_cap_ppm: params.week_cap_ppm as u128, month_cap_ppm: params.month_cap_ppm as u128, bond: params.bond.0,
-            window_s: params.window_s, vote_s: params.vote_s, slash_pct: params.slash_pct as u128,
-            quorum_ppm: params.quorum_ppm as u128, max_age_s: params.max_age_s, tap_amount: params.tap_amount.0,
-            relief: relief_accounts.iter().map(|a| a.to_string()).collect(),
+            s0: params.s0.0, min_mag_x10: params.min_mag_x10, base_ppm: params.base_ppm as u128, max_event_ppm: params.max_event_ppm as u128,
+            cooldown_s: params.cooldown_s, week_cap_ppm: params.week_cap_ppm as u128, month_cap_ppm: params.month_cap_ppm as u128,
+            min_age_s: params.min_age_s, max_age_s: params.max_age_s, max_open: params.max_open, max_claims: params.max_claims,
+            claim_wait_s: params.claim_wait_s, threshold: params.threshold, tap_amount: params.tap_amount.0,
+            publishers: publisher_accounts.iter().map(|a| a.to_string()).collect(), relief: relief_accounts.iter().map(|a| a.to_string()).collect(),
         };
         let core = unwrap_or_panic(Core::new(p, launcher.as_str()));
         let mut registered = LookupSet::new(b"r");
@@ -158,7 +158,7 @@ impl Contract {
                 return U128(amount.0 - refund);
             }
         }
-        U128(amount.0 - 0)
+        U128(amount.0)
     }
 
     pub fn ft_total_supply(&self) -> U128 { U128(self.core.supply) }
@@ -188,48 +188,7 @@ impl Contract {
     }
     pub fn storage_balance_bounds(&self) -> StorageBalanceBounds { StorageBalanceBounds { min: STORAGE_MIN, max: Some(STORAGE_MIN) } }
 
-    // ---------------- bonds and events
-    #[payable]
-    pub fn deposit_bond(&mut self, amount: U128) {
-        assert_one_yocto();
-        unwrap_or_panic(self.core.deposit_bond(&caller(), amount.0));
-        self.flush();
-    }
-    #[payable]
-    pub fn withdraw_bond(&mut self, amount: U128) {
-        assert_one_yocto();
-        unwrap_or_panic(self.core.withdraw_bond(&caller(), amount.0));
-        self.flush();
-    }
-    pub fn report_event(&mut self, event_id: String, mag_x10: u32, origin_s: u64) {
-        unwrap_or_panic(self.core.report_event(&caller(), &event_id, mag_x10, origin_s, now_s()));
-        self.flush();
-    }
-    pub fn challenge(&mut self, event_id: String) {
-        unwrap_or_panic(self.core.challenge(&caller(), &event_id, now_s()));
-        self.flush();
-    }
-    /// side: "real" or "not_real"
-    pub fn vote(&mut self, event_id: String, side: String, amount: U128) {
-        let real = match side.as_str() { "real" => Some(true), "not_real" => Some(false), _ => None };
-        unwrap_or_panic(self.core.vote(&caller(), &event_id, real, amount.0, now_s()));
-        self.flush();
-    }
-    pub fn finalize(&mut self, event_id: String) {
-        let minted = unwrap_or_panic(self.core.finalize(&event_id, now_s()));
-        if let Some((m, _raw, _clipped)) = minted {
-            let parts: Vec<String> = self.core.p.relief.iter().zip(engine::split(m))
-                .map(|(a, n)| format!("{{\"owner_id\":\"{}\",\"amount\":\"{}\",\"memo\":\"{}\"}}", a, n, event_id)).collect();
-            self.emit_standard("ft_mint", format!("[{}]", parts.join(",")));
-        }
-        self.flush();
-    }
-    pub fn claim_vote(&mut self, event_id: String) -> U128 {
-        let out = unwrap_or_panic(self.core.claim_vote(&caller(), &event_id));
-        self.flush();
-        U128(out)
-    }
-
+    // ---------------- starter coins
     /// Starter coins for judges and newcomers: once per account, paid from the pool the launcher filled by sending coins to this
     /// contract's own account. Mints nothing and gives nobody any power. An unregistered caller attaches the flat storage deposit (the excess is refunded).
     #[payable]
@@ -249,21 +208,34 @@ impl Contract {
     }
     pub fn has_tapped(&self, account_id: AccountId) -> bool { self.core.tapped.contains(account_id.as_str()) }
 
+    // ---------------- quakes
+    /// Only the five fixed publisher accounts. They post what they found in USGS; the event counts when `threshold` different publishers
+    /// post exactly the same record (id, magnitude to one decimal, origin time in seconds).
+    pub fn attest(&mut self, event_id: String, mag_x10: u32, origin_s: u64) {
+        unwrap_or_panic(self.core.attest(&caller(), &event_id, mag_x10, origin_s, now_s()));
+        self.flush();
+    }
+    /// Anyone: tell the contract about a quake. Nothing is created unless publishers confirm it from USGS; a made-up claim just expires.
+    pub fn submit_claim(&mut self, event_id: String, mag_x10: u32, origin_s: u64) {
+        unwrap_or_panic(self.core.submit_claim(&caller(), &event_id, mag_x10, origin_s, now_s()));
+        self.flush();
+    }
+
     // ---------------- views
     pub fn get_params(&self) -> ParamsArg {
         let p = &self.core.p;
-        ParamsArg { s0: U128(p.s0), min_mag_x10: p.min_mag_x10, base_ppm: p.base_ppm as u32, max_event_ppm: p.max_event_ppm as u32,
-            cooldown_s: p.cooldown_s, week_cap_ppm: p.week_cap_ppm as u32, month_cap_ppm: p.month_cap_ppm as u32, bond: U128(p.bond),
-            window_s: p.window_s, vote_s: p.vote_s, slash_pct: p.slash_pct as u32, quorum_ppm: p.quorum_ppm as u32, max_age_s: p.max_age_s, tap_amount: U128(p.tap_amount),
+        ParamsArg { s0: U128(p.s0), min_mag_x10: p.min_mag_x10, base_ppm: p.base_ppm as u32, max_event_ppm: p.max_event_ppm as u32, cooldown_s: p.cooldown_s,
+            week_cap_ppm: p.week_cap_ppm as u32, month_cap_ppm: p.month_cap_ppm as u32, min_age_s: p.min_age_s, max_age_s: p.max_age_s, max_open: p.max_open,
+            max_claims: p.max_claims, claim_wait_s: p.claim_wait_s, threshold: p.threshold, tap_amount: U128(p.tap_amount),
+            publisher_accounts: Some(p.publishers.iter().map(|a| a.parse().unwrap()).collect()),
             relief_accounts: Some(p.relief.iter().map(|a| a.parse().unwrap()).collect()) }
     }
     pub fn get_state(&self) -> StateView {
         let now = now_s();
         let (m7, m30, wl, ml) = self.core.state(now);
         StateView { supply: U128(self.core.supply), initial_supply: U128(self.core.p.s0), minted_7d: U128(m7), minted_30d: U128(m30),
-            week_left: U128(wl), month_left: U128(ml), tap_pool: U128(self.core.ft_balance_of(env::current_account_id().as_str())),
-            open_events: self.core.ev.values().filter(|e| matches!(e.status, Status::Waiting | Status::Challenged)).count() as u32,
-            log_len: self.log.len() as u64, now_s: now }
+            week_left: U128(wl), month_left: U128(ml), pending_events: self.core.ev.values().filter(|e| e.status == Status::Pending).count() as u32,
+            tap_pool: U128(self.core.ft_balance_of(env::current_account_id().as_str())), log_len: self.log.len() as u64, now_s: now }
     }
     pub fn get_event(&self, event_id: String) -> Option<EventView> { self.core.ev.get(&event_id).map(|e| self.view(&event_id, e)) }
     pub fn list_events(&self, from: u32, limit: u32) -> Vec<EventView> {
@@ -272,17 +244,16 @@ impl Contract {
     pub fn get_log(&self, from: u64, limit: u64) -> Vec<String> {
         (from..self.log.len() as u64).take(limit.min(100) as usize).map(|i| self.log.get(i as u32).unwrap().clone()).collect()
     }
-    pub fn bond_balance_of(&self, account_id: AccountId) -> U128 { U128(self.core.bond_balance_of(account_id.as_str())) }
 }
 
 impl Contract {
     fn view(&self, id: &str, e: &engine::Ev) -> EventView {
-        let sum = |real: bool| U128(e.votes.values().filter(|v| v.0 == real).map(|v| v.1).sum());
-        EventView { event_id: id.to_string(), mag_x10: e.mag_x10, origin_s: e.origin_s, reporter: e.reporter.parse().unwrap(),
-            reported_at: e.reported_at, status: e.status.as_str().to_string(), challenger: e.challenger.as_ref().map(|c| c.parse().unwrap()),
-            challenged_at: e.challenged_at, window_ends: e.reported_at + self.core.p.window_s,
-            vote_ends: e.challenger.as_ref().map(|_| e.challenged_at + self.core.p.vote_s),
-            real_locked: sum(true), not_real_locked: sum(false), minted: U128(e.minted), clipped: e.clipped, pot: U128(e.pot) }
+        let versions: Vec<VersionView> = e.versions.iter().map(|((m, o), s)| VersionView { mag_x10: *m, origin_s: *o, attesters: s.iter().map(|a| a.parse().unwrap()).collect() }).collect();
+        let lead = e.versions.iter().max_by_key(|(_, s)| s.len()).map(|((m, o), s)| (*m, *o, s.len() as u32)).unwrap_or((0, 0, 0));
+        let (mag, origin, n) = if e.status == Status::Counted { (e.mag_x10, e.origin_s, e.versions[&(e.mag_x10, e.origin_s)].len() as u32) } else { lead };
+        EventView { event_id: id.to_string(), status: e.status.as_str().to_string(), claimer: e.claimer.as_ref().map(|c| c.parse().unwrap()), created_at: e.created_at,
+            mag_x10: mag, origin_s: origin, attestations: n, needed: self.core.p.threshold, versions,
+            claim_open_until: e.claimer.as_ref().map(|_| e.created_at + self.core.p.claim_wait_s), minted: U128(e.minted), clipped: e.clipped }
     }
     fn do_transfer(&mut self, sender: &AccountId, receiver: &AccountId, amount: u128, memo: Option<String>) {
         require!(sender != receiver, "Sender and receiver should be different");
@@ -295,11 +266,18 @@ impl Contract {
     fn emit_standard(&self, event: &str, data: String) {
         env::log_str(&format!("EVENT_JSON:{{\"standard\":\"nep141\",\"version\":\"1.0.0\",\"event\":\"{}\",\"data\":{}}}", event, data));
     }
-    /// Append the core's pending log lines to the on-chain log and emit them as NEP-297 events.
+    /// Append the core's pending log lines to the on-chain log and emit them as NEP-297 events; a counted event also emits the ft_mint events.
     fn flush(&mut self) {
         for (event, data) in std::mem::take(&mut self.core.pending_log) {
             let line = format!("{{\"event\":\"{}\",\"data\":{}}}", event, data);
             env::log_str(&format!("EVENT_JSON:{{\"standard\":\"tremor\",\"version\":\"1.0.0\",\"event\":\"{}\",\"data\":[{}]}}", event, data));
+            if event == "event_counted" {
+                let v: near_sdk::serde_json::Value = near_sdk::serde_json::from_str(&data).unwrap();
+                let m: u128 = v["minted"].as_str().unwrap().parse().unwrap();
+                let parts: Vec<String> = self.core.p.relief.iter().zip(engine::split(m))
+                    .map(|(a, n)| format!("{{\"owner_id\":\"{}\",\"amount\":\"{}\",\"memo\":{}}}", a, n, v["event_id"])).collect();
+                self.emit_standard("ft_mint", format!("[{}]", parts.join(",")));
+            }
             self.log.push(line);
         }
     }

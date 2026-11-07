@@ -1,24 +1,80 @@
 {
- "name": "GV-3 too little turnout",
+ "name": "GV-3 disagreement, too few, and a made-up claim never mint",
  "params": {
-  "s0": 1015225750000,
-  "base_ppm": 5000
+  "s0": 1000000000000,
+  "base_ppm": 5000,
+  "min_age_s": 0
  },
- "scenario": "challenge",
- "votes": [
-  [
-   "Ada",
-   "real",
-   1000000000
-  ]
- ],
- "expect": {
-  "outcome": "rejected",
-  "minted": 0,
-  "final_bond": {
-   "Ada": 1000000000
+ "steps": [
+  {
+   "op": "attest",
+   "who": "bot1",
+   "event_id": "d1",
+   "mag_x10": 60,
+   "origin_s": 1728000000,
+   "now": 1728000005,
+   "expect_ok": true,
+   "expect_supply": 1000000000000
   },
-  "reporter_bond_returned": 1000000000,
-  "challenger_bond_returned": 1000000000
- }
+  {
+   "op": "attest",
+   "who": "bot2",
+   "event_id": "d1",
+   "mag_x10": 60,
+   "origin_s": 1728000000,
+   "now": 1728000005,
+   "expect_ok": true,
+   "expect_supply": 1000000000000
+  },
+  {
+   "op": "attest",
+   "who": "bot3",
+   "event_id": "d1",
+   "mag_x10": 61,
+   "origin_s": 1728000000,
+   "now": 1728000005,
+   "expect_ok": true,
+   "expect_supply": 1000000000000
+  },
+  {
+   "op": "attest",
+   "who": "bot3",
+   "event_id": "d1",
+   "mag_x10": 60,
+   "origin_s": 1728000000,
+   "now": 1728000006,
+   "expect_ok": false,
+   "expect_supply": 1000000000000
+  },
+  {
+   "op": "attest",
+   "who": "bot4",
+   "event_id": "d1",
+   "mag_x10": 60,
+   "origin_s": 1728000000,
+   "now": 1728000007,
+   "expect_ok": true,
+   "expect_supply": 1005000000000
+  },
+  {
+   "op": "claim",
+   "who": "liar",
+   "event_id": "fake-1",
+   "mag_x10": 74,
+   "origin_s": 1728000000,
+   "now": 1728000010,
+   "expect_ok": true,
+   "expect_supply": 1005000000000
+  },
+  {
+   "op": "attest",
+   "who": "bot1",
+   "event_id": "x1",
+   "mag_x10": 59,
+   "origin_s": 1728000000,
+   "now": 1728000010,
+   "expect_ok": false,
+   "expect_supply": 1005000000000
+  }
+ ]
 }
