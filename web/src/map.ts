@@ -1,6 +1,7 @@
 import type { Quake } from "./usgs";
 import { parseCsv } from "./usgs";
 import { esc, mag, reduced } from "./util";
+import { ampFor, shake } from "./shake";
 
 const T0 = 1788825600; // 2026-09-08 00:00 UTC, start of the committed catalog window
 
@@ -10,8 +11,8 @@ export async function initMap(host: HTMLElement, cat: Quake[]) {
   const S0 = 1_000_000 * 1e6;
   const dots = cat.map((q) => {
     const day = Math.floor((q.origin_s - T0) / 86400), big = q.mag_x10 >= 60;
-    const r = big ? 1.4 + (q.mag_x10 - 60) * 0.35 : 0.7;
-    return { q, day, big, html: `<g class="dot${big ? " big" : ""}" data-day="${day}" transform="translate(${(q.lon + 180).toFixed(2)} ${(90 - q.lat).toFixed(2)})"><title>${esc(mag(q.mag_x10))} · ${esc(q.place)}</title>${big ? `<circle class="ring" r="${r}"/>` : ""}<circle class="core" r="${r}"/></g>` };
+    const r = big ? 0.9 + (q.mag_x10 - 60) * 0.2 : 0.55;
+    return { q, day, big, html: `<g class="dot${big ? " big" : ""}" data-day="${day}" transform="translate(${(q.lon + 180).toFixed(2)} ${(90 - q.lat).toFixed(2)})"><title>${esc(mag(q.mag_x10))} · ${esc(q.place)}</title>${big ? `<circle class="ring" r="${r}"/><circle class="ring2" r="${r}"/>` : ""}<circle class="core" r="${r}"/></g>` };
   });
   const grat = [...Array(11)].map((_, i) => `<line x1="${i * 36}" x2="${i * 36}" y1="0" y2="180" class="gr"/>`).join("") + [...Array(5)].map((_, i) => `<line x1="0" x2="360" y1="${i * 45}" y2="${i * 45}" class="gr"/>`).join("");
   host.innerHTML = `<div class="mapbox"><svg viewBox="0 0 360 180" role="img" aria-label="Map of magnitude 5 and larger earthquakes in the committed 60-day catalog">${grat}${dots.map((d) => d.html).join("")}</svg></div>
@@ -20,8 +21,8 @@ export async function initMap(host: HTMLElement, cat: Quake[]) {
   const svg = host.querySelector("svg")!, scrub = host.querySelector<HTMLInputElement>("#scrub")!, play = host.querySelector<HTMLButtonElement>("#play")!;
   const els = [...svg.querySelectorAll<SVGGElement>(".dot")];
   let last = -1;
-  const show = (day: number) => {
-    els.forEach((g) => { const on = +g.dataset.day! <= day; const was = g.classList.contains("on"); g.classList.toggle("on", on); if (on && !was && g.classList.contains("big") && !reduced) { g.classList.remove("pulse"); void (g as unknown as SVGElement).getBoundingClientRect(); g.classList.add("pulse"); } });
+  const show = (day: number, animate = true) => {
+    els.forEach((g) => { const on = +g.dataset.day! <= day; const was = g.classList.contains("on"); g.classList.toggle("on", on); if (on && !was && animate && g.classList.contains("big") && !reduced) { g.classList.remove("pulse"); void (g as unknown as SVGElement).getBoundingClientRect(); g.classList.add("pulse"); const q = dots.find((d) => d.big && d.day === +g.dataset.day! && g.querySelector("title")?.textContent?.startsWith(mag(d.q.mag_x10))); if (q) shake(host, ampFor(q.q.mag_x10), 1500); } });
     host.querySelector("#rd-day")!.textContent = String(day + 1);
     host.querySelector("#rd-sup")!.textContent = (series[day] / 1e6).toLocaleString("en-US", { maximumFractionDigits: 0 }) + " TREM (" + (((series[day] - S0) / S0) * 100).toFixed(2) + "%)";
     host.querySelector("#rd-n")!.textContent = String(dots.filter((d) => d.big && d.day <= day).length);
@@ -35,5 +36,5 @@ export async function initMap(host: HTMLElement, cat: Quake[]) {
     timer = window.setInterval(() => { d++; if (d > 59) return stop(); show(d); }, reduced ? 30 : 160);
   };
   scrub.oninput = () => { stop(); show(+scrub.value); };
-  show(59);
+  show(59, false);
 }

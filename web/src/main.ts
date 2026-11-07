@@ -5,7 +5,8 @@ import { checkEvent, loadCatalog, recentM6, usgsPage, type Flag, type Quake } fr
 import { $, ago, countUp, duration, esc, mag, md, pct, reveal, short, trem } from "./util";
 import { renderCharts } from "./charts";
 import { initMap } from "./map";
-import { ripples } from "./ripples";
+import { Seismo } from "./seismo";
+import { ampFor, shake } from "./shake";
 
 let params: Params | null = null, skew = 0;
 const flags = new Map<string, Flag>();
@@ -66,8 +67,12 @@ function card(e: Ev, p: Params, supply: string): string {
     <a class="usgs" href="${usgsPage(e.event_id)}" target="_blank" rel="noopener">USGS page ↗</a></article>`;
 }
 
+let boardSig = "";
 function renderBoard(evs: Ev[], p: Params, s: State) {
   const board = $("#board");
+  const sig = JSON.stringify(evs) + [...flags.entries()].map(([k, f]) => k + f.kind).join() + Math.floor(nowS() / 60);
+  if (sig === boardSig) return; // unchanged: keep the DOM so card animations do not restart every poll
+  boardSig = sig;
   if (!evs.length) { board.innerHTML = `<div class="empty card">No events yet. The first report will appear here.</div>`; return; }
   board.innerHTML = [...evs].sort((a, b) => b.reported_at - a.reported_at).map((e) => card(e, p, s.supply)).join("");
   evs.forEach((e) => { const k = e.event_id; if (!flags.has(k)) checkEvent(k, e.mag_x10, e.origin_s).then((f) => { flags.set(k, f); renderBoardFlags(); }); });
@@ -140,6 +145,42 @@ $("#lookup").addEventListener("submit", async (ev) => {
 });
 
 $("#contract-link").setAttribute("href", EXPLORER + CONTRACT); $("#contract-link").textContent = CONTRACT;
-ripples($<HTMLCanvasElement>("#ripples")); reveal();
+reveal();
 refresh().then(initSim); setInterval(refresh, POLL_MS); setInterval(tickCountdowns, 1000);
-loadCatalog().then((c) => initMap($("#mapcard"), c)).catch(() => ($("#mapcard").innerHTML = "<p class='note'>The catalog could not be loaded.</p>"));
+initMotion();
+loadCatalog().then((c) => { initHero(c); return initMap($("#mapcard"), c); }).catch(() => ($("#mapcard").innerHTML = "<p class='note'>The catalog could not be loaded.</p>"));
+
+// ---- earthquake motion -------------------------------------------------------------------------------------------------
+const esc2 = esc;
+function initMotion() {
+  // 1. nav trace: a thin seismogram that shakes with how fast you scroll
+  const nav = new Seismo($<HTMLCanvasElement>("#navtrace"), { speed: 70, color: "rgba(112,112,112,.75)", baseline: 0.06 });
+  nav.start();
+  let lastY = scrollY, lastT = performance.now();
+  addEventListener("scroll", () => {
+    const t = performance.now(), v = Math.abs(scrollY - lastY) / Math.max(1, t - lastT) * 1000; lastY = scrollY; lastT = t;
+    nav.setExternal(Math.min(1, v / 2500));
+  }, { passive: true });
+  setInterval(() => { if (performance.now() - lastT > 120) nav.setExternal(0); }, 120);
+}
+
+function initHero(cat: Quake[]) {
+  const big = cat.filter((q) => q.mag_x10 >= 60).sort((a, b) => a.origin_s - b.origin_s);
+  if (!big.length) return;
+  const cap = $("#quake-cap"), hero = $("#hero"), main = $("main");
+  const parts = [$(".shake-a"), $(".shake-b")];
+  const caption = (q: Quake) => { cap.innerHTML = `<b>${esc2(mag(q.mag_x10))}</b> · ${esc2(q.place || "unnamed region")} · replayed from the committed USGS catalog`; };
+  const onS = (amp: number) => { const a = 2 + amp * 9; parts.forEach((el, i) => shake(el, a * (i ? 0.8 : 1))); shake(main, a * 0.35, 1400); };
+  const seismo = new Seismo($<HTMLCanvasElement>("#seismo"), { speed: 110, color: "#1d1d1f", grid: "#e6e6e8", labels: true, onS });
+  let i = Math.floor(Math.random() * big.length), timer: number | undefined;
+  const fire = (q: Quake) => { caption(q); seismo.burst(q.mag_x10); };
+  const next = () => { fire(big[i++ % big.length]); };
+  const loop = () => { timer = window.setTimeout(() => { next(); loop(); }, 9000); };
+  new IntersectionObserver(([e]) => {
+    if (e.isIntersecting) { seismo.start(); if (!timer) { timer = window.setTimeout(() => { next(); loop(); }, 1200); } }
+    else { seismo.stop(); clearTimeout(timer); timer = undefined; }
+  }).observe(hero);
+  $("#feel").addEventListener("click", () => { const q = big[Math.floor(Math.random() * big.length)]; fire(q); window.setTimeout(() => shake(main, ampFor(q.mag_x10) * 0.6, 1800), 1400); });
+  if (reducedMotionNote()) caption(big[0]);
+}
+function reducedMotionNote() { return matchMedia("(prefers-reduced-motion: reduce)").matches; }
