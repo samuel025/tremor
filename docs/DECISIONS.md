@@ -32,3 +32,9 @@ base_ppm 2500 (0.25% at M6.0, 2x at M7, 3x at M8, max 1.5%), weekly cap 15000 pp
 - D-13: Python reference default base_ppm changed to the Gate A value (2500); golden vectors pin 5000 explicitly.
 - D-4 (update): MAX_OPEN_EVENTS stays 64; measured storage 303 B/event and 3 Tgas per report at the limit.
 - D-14: sandbox tests use 6 s / 10 s windows (2 s / 3 s was too tight for three sequential votes).
+
+## Automation round (2026-11-07), at the human's request
+- D-15: every lock (report, challenge, vote) first tops the deposit balance up from the wallet if short, so there is no separate deposit step. `deposit_bond` and `withdraw_bond` still exist. RULES.md updated; Python reference, Rust engine, the 200-scenario conformance set and a sandbox test cover it.
+- D-16: demo windows shortened to 20 s (challenge) and 30 s (vote) because a judge should not wait; the real 24 h / 48 h values are on the Live contract.
+- D-17: keeper.mjs became a keeper and watcher: it challenges reports USGS does not confirm (not found, magnitude or time differs by more than 60 s), votes "not real" on those and "real" on real events that someone challenges, finalizes due events and claims payouts. It never challenges on a failed USGS lookup. Its stake per vote is 5,000 TREM, more than a judge's starter coins, so on the demo the bot outvotes a lone liar; that is a demonstration choice, not a claim about real holders.
+- D-18: scheduler limits: hosted cron cannot wake every few seconds, so the demo watcher is a long-running loop restarted hourly by GitHub Actions; this may be delayed or against the spirit of GitHub's free-runner terms, and it can be run on any always-on machine instead. `make demo` conflicts with a running watcher (it would challenge the demo's made-up events first), so stop the watcher before running it.

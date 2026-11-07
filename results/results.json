@@ -20,7 +20,7 @@
  },
  "verify_onchain": {
   "demo": {
-   "pass_": 12,
+   "pass_": 13,
    "fail": 0,
    "ok": true,
    "date": "2026-11-07",
@@ -59,7 +59,7 @@
   "catalog_m6": 28
  },
  "sandbox": {
-  "passed": 8,
+  "passed": 9,
   "failed": 0,
   "ok": true,
   "storage_per_event_bytes": 303,

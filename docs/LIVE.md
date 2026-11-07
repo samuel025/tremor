@@ -24,3 +24,5 @@ Two copies of the same contract code run on NEAR testnet. Both have fixed parame
 - If the demo watcher is not running, a made-up quake on the demo is not challenged and counts up to the caps (the honest worst case). The recorded challenge on the page still shows the full dispute.
 - A bot stops if its function-call key runs out of gas allowance (1 NEAR when created), its account runs out of NEAR for gas, or its wallet runs out of TREM (each report locks 1,000, each vote 5,000).
 - GitHub disables scheduled workflows on repos with no activity for 60 days.
+
+- `make demo` expects nobody else to challenge its made-up events: stop the demo watcher before running it, or it will challenge them first.

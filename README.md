@@ -6,7 +6,7 @@
 
 - Live page: TODO(human): add the hosted URL. Until then run it yourself: `make web-dev`.
 - Live contract (testnet, real 24 h and 48 h windows, kept busy by a bot): `tremor-live.rounds-fund-5928.testnet`
-- Demo contract (testnet, 2 and 3 minute windows so a whole round takes minutes): `tremor.rounds-indep-5928.testnet`
+- Demo contract (testnet, 20 second and 30 second windows so a whole round takes about a minute): `tremor.rounds-indep-5928.testnet`
 - Demo video and X post: TODO(human): add the links.
 - Built for the NEAR HACKATHON, track **Memecoins With Mechanics**. All code was written from Nov 7, 2026.
 
@@ -16,9 +16,9 @@ Every number below is read from `results/results.json`, which `make results` fil
 
 - `make test`: 3 Python tests pass (2026-11-07), including the three golden vectors.
 - `make conformance`: the Rust contract logic and the Python reference agree on 200 seeded random scenarios, 24,529 steps, 0 mismatches (2026-11-07).
-- `make sandbox-test`: 8 simulated-network tests pass, 0 fail (2026-11-07). One open event costs about 303 bytes of storage; `report_event` burns about 3 Tgas with 63 events open.
+- `make sandbox-test`: 9 simulated-network tests pass, 0 fail (2026-11-07). One open event costs about 303 bytes of storage; `report_event` burns about 3 Tgas with 63 events open.
 - `make replay` (offline): 14 checks pass, 0 fail (2026-11-07).
-- `make verify-onchain` (demo, `tremor.rounds-indep-5928.testnet`): 12 checks pass, 0 fail (2026-11-07). The contract still has 1 access key; every key is deleted only as the very last step, on the human's word, and `python3 scripts/verify_onchain.py --net demo --final` then demands an empty list.
+- `make verify-onchain` (demo, `tremor.rounds-indep-5928.testnet`): 13 checks pass, 0 fail (2026-11-07). The contract still has 1 access key; every key is deleted only as the very last step, on the human's word, and `python3 scripts/verify_onchain.py --net demo --final` then demands an empty list.
 - `make verify-onchain` (live, `tremor-live.rounds-fund-5928.testnet`): 14 checks pass, 0 fail (2026-11-07). The contract still has 1 access key; every key is deleted only as the very last step, on the human's word, and `python3 scripts/verify_onchain.py --net live --final` then demands an empty list.
 - `make demo` (testnet): 13 of 13 checks matched the reference's expected values (2026-11-07).
 - `make sim`: 243 parameter combinations were tried on 352 real events (28 of M6.0 or more); 45 passed every threshold that was written down before the run (`docs/DECISIONS.md`). Chosen: 0.25% base share, 1.5% weekly cap, 5% monthly cap, 20% penalty, 0.2% minimum turnout. A passive holder is diluted by 6.43% over the 60 real days. See `results/sim/SUMMARY.md`.
@@ -37,26 +37,24 @@ Every number below is read from `results/results.json`, which `make results` fil
 
 ## Take part as a judge
 
-The page opens on the **Demo** contract and walks you through the whole process in seven steps, one button each. The current step is worked out from the chain and your wallet, so it moves on by itself:
+The page opens on the **Demo** contract and walks you through the whole process in five steps. The current step is worked out from the chain and your wallet, so it moves on by itself:
 
 1. Connect a free testnet wallet (Meteor, set to testnet). Logging in gives the page a key that can call Tremor and nothing else.
 2. Get 5,000 starter TREM from the tap (once per account; it comes from a pool the launcher filled and creates no new coins).
-3. Put a deposit down: reporting locks 1,000 TREM, returned if you are right.
-4. Report a real earthquake (picked for you from USGS) or make up a fake one.
-5. Wait out the safety window (2 minutes on Demo; the real 24 hours on Live), with a countdown.
-6. Finalize.
-7. See what it did: how many new coins were created and what each relief account received.
+3. Report a real earthquake (picked for you from USGS) or make up a fake one. The 1,000 TREM deposit is taken from your wallet automatically; it is returned if you are right.
+4. Wait for the safety window (20 seconds on Demo, the real 24 hours on Live), with a countdown. A watcher bot checks every report against USGS and settles the result by itself; a fallback button appears if it is slow.
+5. See what it did: how many new coins were created and what each relief account received.
 
-Disputing your own report is not allowed, so one wallet cannot go through a challenge. The page therefore includes **Watch a challenge play out**, a narrated replay of a real recorded run on testnet (a liar reports a made-up quake, holders vote it down). With two wallets you can also challenge and vote on any event from the event board.
+If you report a made-up quake, the watcher bot challenges it (USGS has no such event), votes it down, and finalizes it as rejected within seconds. For a challenge between two humans, the page also includes **Watch a challenge play out**, a narrated replay of a real recorded run, and with two wallets you can challenge and vote on any event from the event board.
 
-On Live, a bot (`keeper/keeper.mjs`, run every 20 minutes by `.github/workflows/keeper.yml`) reports real M6+ quakes from USGS and finalizes events whose window has ended, so the board is alive. Details and limits are in `docs/LIVE.md`.
+The bots are `keeper/keeper.mjs`. On Live it runs every 20 minutes (`.github/workflows/keeper.yml`): it reports real M6+ quakes from USGS, challenges reports USGS does not confirm, votes, finalizes events whose window has ended, and claims payouts. On Demo a watcher (`.github/workflows/demo-watcher.yml`) does the same except reporting, in a loop that polls every few seconds because the windows are so short. Details and limits are in `docs/LIVE.md`.
 
 ## The mechanic in brief
 
 A confirmed big earthquake creates new coins equal to a small share of the supply, split equally among five fixed relief accounts. Everyone else is diluted by that small amount, and caps limit how much any week or month can dilute. The exact integer rules are in `RULES.md`.
 
 - **Report.** Anyone posts a USGS event ID, its magnitude to one decimal, and its time, locking a bond of 1,000 TREM.
-- **Wait.** The event sits for a fixed window (24 hours in the spec; 120 seconds in the demo). USGS sometimes revises or removes events, so the window doubles as the finality delay.
+- **Wait.** The event sits for a fixed window (24 hours in the spec; 20 seconds on the demo contract). USGS sometimes revises or removes events, so the window doubles as the finality delay.
 - **Challenge.** During the window anyone can challenge with a matching bond. Holders then lock coins on "real" or "not real".
 - **Count.** With no challenge the event counts. With a challenge the side with more locked coins wins, if turnout reaches the minimum; otherwise it is rejected and everything is refunded.
 - **Mint.** A counted event mints 0.25% of supply at M6.0 (twice that at M7, three times at M8, never above 1.5%), less if it follows another event within 24 hours, clipped to a weekly cap of 1.5% and a monthly cap of 5%.
@@ -100,6 +98,8 @@ The contract cannot check that an earthquake happened. The design rule is that a
 - `make replay` and `make verify-onchain` check supply, mints, caps, event outcomes, vote payouts and relief balances. The on-chain log does not record plain transfers or bond deposits, so they do not check every holder's balance.
 - The page's wallet buttons (Meteor wallet, testnet) call only contract functions that the tests above exercise, but the author has not completed a full wallet round trip in a real browser session. If a button misbehaves, the command-line path (`scripts/tn.sh`, `scripts/demo.py`) does the same calls.
 - The tap pool is finite and any account can use it; anyone can also report made-up events on the contracts. Both are deliberate on testnet and written up in `docs/LIVE.md`.
+- Deposits are now taken from the wallet automatically when a report, challenge or vote needs them. That is a rule change from the first spec, logged in `docs/DECISIONS.md`.
+- The watcher bots challenge by checking USGS, so they trust one data source, and while a bot is down a made-up quake on that contract is not challenged and counts up to the caps. The Demo watcher runs on a scheduled GitHub job that can be delayed or skipped.
 - The keeper runs on GitHub's scheduled jobs, which can be delayed or paused, and it stops if its small gas allowance or bond balance runs out.
 - The USGS licence terms were not verified (their policy page blocked automated access). Read them before making this repo public.
 - Public testnet RPC endpoints rate-limit. The page and the check scripts try `test.rpc.fastnear.com` first and fall back to `rpc.testnet.near.org`.
