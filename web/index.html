@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Tremor · the coin that shakes with the earth</title>
+<meta name="description" content="A NEAR testnet memecoin whose supply grows to a fixed relief list when a magnitude 6+ earthquake is confirmed. Capped, challengeable, no admin key. No value.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%231a6bff'/%3E%3Cpath d='M4 17h5l3-8 5 15 3-9 2 2h6' fill='none' stroke='white' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+</head>
+<body>
+<a class="skip" href="#live">Skip to the live state</a>
+<header class="nav"><div class="wrap nav-in">
+  <a class="logo" href="#top"><svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><rect width="32" height="32" rx="9" fill="currentColor"/><path d="M4 17h5l3-8 5 15 3-9 2 2h6" fill="none" stroke="var(--logo-ink)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Tremor</a>
+  <nav aria-label="Sections"><a href="#events">Events</a><a href="#map">Map</a><a href="#params">Rules</a><a href="#sim">Simulation</a><a href="#check">Check me</a></nav>
+  <span class="pill testnet">Testnet · no value</span>
+</div></header>
+<main id="top">
+<section class="hero"><canvas id="ripples" aria-hidden="true"></canvas><div class="wrap hero-in">
+  <p class="eyebrow">A memecoin with a mechanic</p>
+  <h1><span>When the earth shakes,</span> <span>this coin does <em>something.</em></span></h1>
+  <p class="lead">When an earthquake of magnitude 6 or more is confirmed, Tremor creates a small amount of new supply for a fixed relief list. Every mint is capped. Anyone can report an event, anyone can challenge it, and the rules are written into the contract.</p>
+  <div class="cta"><a class="btn big" href="#live">See it live</a><a class="btn ghost big" href="#check">How to check me</a></div>
+  <div class="chips" id="chips" aria-live="polite">
+    <div class="chip"><small>Total supply</small><b id="c-supply" data-v="0">–</b><span id="c-supply-sub">TREM</span></div>
+    <div class="chip"><small>New coins, last 7 days</small><b id="c-7d" data-v="0">–</b><span>TREM</span></div>
+    <div class="chip"><small>Open events</small><b id="c-open" data-v="0">–</b><span id="c-live"><i class="dot-live"></i>live from testnet</span></div>
+  </div>
+</div></section>
+
+<div class="wrap">
+<div id="banner" class="banner" hidden></div>
+
+<section id="live" class="block reveal"><h2>The most it can ever dilute you</h2>
+  <p class="sub">New coins are capped for any 7 days and any 30 days. These meters show how much of each allowance is already used.</p>
+  <div class="grid2">
+    <div class="card meter"><div class="mh"><b>This week</b><span id="wk-t">–</span></div><div class="bar"><i id="wk-bar"></i></div><p class="note" id="wk-n"></p></div>
+    <div class="card meter"><div class="mh"><b>This month</b><span id="mo-t">–</span></div><div class="bar"><i id="mo-bar"></i></div><p class="note" id="mo-n"></p></div>
+  </div>
+  <div class="card meter wide"><div class="mh"><b>Supply against the start</b><span id="sp-t">–</span></div><div class="bar"><i id="sp-bar" class="alt"></i></div><p class="note">Supply only ever grows, and only when a confirmed event mints.</p></div>
+</section>
+
+<section id="events" class="block reveal"><h2>Event board</h2>
+  <p class="sub">Every report, its status, a countdown to the end of its waiting window, and a check against the USGS record made by this page in your browser.</p>
+  <div id="board" class="board"><div class="skeleton"></div><div class="skeleton"></div></div>
+</section>
+
+<section id="unreported" class="block reveal"><h2>Real quakes nobody has reported</h2>
+  <p class="sub">USGS events of magnitude 6 or more from the last 60 days that the contract has not seen. There is no reward for reporting, by design.</p>
+  <div id="unrep" class="list"></div>
+</section>
+
+<section id="relief" class="block reveal"><h2>The relief list</h2>
+  <p class="sub">Five fixed accounts, set at launch and never changed. Each mint is split equally. On testnet they are stand-ins: nothing real is donated.</p>
+  <div id="relief-list" class="relief"></div>
+</section>
+
+<section id="map" class="block reveal"><h2>Sixty days of real earthquakes</h2>
+  <p class="sub">Every dot is a USGS event of magnitude 5 or more in the committed window. Larger rings are M6+. Press replay to watch the supply respond, using the chosen parameters in the simulation.</p>
+  <div class="card" id="mapcard"><div class="skeleton tall"></div></div>
+</section>
+
+<section id="mine" class="block reveal"><h2>Look up any account</h2>
+  <p class="sub">No wallet needed to read. Acting (depositing a bond, reporting, challenging, voting) is done from the command line for now; see “How to check me”.</p>
+  <form id="lookup" class="card lookup"><label for="acct">Testnet account</label><div class="row"><input id="acct" placeholder="ada.example.testnet" autocomplete="off" spellcheck="false"><button class="btn" type="submit">Look up</button></div><p id="lookup-out" class="note" aria-live="polite"></p></form>
+</section>
+
+<section id="params" class="block reveal"><h2>The rules, fixed at launch</h2>
+  <p class="sub">Read straight from the contract. There is no owner and no method that changes any of these.</p>
+  <div class="grid2"><div class="card"><table class="kv" id="params-t"></table></div>
+  <div class="card proof"><h3>Proof there is no admin</h3><p id="keys-line" class="big-n">–</p><p class="note">Access keys on the contract account, read live. The demo keeps one key until the build is final; at the very end every key is deleted and this reads 0. Run <code>make verify-onchain</code> to also check the deployed code has no owner, admin or upgrade method.</p></div></div>
+</section>
+
+<section id="sim" class="block reveal"><h2>We simulated it before choosing the numbers</h2>
+  <p class="sub" id="sim-sub">Loading…</p>
+  <div id="sim-cards" class="grid3"></div>
+  <div id="charts" class="charts"></div>
+  <details class="card full"><summary>Full simulation results</summary><div id="summary" class="md"></div></details>
+</section>
+
+<section id="check" class="block reveal"><h2>How to check me</h2>
+  <p class="sub">Do not trust this page. Run the checks yourself.</p>
+  <div class="card code"><pre><code>git clone &lt;repo&gt; &amp;&amp; cd tremor
+make test              # Python reference and golden vectors
+make conformance       # Rust contract vs Python on 200 random scenarios
+make sim               # the five simulation scenarios on real data
+make replay            # recompute the chain log offline
+make verify-onchain    # read the live contract and compare</code></pre></div>
+</section>
+
+<section id="limits" class="block reveal"><h2>What it does not solve</h2>
+  <div class="grid2"><div class="card"><h3>Honest limits</h3><ul>
+    <li>Nobody can prove an earthquake on chain. A fake nobody challenges still mints, up to the caps.</li>
+    <li>Whoever holds most of the coins controls challenge votes. In the simulation a 40% holder blocked about half of real events.</li>
+    <li>USGS revises events; the waiting window is the delay for that.</li>
+    <li>On testnet the coins are free, so bonds and penalties show the rules but deter no one.</li>
+  </ul></div><div class="card"><h3>The case against Tremor</h3><ul>
+    <li>A coin that dilutes its holders gives no one a reason to hold it.</li>
+    <li>The relief is symbolic here; the five accounts are stand-ins.</li>
+    <li>Once a cap is hit, a big event can mint nothing.</li>
+    <li>It depends on one data source.</li>
+  </ul></div></div>
+</section>
+</div>
+</main>
+<footer class="foot"><div class="wrap">
+  <p><b>Tremor is a testnet prototype.</b> It has no value and promises none. Holding it dilutes you when quakes happen. The relief accounts donate nothing real, and nothing here claims real-world impact.</p>
+  <p>Earthquake data: U.S. Geological Survey, Earthquake Hazards Program (ANSS ComCat). Contract: <a id="contract-link" href="#" rel="noopener">–</a>. Code written from Nov 7, 2026 with AI assistance; MIT licence.</p>
+  <p>Other NEAR HACKATHON project by the same entrant: Rounds (link to be added). The two are independent: different code, different track.</p>
+</div></footer>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

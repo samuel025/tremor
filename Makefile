@@ -23,3 +23,7 @@ replay:
 	python3 scripts/replay.py
 verify-onchain:
 	python3 scripts/verify_onchain.py
+web-dev:
+	cd web && npm install && npm run dev
+web-build:
+	cd web && npm install && npm run build

@@ -10,7 +10,7 @@ from replaylog import replay
 
 ap = argparse.ArgumentParser(); ap.add_argument("--save"); ap.add_argument("--final", action="store_true"); ap.add_argument("--contract")
 a = ap.parse_args()
-RPC = "https://rpc.testnet.near.org"
+RPCS = ["https://test.rpc.fastnear.com", "https://rpc.testnet.near.org"]  # the official one rate-limits
 C = a.contract or f"tremor.{(ROOT / '.state/parent_account').read_text().strip()}"
 fails = 0
 ALLOWED = {"bond_balance_of", "challenge", "claim_vote", "contract_source_metadata", "deposit_bond", "finalize", "ft_balance_of", "ft_metadata",
@@ -18,10 +18,14 @@ ALLOWED = {"bond_balance_of", "challenge", "claim_vote", "contract_source_metada
            "list_events", "memory", "new", "report_event", "storage_balance_bounds", "storage_balance_of", "storage_deposit", "vote", "withdraw_bond"}
 
 def rpc(method, params):
-    req = urllib.request.Request(RPC, json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}).encode(), {"Content-Type": "application/json"})
-    r = json.load(urllib.request.urlopen(req, timeout=30))
-    if "error" in r or "error" in r.get("result", {}): sys.exit(f"RPC error: {r}")
-    return r["result"]
+    for url in RPCS:
+        try:
+            req = urllib.request.Request(url, json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}).encode(), {"Content-Type": "application/json"})
+            r = json.load(urllib.request.urlopen(req, timeout=30))
+        except Exception: continue
+        if "error" in r or "error" in r.get("result", {}): sys.exit(f"RPC error: {r}")
+        return r["result"]
+    sys.exit("no RPC endpoint answered")
 
 def view(m, args=None):
     r = rpc("query", {"request_type": "call_function", "finality": "final", "account_id": C, "method_name": m,

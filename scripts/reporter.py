@@ -13,7 +13,7 @@ ap = argparse.ArgumentParser(); ap.add_argument("--days", type=int, default=7); 
 def rpc_view(m, args=None):
     body = {"jsonrpc": "2.0", "id": 1, "method": "query", "params": {"request_type": "call_function", "finality": "final", "account_id": C, "method_name": m,
             "args_base64": base64.b64encode(json.dumps(args or {}).encode()).decode()}}
-    r = json.load(urllib.request.urlopen(urllib.request.Request("https://rpc.testnet.near.org", json.dumps(body).encode(), {"Content-Type": "application/json"}), timeout=30))
+    r = json.load(urllib.request.urlopen(urllib.request.Request("https://test.rpc.fastnear.com", json.dumps(body).encode(), {"Content-Type": "application/json"}), timeout=30))
     return json.loads(bytes(r["result"]["result"]))
 
 def send(method, args):

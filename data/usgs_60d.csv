@@ -2,356 +2,356 @@
 # Query: https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime=2026-09-08&endtime=2026-11-07&minmagnitude=5&orderby=time-asc
 # Retrieved: 2026-11-07  Window (UTC dates): 2026-09-08 to 2026-11-07 (end exclusive)
 # Citation: please credit the U.S. Geological Survey. licence terms NOT yet verified (see docs/NOTES.md); see https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits
-event_id,mag_x10,origin_s,status,place
-us7000tfqf,52,1788828721,reviewed,"100 km ESE of Isangel, Vanuatu"
-us7000tfr8,52,1788842428,reviewed,"51 km N of Ruteng, Indonesia"
-us7000tfs3,52,1788850244,reviewed,South Sandwich Islands region
-us7000tftd,53,1788868269,reviewed,"26 km NNW of Neiafu, Tonga"
-us7000tfum,52,1788881794,reviewed,"119 km NE of Ruteng, Indonesia"
-us7000tg06,50,1788937622,reviewed,"162 km SSW of Sarangani, Philippines"
-us7000tg3x,52,1788973312,reviewed,"77 km ESE of Isangel, Vanuatu"
-us7000tg43,51,1788974325,reviewed,"85 km ESE of Isangel, Vanuatu"
-us7000tg8v,53,1789022560,reviewed,"126 km WSW of Alianza Cristiana, Peru"
-us7000tg98,50,1789028813,reviewed,"44 km SSE of Quepos, Costa Rica"
-us7000tgb6,51,1789046895,reviewed,"163 km SW of Merizo Village, Guam"
-us7000tgey,54,1789064479,reviewed,southern East Pacific Rise
-us7000tgf2,50,1789065880,reviewed,"86 km E of Lospalos, Timor Leste"
-us7000tgky,51,1789123632,reviewed,"149 km WSW of Adak, Alaska"
-us7000tgl2,59,1789127783,reviewed,"256 km NE of Lospalos, Timor Leste"
-us7000tgrk,65,1789161835,reviewed,"121 km NNE of Teluknaga, Indonesia"
-us7000tgvr,51,1789174508,reviewed,South Sandwich Islands region
-us7000th1q,51,1789245177,reviewed,"99 km S of Yudomari, Japan"
-us7000th4y,52,1789283963,reviewed,"35 km NE of Luganville, Vanuatu"
-us7000th50,50,1789284623,reviewed,southeast of the Loyalty Islands
-us7000th8u,50,1789339201,reviewed,"50 km NE of Labuan Bajo, Indonesia"
-us7000tha3,54,1789354577,reviewed,northern Mid-Atlantic Ridge
-us7000thc6,53,1789378058,reviewed,"210 km SSW of Pelabuhanratu, Indonesia"
-us7000thcs,56,1789383483,reviewed,"79 km NNE of Tobelo, Indonesia"
-us7000thea,50,1789402505,reviewed,"136 km SE of Gizo, Solomon Islands"
-us7000thgs,53,1789418339,reviewed,"off the coast of Michoacan, Mexico"
-us7000thhd,50,1789423613,reviewed,"68 km NW of Lae, Papua New Guinea"
-us7000thki,50,1789429967,reviewed,"127 km NW of Lautoka, Fiji"
-us7000thrz,50,1789530302,reviewed,"71 km SSW of Ocós, Guatemala"
-us7000ths9,50,1789537923,reviewed,"279 km SSE of Dunhuang, China"
-us7000thsx,50,1789547820,reviewed,"162 km ESE of San Jose Village, Northern Mariana Islands"
-us7000thwt,51,1789582000,reviewed,"80 km SSW of San Jose Village, Northern Mariana Islands"
-us7000thxg,51,1789590084,reviewed,"186 km ESE of Kimbe, Papua New Guinea"
-us6000twws,50,1789592812,reviewed,"136 km ENE of Georgetown, Saint Helena"
-us7000thz3,53,1789618013,reviewed,"152 km SSE of Hihifo, Tonga"
-us7000thzp,52,1789626053,reviewed,"130 km E of Bitung, Indonesia"
-us7000thzw,53,1789627360,reviewed,"189 km SE of Mata-Utu, Wallis and Futuna"
-us7000thzz,50,1789627721,reviewed,South Atlantic Ocean
-us7000ti1p,65,1789654792,reviewed,"170 km W of Nikolski, Alaska"
-us7000ti89,50,1789715969,reviewed,"Izu Islands, Japan region"
-us7000tib8,52,1789742177,reviewed,"192 km SSW of Pelabuhanratu, Indonesia"
-us7000tigd,53,1789773508,reviewed,Kermadec Islands region
-us7000tih8,52,1789791515,reviewed,"209 km WNW of Abepura, Indonesia"
-us7000tiis,50,1789811997,reviewed,South Sandwich Islands region
-us7000tiju,52,1789826160,reviewed,"60 km NE of Ruteng, Indonesia"
-us7000tild,53,1789849482,reviewed,Reykjanes Ridge
-us7000timy,53,1789865894,reviewed,Reykjanes Ridge
-us7000tinl,52,1789875804,reviewed,"124 km ESE of Yigo Village, Guam"
-us7000tip2,50,1789880823,reviewed,"78 km W of Hihifo, Tonga"
-us7000tipl,51,1789889302,reviewed,"17 km WNW of Naze, Japan"
-us7000tiq2,53,1789894074,reviewed,"61 km WNW of Cafayate, Argentina"
-us7000tiqc,64,1789895856,reviewed,"50 km NNE of Kainantu, Papua New Guinea"
-us7000tirh,54,1789908352,reviewed,"60 km NE of Kainantu, Papua New Guinea"
-us7000tirq,52,1789909245,reviewed,"103 km W of Hihifo, Tonga"
-us7000tit5,55,1789937677,reviewed,south of Africa
-us7000titz,50,1789944680,reviewed,"201 km SSE of Lata, Solomon Islands"
-us7000tiur,50,1789954896,reviewed,"35 km NNE of Ruteng, Indonesia"
-us7000tj0z,50,1790026624,reviewed,South Sandwich Islands region
-us7000tj1s,53,1790034493,reviewed,"101 km SSW of Sarangani, Philippines"
-us7000tj3k,51,1790054304,reviewed,"Volcano Islands, Japan region"
-us7000tj4y,50,1790073981,reviewed,"82 km NNW of Uken, Japan"
-us6000twyf,50,1790107909,reviewed,"47 km NW of Houma, Tonga"
-us6000tx23,50,1790152917,reviewed,Scotia Sea
-us6000tx29,53,1790155274,reviewed,"47 km NNE of Chilecito, Argentina"
-us6000tx38,50,1790168511,reviewed,Mariana Islands region
-us6000tx3m,57,1790174462,reviewed,"194 km SSE of Mata-Utu, Wallis and Futuna"
-us6000tx58,50,1790185566,reviewed,"138 km NNE of Ba, Fiji"
-us6000tx9u,52,1790235658,reviewed,"21 km SW of Hilvan, Turkey"
-us6000txbm,50,1790252999,reviewed,"140 km SW of Kokopo, Papua New Guinea"
-us6000txf9,51,1790272848,reviewed,"33 km S of Kokopo, Papua New Guinea"
-us6000txha,50,1790288579,reviewed,"Kermadec Islands, New Zealand"
-us6000txhp,53,1790292629,reviewed,"69 km NW of Finschhafen, Papua New Guinea"
-us6000txim,51,1790310460,reviewed,"123 km N of Metinaro, Timor Leste"
-us6000txjy,53,1790334736,reviewed,Vanuatu region
-us6000txme,52,1790350147,reviewed,"69 km SW of San Antonio, Chile"
-us6000txpf,50,1790370087,reviewed,"11 km NNW of Xunchang, China"
-us6000txpi,67,1790371383,reviewed,"74 km ENE of Tadine, New Caledonia"
-us6000txq2,50,1790374054,reviewed,"83 km ENE of Tadine, New Caledonia"
-us6000txqi,55,1790379580,reviewed,"73 km ENE of Tadine, New Caledonia"
-us6000txqk,53,1790380354,reviewed,"76 km ENE of Tadine, New Caledonia"
-us6000txql,50,1790380653,reviewed,"13 km NW of Xunchang, China"
-us6000txqu,53,1790385018,reviewed,"68 km NE of Tadine, New Caledonia"
-us6000tz4s,51,1790406498,reviewed,"79 km NE of Tadine, New Caledonia"
-us6000txrq,50,1790407334,reviewed,"64 km ENE of Tadine, New Caledonia"
-us6000txrs,50,1790411098,reviewed,"83 km ENE of Tadine, New Caledonia"
-us6000txse,50,1790418065,reviewed,"87 km ENE of Tadine, New Caledonia"
-us6000txsz,50,1790424860,reviewed,"78 km NE of Tadine, New Caledonia"
-us6000txt0,50,1790424889,reviewed,"82 km ENE of Tadine, New Caledonia"
-us6000tz4m,53,1790424897,reviewed,"78 km ENE of Tadine, New Caledonia"
-us6000txtc,56,1790431697,reviewed,"74 km ESE of Kokopo, Papua New Guinea"
-us6000tz3z,50,1790433222,reviewed,"54 km ENE of Kolonga, Tonga"
-us6000txtn,50,1790434896,reviewed,"72 km ENE of Tadine, New Caledonia"
-us6000txtz,52,1790440423,reviewed,"150 km NW of Kilmia, Yemen"
-us6000txvu,51,1790471905,reviewed,"61 km ENE of Tadine, New Caledonia"
-us6000txw5,51,1790475730,reviewed,"87 km ENE of Tadine, New Caledonia"
-us6000tyt8,53,1790523665,reviewed,Balleny Islands region
-us6000ty0j,50,1790543615,reviewed,South Sandwich Islands region
-us6000ty2b,53,1790565906,reviewed,"72 km NE of Tadine, New Caledonia"
-us6000ty2e,52,1790567024,reviewed,South Sandwich Islands region
-us6000ty2u,54,1790570483,reviewed,"207 km WSW of Port McNeill, Canada"
-us6000ty33,50,1790573288,reviewed,"74 km ENE of Tadine, New Caledonia"
-us6000ty38,50,1790574328,reviewed,"83 km ENE of Tadine, New Caledonia"
-us6000ty43,52,1790586819,reviewed,"192 km WSW of Port McNeill, Canada"
-us6000ty57,54,1790601759,reviewed,north of Svalbard
-us6000tya5,53,1790652233,reviewed,"86 km NE of Tadine, New Caledonia"
-us6000tybr,50,1790678577,reviewed,"78 km ENE of Tadine, New Caledonia"
-us6000tyc1,55,1790685636,reviewed,"76 km SSE of Pangai, Tonga"
-us6000tyc3,56,1790687170,reviewed,southern Mid-Atlantic Ridge
-us6000tyhi,54,1790743683,reviewed,Balleny Islands region
-us6000tyhk,55,1790744425,reviewed,"75 km S of Yonakuni, Japan"
-us6000tyid,50,1790751003,reviewed,"73 km NE of Tadine, New Caledonia"
-us6000tyik,52,1790752035,reviewed,Balleny Islands region
-us6000tyit,50,1790756120,reviewed,"115 km S of Kokopo, Papua New Guinea"
-us6000tymj,56,1790805326,reviewed,"91 km SW of Tamarindo, Costa Rica"
-us6000tyny,50,1790818160,reviewed,"4 km SE of Baghlān, Afghanistan"
-us6000tyq7,53,1790832850,reviewed,"42 km WSW of Palimbang, Philippines"
-us6000tytg,52,1790857634,reviewed,"0 km ENE of Yokoshiba, Japan"
-us6000tyua,50,1790864399,reviewed,"177 km NNE of Ruteng, Indonesia"
-us6000tyw6,51,1790875037,reviewed,"103 km ENE of Miyako, Japan"
-us6000tywu,51,1790883481,reviewed,"182 km SE of Lata, Solomon Islands"
-us6000tyzl,51,1790916293,reviewed,"167 km ESE of Gizo, Solomon Islands"
-us6000tz0x,50,1790939653,reviewed,"61 km SW of Panguna, Papua New Guinea"
-us6000tz1c,50,1790949435,reviewed,"4 km ENE of Inglewood, New Zealand"
-us6000tz5h,50,1790958684,reviewed,"22 km SSE of Güiria, Venezuela"
-us6000tz62,57,1790958879,reviewed,"152 km SE of Vilyuchinsk, Russia"
-us6000tz7b,50,1790965520,reviewed,"173 km SSE of Vilyuchinsk, Russia"
-us6000tzal,51,1790996346,reviewed,"169 km SE of Petropavlovsk-Kamchatsky, Russia"
-us6000tzer,57,1791068152,reviewed,"36 km WSW of Tambolaka, Indonesia"
-us6000tzfg,53,1791070654,reviewed,"85 km SSW of Banda Aceh, Indonesia"
-us6000tzi5,50,1791108787,reviewed,"42 km NNW of Ruteng, Indonesia"
-us6000tzid,51,1791112368,reviewed,"Volcano Islands, Japan region"
-us6000tzip,51,1791114202,reviewed,"21 km ESE of Feke, Turkey"
-us6000tzj8,50,1791122770,reviewed,south of Panama
-us6000tzkn,50,1791145644,reviewed,"28 km SE of Jurm, Afghanistan"
-us6000tzlp,53,1791163130,reviewed,central Mid-Atlantic Ridge
-us6000tzme,50,1791178005,reviewed,"67 km E of ‘Ohonua, Tonga"
-us6000tzna,50,1791197529,reviewed,"183 km ENE of Saipan, Northern Mariana Islands"
-us6000tzsc,50,1791231779,reviewed,south of the Fiji Islands
-us6000tzwg,50,1791292282,reviewed,"43 km NNE of Semporna, Malaysia"
-us6000u0hy,58,1791305301,reviewed,"275 km SSW of Severo-Kuril’sk, Russia"
-us6000u0hz,50,1791305592,reviewed,"32 km NW of Bāgeshwar, India"
-aka2026tuxgky,55,1791311671,reviewed,"92 km NNW of Aleneva, Alaska"
-us6000u0rr,52,1791385165,reviewed,Chagos Archipelago region
-us6000u0wa,50,1791434940,reviewed,"92 km N of Ruteng, Indonesia"
-us6000u0ws,55,1791442008,reviewed,west of Macquarie Island
-us6000u0x4,55,1791446879,reviewed,"13 km SW of Burias, Philippines"
-us6000u0xi,63,1791450008,reviewed,"117 km NE of Norsup, Vanuatu"
-us6000u11v,51,1791493170,reviewed,northern Mid-Atlantic Ridge
-us6000u13v,52,1791522663,reviewed,"112 km SE of Bitung, Indonesia"
-us6000u153,51,1791541335,reviewed,"74 km SSW of Colchane, Chile"
-us6000u15x,52,1791553902,reviewed,"101 km NE of Norsup, Vanuatu"
-us6000u164,59,1791557382,reviewed,west of Macquarie Island
-us6000u18k,77,1791568565,reviewed,"10 km WSW of Pitaloza Arriba, Panama"
-us6000u2uc,52,1791568910,reviewed,"16 km NE of Pedasí, Panama"
-us6000u2ud,54,1791568963,reviewed,"47 km SSW of Puerto Vidal, Panama"
-us6000u2us,51,1791569190,reviewed,"8 km NNE of Quebro, Panama"
-us6000u2t1,51,1791569807,reviewed,"2 km ESE of La Mesa, Panama"
-us6000u18t,55,1791570135,reviewed,"1 km E of La Miel, Panama"
-us6000u2uw,50,1791571036,reviewed,"6 km NNW of El Cortezo, Panama"
-us6000u18x,58,1791571065,reviewed,"4 km W of Flores, Panama"
-us6000u2td,50,1791571346,reviewed,"13 km SE of Río Grande, Panama"
-us6000u197,50,1791572689,reviewed,"8 km SE of Río Grande, Panama"
-us6000u19h,52,1791575335,reviewed,"11 km SE of Río Grande, Panama"
-us6000u19s,50,1791577222,reviewed,"15 km SSW of Tebario, Panama"
-us6000u19t,50,1791577298,reviewed,"10 km W of Flores, Panama"
-us6000u19w,66,1791577538,reviewed,"13 km WSW of Río Grande, Panama"
-us6000u2un,56,1791577681,reviewed,"13 km WNW of Río Grande, Panama"
-us6000u2tu,51,1791578157,reviewed,"16 km WNW of Río Grande, Panama"
-us6000u1aa,50,1791578528,reviewed,"16 km W of Río Grande, Panama"
-us6000u1ax,51,1791587402,reviewed,"4 km ESE of La Tronosa, Panama"
-us6000u1ay,54,1791587558,reviewed,"6 km SE of Oria Arriba, Panama"
-us6000u1az,50,1791588193,reviewed,"4 km NE of Río Grande, Panama"
-us6000u1bs,51,1791597642,reviewed,"127 km E of Bitung, Indonesia"
-us6000u1bu,50,1791599193,reviewed,"5 km WSW of Flores, Panama"
-us6000u1cd,53,1791604698,reviewed,"40 km NE of Yigo Village, Guam"
-us6000u1cf,60,1791605641,reviewed,"4 km NNE of La Tronosa, Panama"
-us6000u1cv,50,1791610321,reviewed,"136 km E of Bitung, Indonesia"
-us6000u1gs,53,1791668042,reviewed,southeast of Easter Island
-us6000u1i6,52,1791689417,reviewed,"193 km S of Pelabuhanratu, Indonesia"
-us6000u1kt,53,1791726178,reviewed,"28 km SSW of Camaná, Peru"
-us6000u1kv,62,1791727640,reviewed,"86 km SSE of Panguna, Papua New Guinea"
-us6000u1ld,53,1791738026,reviewed,"108 km SSW of Severo-Kuril’sk, Russia"
-us6000u1mj,52,1791754494,reviewed,"149 km W of Gorontalo, Indonesia"
-us6000u1pl,55,1791779891,reviewed,"119 km W of Neiafu, Tonga"
-us6000u1rh,54,1791804523,reviewed,Mid-Indian Ridge
-us6000u1wn,61,1791847236,reviewed,"15 km W of Río Grande, Panama"
-us6000u3vr,50,1791847670,reviewed,"8 km NW of Río Grande, Panama"
-us6000u1ye,51,1791864015,reviewed,"107 km S of Gambiran Satu, Indonesia"
-us6000u1z5,67,1791870281,reviewed,central Mid-Atlantic Ridge
-us6000u1zc,50,1791871283,reviewed,"79 km N of Claveria, Philippines"
-us6000u207,53,1791880708,reviewed,southern Mid-Atlantic Ridge
-us6000u214,68,1791894187,reviewed,central Mid-Atlantic Ridge
-us6000u21s,53,1791902172,reviewed,"129 km S of Kokopo, Papua New Guinea"
-us6000u23d,51,1791908893,reviewed,"122 km S of Kokopo, Papua New Guinea"
-us6000u24c,60,1791917103,reviewed,"128 km S of Kokopo, Papua New Guinea"
-us6000u28y,59,1791974988,reviewed,Fiji region
-us6000u2ec,51,1792035389,reviewed,"37 km E of Safotu, Samoa"
-us6000u2ev,53,1792041931,reviewed,"46 km SSE of Otorohanga, New Zealand"
-aka2026ukynnb,56,1792062421,reviewed,"43 km NNW of Lake Minchumina, Alaska"
-us6000u2gd,54,1792063003,reviewed,off the coast of Ecuador
-us6000u2hp,52,1792069611,reviewed,"161 km W of Sola, Vanuatu"
-us6000u2hv,52,1792070971,reviewed,"92 km NNE of Hihifo, Tonga"
-us6000u2mq,69,1792121732,reviewed,"72 km NE of Ozernovskiy, Russia"
-us6000u2v8,52,1792179250,reviewed,off the coast of Ecuador
-us6000u2y1,57,1792213617,reviewed,"47 km WNW of Khuzdar, Pakistan"
-us6000u309,52,1792245574,reviewed,"86 km SW of Brisas Barra de Suchiate, Mexico"
-us6000u34e,52,1792310405,reviewed,"60 km NNW of Ruteng, Indonesia"
-us6000u37h,52,1792351948,reviewed,"71 km ESE of ‘Ohonua, Tonga"
-us6000u38g,51,1792362703,reviewed,"127 km SSE of Kokopo, Papua New Guinea"
-us6000u3bc,60,1792396144,reviewed,"186 km NW of Port-Olry, Vanuatu"
-us6000u3be,53,1792396536,reviewed,"188 km NW of Port-Olry, Vanuatu"
-us6000u3bi,54,1792397558,reviewed,"184 km WNW of Port-Olry, Vanuatu"
-us6000u3bk,52,1792398107,reviewed,"211 km WNW of Port-Olry, Vanuatu"
-us6000u3c6,54,1792406421,reviewed,"196 km NW of Port-Olry, Vanuatu"
-us7000ttse,53,1792406447,reviewed,"221 km NW of Port-Olry, Vanuatu"
-us6000u3c7,50,1792407427,reviewed,"15 km WNW of Jiangyou, China"
-us6000u3ct,53,1792421064,reviewed,"106 km WNW of Höfn, Iceland"
-us6000u3ft,51,1792431950,reviewed,South Sandwich Islands region
-us6000u3ga,57,1792435956,reviewed,"198 km NW of Port-Olry, Vanuatu"
-us6000u3ge,57,1792436137,reviewed,"203 km WNW of Port-Olry, Vanuatu"
-us6000u3j1,50,1792456707,reviewed,"193 km NW of Port-Olry, Vanuatu"
-us6000u3jl,63,1792470038,reviewed,"197 km NW of Port-Olry, Vanuatu"
-us6000u3k5,52,1792477762,reviewed,"204 km NW of Port-Olry, Vanuatu"
-us6000u3ka,51,1792478483,reviewed,"266 km WSW of Yanglong, China"
-us6000u3lf,50,1792492840,reviewed,"81 km S of Sand Point, Alaska"
-us6000u3nc,50,1792513778,reviewed,"21 km SW of Meulaboh, Indonesia"
-us6000u3nl,54,1792515947,reviewed,"210 km S of Burica, Panama"
-us6000u3p1,51,1792519637,reviewed,"41 km WNW of Mosteiros, Portugal"
-us6000u3rr,50,1792545602,reviewed,south of Panama
-us6000u3t4,51,1792568656,reviewed,"164 km NE of Lospalos, Timor Leste"
-us6000u3t6,52,1792571861,reviewed,"68 km NE of Cabatuan, Philippines"
-us6000u3ue,50,1792594587,reviewed,"191 km NW of Port-Olry, Vanuatu"
-us6000u3wh,51,1792606355,reviewed,south of Africa
-us6000u3xx,50,1792608064,reviewed,"190 km WNW of Port-Olry, Vanuatu"
-us6000u3x2,50,1792609565,reviewed,Reykjanes Ridge
-us6000u3yj,54,1792618734,reviewed,Reykjanes Ridge
-us6000u3yp,51,1792619927,reviewed,Reykjanes Ridge
-us6000u3zp,50,1792628738,reviewed,South Sandwich Islands region
-us6000u43g,70,1792679620,reviewed,"189 km ENE of Nagqu, China"
-us6000u44n,52,1792681924,reviewed,"197 km ENE of Nagqu, China"
-us6000u45j,50,1792692404,reviewed,"207 km ENE of Nagqu, China"
-us6000u473,50,1792699504,reviewed,"153 km S of Kokopo, Papua New Guinea"
-us6000u4bk,57,1792750756,reviewed,"61 km WNW of Leni, Italy"
-us6000u4dc,52,1792763736,reviewed,"50 km WNW of Malfa, Italy"
-us6000u4e2,51,1792771670,reviewed,"73 km ENE of Noda, Japan"
-us6000u4h7,51,1792793111,reviewed,"206 km NW of Port-Olry, Vanuatu"
-us6000u4j2,68,1792809088,reviewed,"203 km NW of Port-Olry, Vanuatu"
-us6000u4jb,61,1792809357,reviewed,"163 km NW of Port-Olry, Vanuatu"
-us6000u4ji,51,1792811325,reviewed,"170 km NW of Port-Olry, Vanuatu"
-us6000u4jl,52,1792811875,reviewed,"202 km NW of Port-Olry, Vanuatu"
-us6000u4ju,57,1792814736,reviewed,"205 km NW of Port-Olry, Vanuatu"
-us6000u4jw,58,1792815125,reviewed,"203 km NW of Port-Olry, Vanuatu"
-us6000u4jy,53,1792815578,reviewed,"216 km W of Sola, Vanuatu"
-us6000u4k2,50,1792817085,reviewed,"161 km NW of Port-Olry, Vanuatu"
-us6000u4k1,51,1792817361,reviewed,"217 km NW of Port-Olry, Vanuatu"
-us6000u4k6,58,1792819420,reviewed,"182 km NW of Port-Olry, Vanuatu"
-us6000u4kj,53,1792821856,reviewed,"174 km NW of Port-Olry, Vanuatu"
-us6000u4kq,55,1792824189,reviewed,"55 km NNE of Port-Olry, Vanuatu"
-us6000u4ku,50,1792824724,reviewed,"219 km NW of Port-Olry, Vanuatu"
-us6000u4l9,51,1792830166,reviewed,"218 km NW of Port-Olry, Vanuatu"
-us6000u4lc,51,1792830482,reviewed,"209 km NW of Port-Olry, Vanuatu"
-us6000u4lg,53,1792831193,reviewed,"223 km ENE of Nagqu, China"
-us6000u4lm,59,1792832188,reviewed,"196 km NW of Port-Olry, Vanuatu"
-us6000u4lp,50,1792832820,reviewed,"224 km WNW of Port-Olry, Vanuatu"
-us6000u4lr,51,1792834728,reviewed,"170 km NW of Port-Olry, Vanuatu"
-us6000u4m5,51,1792840440,reviewed,"210 km NW of Port-Olry, Vanuatu"
-us6000u4m6,50,1792840827,reviewed,"141 km NNW of Kilmia, Yemen"
-us6000u4mn,59,1792855459,reviewed,Bouvet Island region
-us6000u4nv,50,1792868835,reviewed,"193 km NW of Port-Olry, Vanuatu"
-us6000u4pa,53,1792874104,reviewed,"101 km SSE of Vilyuchinsk, Russia"
-us6000u4q8,50,1792882029,reviewed,"229 km NW of Port-Olry, Vanuatu"
-us6000u4qp,50,1792885498,reviewed,"198 km NW of Port-Olry, Vanuatu"
-us6000u4qq,51,1792886377,reviewed,"46 km ESE of Miyazaki, Japan"
-us6000u4r3,51,1792892783,reviewed,"166 km WNW of Port-Olry, Vanuatu"
-us6000u4r7,51,1792893970,reviewed,"161 km WNW of Port-Olry, Vanuatu"
-us6000u4r9,65,1792894163,reviewed,"Bonin Islands, Japan region"
-us6000u4rf,61,1792895040,reviewed,"25 km ENE of Port-Olry, Vanuatu"
-us6000u4s5,52,1792898950,reviewed,"63 km NNE of Lae, Papua New Guinea"
-us6000u4tc,54,1792917660,reviewed,"205 km NW of Port-Olry, Vanuatu"
-us6000u4tq,54,1792924227,reviewed,"33 km ESE of Ambunti, Papua New Guinea"
-us6000u4tx,51,1792927454,reviewed,"199 km ENE of Nagqu, China"
-us6000u4ty,59,1792927557,reviewed,"218 km ENE of Nagqu, China"
-us6000u4va,52,1792950263,reviewed,"59 km SW of Ashkāsham, Afghanistan"
-us6000u4we,53,1792966455,reviewed,"Bonin Islands, Japan region"
-us6000u4xa,50,1792977741,reviewed,"204 km NW of Port-Olry, Vanuatu"
-us6000u4y1,50,1792990420,reviewed,"45 km NNW of Ende, Indonesia"
-us6000u4yr,55,1793009581,reviewed,"283 km E of Levuka, Fiji"
-us6000u4z6,50,1793013475,reviewed,"218 km NW of Port-Olry, Vanuatu"
-us6000u4zb,52,1793016810,reviewed,"205 km NW of Port-Olry, Vanuatu"
-us7000ttfb,58,1793091323,reviewed,"196 km NW of Port-Olry, Vanuatu"
-us7000ttfc,50,1793092065,reviewed,"95 km NNE of Hihifo, Tonga"
-us7000ttfe,50,1793092855,reviewed,"206 km NW of Port-Olry, Vanuatu"
-us7000ttfj,50,1793095591,reviewed,"184 km NW of Port-Olry, Vanuatu"
-us7000ttfk,52,1793098235,reviewed,"191 km NW of Port-Olry, Vanuatu"
-us7000ttgf,54,1793112241,reviewed,"126 km S of Pundong, Indonesia"
-us7000ttgm,50,1793114763,reviewed,"29 km W of Río Grande, Panama"
-us7000ttis,54,1793127473,reviewed,"210 km ENE of Nagqu, China"
-us7000ttke,54,1793142856,reviewed,"192 km WSW of Merizo Village, Guam"
-us7000ttkk,51,1793144631,reviewed,"8 km WNW of Sugal, Philippines"
-us7000ttlc,52,1793149914,reviewed,"6 km NW of Balangonan, Philippines"
-us7000ttld,55,1793151551,reviewed,"221 km NW of Port-Olry, Vanuatu"
-us7000ttlk,52,1793153835,reviewed,"220 km NW of Port-Olry, Vanuatu"
-us7000ttlm,60,1793154105,reviewed,"214 km NW of Port-Olry, Vanuatu"
-us7000ttlt,56,1793156388,reviewed,"174 km NW of Port-Olry, Vanuatu"
-us7000ttm2,50,1793161864,reviewed,"200 km W of Sola, Vanuatu"
-us7000ttmb,50,1793167967,reviewed,"205 km SSE of Vilyuchinsk, Russia"
-us7000ttnc,55,1793187469,reviewed,Reykjanes Ridge
-us7000ttnk,50,1793188577,reviewed,Reykjanes Ridge
-us7000ttnz,50,1793191628,reviewed,Reykjanes Ridge
-us7000ttpe,55,1793200072,reviewed,"5 km ESE of Asahi, Japan"
-us7000ttth,52,1793216732,reviewed,Reykjanes Ridge
-us7000tttl,53,1793217407,reviewed,"161 km WNW of Tobelo, Indonesia"
-us7000ttua,57,1793225205,reviewed,"271 km WSW of Tual, Indonesia"
-us7000ttvf,54,1793232500,reviewed,"109 km ENE of Luganville, Vanuatu"
-us7000ttw2,54,1793243874,reviewed,"113 km ENE of Barcelona, Philippines"
-us7000ttw3,58,1793243945,reviewed,"110 km ENE of Barcelona, Philippines"
-us7000ttw5,57,1793244402,reviewed,"82 km NE of Kiunga, Papua New Guinea"
-us7000ttx0,54,1793250408,reviewed,South Sandwich Islands region
-us7000ttx8,51,1793252016,reviewed,Balleny Islands region
-us7000ttxn,54,1793259090,reviewed,"114 km ENE of Barcelona, Philippines"
-us7000ttxz,64,1793260190,reviewed,southeast of Easter Island
-us7000tty7,51,1793263782,reviewed,"218 km NNW of Bamboo Flat, India"
-us7000tu3j,50,1793304872,reviewed,"143 km S of False Pass, Alaska"
-us7000tu3u,50,1793305931,reviewed,"131 km NNW of Tual, Indonesia"
-us7000tu4f,62,1793310404,reviewed,"43 km ESE of Port-Olry, Vanuatu"
-us7000tu5q,51,1793329457,reviewed,"97 km NNE of Finschhafen, Papua New Guinea"
-us7000tu7j,51,1793355148,reviewed,Balleny Islands region
-us7000tuif,50,1793446272,reviewed,"196 km NW of Port-Olry, Vanuatu"
-us7000tujf,52,1793461818,reviewed,"4 km E of La Miel, Panama"
-us7000tukm,50,1793481639,reviewed,"115 km SE of Bushehr, Iran"
-us7000tuku,60,1793484902,reviewed,"58 km SSE of Shima, Japan"
-us7000tuky,52,1793486559,reviewed,"200 km NW of Port-Olry, Vanuatu"
-us7000tun8,54,1793514402,reviewed,"203 km NW of Port-Olry, Vanuatu"
-us7000tund,51,1793516454,reviewed,"201 km NW of Port-Olry, Vanuatu"
-us7000tupl,60,1793533623,reviewed,"165 km NW of Port-Olry, Vanuatu"
-us7000tuqk,51,1793553116,reviewed,South Sandwich Islands region
-us7000tuqx,50,1793558079,reviewed,Mid-Indian Ridge
-us7000tusv,51,1793580790,reviewed,Banda Sea
-us7000tut4,51,1793582296,reviewed,Kermadec Islands region
-us7000tuuy,51,1793607194,reviewed,"19 km WNW of Tomohon, Indonesia"
-us7000tuxg,51,1793633293,reviewed,"50 km WSW of Huarmey, Peru"
-us7000tuxy,53,1793638157,reviewed,"81 km SSE of Palekastro, Greece"
-us7000tv4i,54,1793697194,reviewed,"24 km NNW of Rioblanco, Colombia"
-us7000tv5i,50,1793712844,reviewed,South Sandwich Islands region
-us7000tvie,52,1793724492,reviewed,"Volcano Islands, Japan region"
-us7000tvs3,52,1793730073,reviewed,Mid-Indian Ridge
-us7000tvtj,52,1793741648,reviewed,"91 km ESE of Kyzyl-Eshme, Kyrgyzstan"
-us7000tvwj,50,1793778012,reviewed,"207 km ESE of Sarangani, Philippines"
-us7000tw76,51,1793870552,reviewed,"19 km NNW of Masumbwe, Tanzania"
-us7000tw8p,50,1793897785,reviewed,"130 km NE of Thang, India"
-us7000tw8r,61,1793899305,reviewed,Fiji region
-us7000twg9,61,1793961567,reviewed,"144 km SE of Hasaki, Japan"
+event_id,mag_x10,origin_s,status,place,lat,lon
+us7000tfqf,52,1788828721,reviewed,"100 km ESE of Isangel, Vanuatu",-19.83,170.19
+us7000tfr8,52,1788842428,reviewed,"51 km N of Ruteng, Indonesia",-8.15,120.53
+us7000tfs3,52,1788850244,reviewed,South Sandwich Islands region,-58.09,-26.12
+us7000tftd,53,1788868269,reviewed,"26 km NNW of Neiafu, Tonga",-18.43,-174.07
+us7000tfum,52,1788881794,reviewed,"119 km NE of Ruteng, Indonesia",-7.73,121.09
+us7000tg06,50,1788937622,reviewed,"162 km SSW of Sarangani, Philippines",3.99,125.05
+us7000tg3x,52,1788973312,reviewed,"77 km ESE of Isangel, Vanuatu",-19.81,169.96
+us7000tg43,51,1788974325,reviewed,"85 km ESE of Isangel, Vanuatu",-19.76,170.07
+us7000tg8v,53,1789022560,reviewed,"126 km WSW of Alianza Cristiana, Peru",-3.87,-77.5
+us7000tg98,50,1789028813,reviewed,"44 km SSE of Quepos, Costa Rica",9.06,-84.02
+us7000tgb6,51,1789046895,reviewed,"163 km SW of Merizo Village, Guam",12.04,143.83
+us7000tgey,54,1789064479,reviewed,southern East Pacific Rise,-34.78,-109.14
+us7000tgf2,50,1789065880,reviewed,"86 km E of Lospalos, Timor Leste",-8.43,127.78
+us7000tgky,51,1789123632,reviewed,"149 km WSW of Adak, Alaska",51.17,-178.47
+us7000tgl2,59,1789127783,reviewed,"256 km NE of Lospalos, Timor Leste",-7.22,128.92
+us7000tgrk,65,1789161835,reviewed,"121 km NNE of Teluknaga, Indonesia",-5.03,106.87
+us7000tgvr,51,1789174508,reviewed,South Sandwich Islands region,-59.11,-24.93
+us7000th1q,51,1789245177,reviewed,"99 km S of Yudomari, Japan",29.34,130.38
+us7000th4y,52,1789283963,reviewed,"35 km NE of Luganville, Vanuatu",-15.28,167.38
+us7000th50,50,1789284623,reviewed,southeast of the Loyalty Islands,-22.34,171.22
+us7000th8u,50,1789339201,reviewed,"50 km NE of Labuan Bajo, Indonesia",-8.21,120.25
+us7000tha3,54,1789354577,reviewed,northern Mid-Atlantic Ridge,25.52,-45.44
+us7000thc6,53,1789378058,reviewed,"210 km SSW of Pelabuhanratu, Indonesia",-8.73,105.78
+us7000thcs,56,1789383483,reviewed,"79 km NNE of Tobelo, Indonesia",2.42,128.19
+us7000thea,50,1789402505,reviewed,"136 km SE of Gizo, Solomon Islands",-8.93,157.77
+us7000thgs,53,1789418339,reviewed,"off the coast of Michoacan, Mexico",15.2,-104.37
+us7000thhd,50,1789423613,reviewed,"68 km NW of Lae, Papua New Guinea",-6.29,146.56
+us7000thki,50,1789429967,reviewed,"127 km NW of Lautoka, Fiji",-16.8,176.61
+us7000thrz,50,1789530302,reviewed,"71 km SSW of Ocós, Guatemala",13.92,-92.47
+us7000ths9,50,1789537923,reviewed,"279 km SSE of Dunhuang, China",37.73,95.49
+us7000thsx,50,1789547820,reviewed,"162 km ESE of San Jose Village, Northern Mariana Islands",14.37,147.0
+us7000thwt,51,1789582000,reviewed,"80 km SSW of San Jose Village, Northern Mariana Islands",14.27,145.42
+us7000thxg,51,1789590084,reviewed,"186 km ESE of Kimbe, Papua New Guinea",-6.03,151.75
+us6000twws,50,1789592812,reviewed,"136 km ENE of Georgetown, Saint Helena",-7.3,-13.35
+us7000thz3,53,1789618013,reviewed,"152 km SSE of Hihifo, Tonga",-17.29,-173.48
+us7000thzp,52,1789626053,reviewed,"130 km E of Bitung, Indonesia",1.27,126.29
+us7000thzw,53,1789627360,reviewed,"189 km SE of Mata-Utu, Wallis and Futuna",-14.4,-174.84
+us7000thzz,50,1789627721,reviewed,South Atlantic Ocean,-22.61,-20.29
+us7000ti1p,65,1789654792,reviewed,"170 km W of Nikolski, Alaska",52.88,-171.4
+us7000ti89,50,1789715969,reviewed,"Izu Islands, Japan region",32.3,141.4
+us7000tib8,52,1789742177,reviewed,"192 km SSW of Pelabuhanratu, Indonesia",-8.61,105.92
+us7000tigd,53,1789773508,reviewed,Kermadec Islands region,-27.82,-177.3
+us7000tih8,52,1789791515,reviewed,"209 km WNW of Abepura, Indonesia",-1.83,138.91
+us7000tiis,50,1789811997,reviewed,South Sandwich Islands region,-55.56,-28.14
+us7000tiju,52,1789826160,reviewed,"60 km NE of Ruteng, Indonesia",-8.2,120.83
+us7000tild,53,1789849482,reviewed,Reykjanes Ridge,57.13,-33.42
+us7000timy,53,1789865894,reviewed,Reykjanes Ridge,57.02,-33.57
+us7000tinl,52,1789875804,reviewed,"124 km ESE of Yigo Village, Guam",13.06,145.93
+us7000tip2,50,1789880823,reviewed,"78 km W of Hihifo, Tonga",-15.95,-174.53
+us7000tipl,51,1789889302,reviewed,"17 km WNW of Naze, Japan",28.44,129.33
+us7000tiq2,53,1789894074,reviewed,"61 km WNW of Cafayate, Argentina",-25.96,-66.58
+us7000tiqc,64,1789895856,reviewed,"50 km NNE of Kainantu, Papua New Guinea",-5.9,146.11
+us7000tirh,54,1789908352,reviewed,"60 km NE of Kainantu, Papua New Guinea",-5.89,146.24
+us7000tirq,52,1789909245,reviewed,"103 km W of Hihifo, Tonga",-15.81,-174.76
+us7000tit5,55,1789937677,reviewed,south of Africa,-48.45,31.25
+us7000titz,50,1789944680,reviewed,"201 km SSE of Lata, Solomon Islands",-12.44,166.4
+us7000tiur,50,1789954896,reviewed,"35 km NNE of Ruteng, Indonesia",-8.32,120.59
+us7000tj0z,50,1790026624,reviewed,South Sandwich Islands region,-56.52,-24.16
+us7000tj1s,53,1790034493,reviewed,"101 km SSW of Sarangani, Philippines",4.5,125.28
+us7000tj3k,51,1790054304,reviewed,"Volcano Islands, Japan region",23.04,142.41
+us7000tj4y,50,1790073981,reviewed,"82 km NNW of Uken, Japan",28.99,128.91
+us6000twyf,50,1790107909,reviewed,"47 km NW of Houma, Tonga",-20.88,-175.64
+us6000tx23,50,1790152917,reviewed,Scotia Sea,-60.34,-47.55
+us6000tx29,53,1790155274,reviewed,"47 km NNE of Chilecito, Argentina",-28.77,-67.3
+us6000tx38,50,1790168511,reviewed,Mariana Islands region,21.65,143.0
+us6000tx3m,57,1790174462,reviewed,"194 km SSE of Mata-Utu, Wallis and Futuna",-14.79,-175.27
+us6000tx58,50,1790185566,reviewed,"138 km NNE of Ba, Fiji",-16.33,178.03
+us6000tx9u,52,1790235658,reviewed,"21 km SW of Hilvan, Turkey",37.47,38.76
+us6000txbm,50,1790252999,reviewed,"140 km SW of Kokopo, Papua New Guinea",-5.33,151.48
+us6000txf9,51,1790272848,reviewed,"33 km S of Kokopo, Papua New Guinea",-4.65,152.25
+us6000txha,50,1790288579,reviewed,"Kermadec Islands, New Zealand",-29.45,-177.67
+us6000txhp,53,1790292629,reviewed,"69 km NW of Finschhafen, Papua New Guinea",-6.11,147.4
+us6000txim,51,1790310460,reviewed,"123 km N of Metinaro, Timor Leste",-7.42,125.67
+us6000txjy,53,1790334736,reviewed,Vanuatu region,-21.91,174.03
+us6000txme,52,1790350147,reviewed,"69 km SW of San Antonio, Chile",-33.99,-72.18
+us6000txpf,50,1790370087,reviewed,"11 km NNW of Xunchang, China",28.54,104.65
+us6000txpi,67,1790371383,reviewed,"74 km ENE of Tadine, New Caledonia",-21.31,168.55
+us6000txq2,50,1790374054,reviewed,"83 km ENE of Tadine, New Caledonia",-21.2,168.6
+us6000txqi,55,1790379580,reviewed,"73 km ENE of Tadine, New Caledonia",-21.34,168.55
+us6000txqk,53,1790380354,reviewed,"76 km ENE of Tadine, New Caledonia",-21.2,168.52
+us6000txql,50,1790380653,reviewed,"13 km NW of Xunchang, China",28.53,104.61
+us6000txqu,53,1790385018,reviewed,"68 km NE of Tadine, New Caledonia",-21.18,168.41
+us6000tz4s,51,1790406498,reviewed,"79 km NE of Tadine, New Caledonia",-20.98,168.34
+us6000txrq,50,1790407334,reviewed,"64 km ENE of Tadine, New Caledonia",-21.23,168.41
+us6000txrs,50,1790411098,reviewed,"83 km ENE of Tadine, New Caledonia",-21.2,168.6
+us6000txse,50,1790418065,reviewed,"87 km ENE of Tadine, New Caledonia",-21.14,168.6
+us6000txsz,50,1790424860,reviewed,"78 km NE of Tadine, New Caledonia",-21.15,168.51
+us6000txt0,50,1790424889,reviewed,"82 km ENE of Tadine, New Caledonia",-21.33,168.64
+us6000tz4m,53,1790424897,reviewed,"78 km ENE of Tadine, New Caledonia",-21.24,168.56
+us6000txtc,56,1790431697,reviewed,"74 km ESE of Kokopo, Papua New Guinea",-4.59,152.89
+us6000tz3z,50,1790433222,reviewed,"54 km ENE of Kolonga, Tonga",-21.0,-174.56
+us6000txtn,50,1790434896,reviewed,"72 km ENE of Tadine, New Caledonia",-21.37,168.56
+us6000txtz,52,1790440423,reviewed,"150 km NW of Kilmia, Yemen",13.3,51.44
+us6000txvu,51,1790471905,reviewed,"61 km ENE of Tadine, New Caledonia",-21.43,168.47
+us6000txw5,51,1790475730,reviewed,"87 km ENE of Tadine, New Caledonia",-21.34,168.69
+us6000tyt8,53,1790523665,reviewed,Balleny Islands region,-62.61,165.93
+us6000ty0j,50,1790543615,reviewed,South Sandwich Islands region,-59.12,-25.99
+us6000ty2b,53,1790565906,reviewed,"72 km NE of Tadine, New Caledonia",-21.16,168.44
+us6000ty2e,52,1790567024,reviewed,South Sandwich Islands region,-57.72,-25.22
+us6000ty2u,54,1790570483,reviewed,"207 km WSW of Port McNeill, Canada",50.21,-129.94
+us6000ty33,50,1790573288,reviewed,"74 km ENE of Tadine, New Caledonia",-21.24,168.52
+us6000ty38,50,1790574328,reviewed,"83 km ENE of Tadine, New Caledonia",-21.17,168.57
+us6000ty43,52,1790586819,reviewed,"192 km WSW of Port McNeill, Canada",50.11,-129.68
+us6000ty57,54,1790601759,reviewed,north of Svalbard,82.59,-7.44
+us6000tya5,53,1790652233,reviewed,"86 km NE of Tadine, New Caledonia",-21.02,168.49
+us6000tybr,50,1790678577,reviewed,"78 km ENE of Tadine, New Caledonia",-21.29,168.58
+us6000tyc1,55,1790685636,reviewed,"76 km SSE of Pangai, Tonga",-20.49,-174.2
+us6000tyc3,56,1790687170,reviewed,southern Mid-Atlantic Ridge,-35.3,-16.18
+us6000tyhi,54,1790743683,reviewed,Balleny Islands region,-63.31,169.89
+us6000tyhk,55,1790744425,reviewed,"75 km S of Yonakuni, Japan",23.79,122.9
+us6000tyid,50,1790751003,reviewed,"73 km NE of Tadine, New Caledonia",-21.05,168.34
+us6000tyik,52,1790752035,reviewed,Balleny Islands region,-63.74,170.72
+us6000tyit,50,1790756120,reviewed,"115 km S of Kokopo, Papua New Guinea",-5.37,152.11
+us6000tymj,56,1790805326,reviewed,"91 km SW of Tamarindo, Costa Rica",9.78,-86.49
+us6000tyny,50,1790818160,reviewed,"4 km SE of Baghlān, Afghanistan",36.11,68.74
+us6000tyq7,53,1790832850,reviewed,"42 km WSW of Palimbang, Philippines",6.05,123.83
+us6000tytg,52,1790857634,reviewed,"0 km ENE of Yokoshiba, Japan",35.65,140.49
+us6000tyua,50,1790864399,reviewed,"177 km NNE of Ruteng, Indonesia",-7.05,120.84
+us6000tyw6,51,1790875037,reviewed,"103 km ENE of Miyako, Japan",39.86,143.12
+us6000tywu,51,1790883481,reviewed,"182 km SE of Lata, Solomon Islands",-11.88,166.99
+us6000tyzl,51,1790916293,reviewed,"167 km ESE of Gizo, Solomon Islands",-8.89,158.14
+us6000tz0x,50,1790939653,reviewed,"61 km SW of Panguna, Papua New Guinea",-6.63,155.03
+us6000tz1c,50,1790949435,reviewed,"4 km ENE of Inglewood, New Zealand",-39.14,174.23
+us6000tz5h,50,1790958684,reviewed,"22 km SSE of Güiria, Venezuela",10.38,-62.23
+us6000tz62,57,1790958879,reviewed,"152 km SE of Vilyuchinsk, Russia",51.8,159.67
+us6000tz7b,50,1790965520,reviewed,"173 km SSE of Vilyuchinsk, Russia",51.61,159.77
+us6000tzal,51,1790996346,reviewed,"169 km SE of Petropavlovsk-Kamchatsky, Russia",52.12,160.6
+us6000tzer,57,1791068152,reviewed,"36 km WSW of Tambolaka, Indonesia",-9.54,118.92
+us6000tzfg,53,1791070654,reviewed,"85 km SSW of Banda Aceh, Indonesia",4.8,95.14
+us6000tzi5,50,1791108787,reviewed,"42 km NNW of Ruteng, Indonesia",-8.27,120.29
+us6000tzid,51,1791112368,reviewed,"Volcano Islands, Japan region",22.85,144.61
+us6000tzip,51,1791114202,reviewed,"21 km ESE of Feke, Turkey",37.73,36.13
+us6000tzj8,50,1791122770,reviewed,south of Panama,5.25,-82.69
+us6000tzkn,50,1791145644,reviewed,"28 km SE of Jurm, Afghanistan",36.67,71.05
+us6000tzlp,53,1791163130,reviewed,central Mid-Atlantic Ridge,-0.44,-19.93
+us6000tzme,50,1791178005,reviewed,"67 km E of ‘Ohonua, Tonga",-21.3,-174.3
+us6000tzna,50,1791197529,reviewed,"183 km ENE of Saipan, Northern Mariana Islands",15.82,147.34
+us6000tzsc,50,1791231779,reviewed,south of the Fiji Islands,-24.48,179.86
+us6000tzwg,50,1791292282,reviewed,"43 km NNE of Semporna, Malaysia",4.84,118.77
+us6000u0hy,58,1791305301,reviewed,"275 km SSW of Severo-Kuril’sk, Russia",48.34,154.83
+us6000u0hz,50,1791305592,reviewed,"32 km NW of Bāgeshwar, India",30.08,79.57
+aka2026tuxgky,55,1791311671,reviewed,"92 km NNW of Aleneva, Alaska",58.8,-153.61
+us6000u0rr,52,1791385165,reviewed,Chagos Archipelago region,-6.68,72.35
+us6000u0wa,50,1791434940,reviewed,"92 km N of Ruteng, Indonesia",-7.78,120.33
+us6000u0ws,55,1791442008,reviewed,west of Macquarie Island,-52.57,140.14
+us6000u0x4,55,1791446879,reviewed,"13 km SW of Burias, Philippines",5.62,125.18
+us6000u0xi,63,1791450008,reviewed,"117 km NE of Norsup, Vanuatu",-15.43,168.28
+us6000u11v,51,1791493170,reviewed,northern Mid-Atlantic Ridge,30.58,-41.87
+us6000u13v,52,1791522663,reviewed,"112 km SE of Bitung, Indonesia",0.83,125.94
+us6000u153,51,1791541335,reviewed,"74 km SSW of Colchane, Chile",-19.93,-68.8
+us6000u15x,52,1791553902,reviewed,"101 km NE of Norsup, Vanuatu",-15.53,168.16
+us6000u164,59,1791557382,reviewed,west of Macquarie Island,-60.88,154.14
+us6000u18k,77,1791568565,reviewed,"10 km WSW of Pitaloza Arriba, Panama",7.61,-80.76
+us6000u2uc,52,1791568910,reviewed,"16 km NE of Pedasí, Panama",7.63,-79.91
+us6000u2ud,54,1791568963,reviewed,"47 km SSW of Puerto Vidal, Panama",7.65,-81.76
+us6000u2us,51,1791569190,reviewed,"8 km NNE of Quebro, Panama",7.51,-80.85
+us6000u2t1,51,1791569807,reviewed,"2 km ESE of La Mesa, Panama",7.65,-80.6
+us6000u18t,55,1791570135,reviewed,"1 km E of La Miel, Panama",7.56,-80.32
+us6000u2uw,50,1791571036,reviewed,"6 km NNW of El Cortezo, Panama",7.49,-80.65
+us6000u18x,58,1791571065,reviewed,"4 km W of Flores, Panama",7.48,-80.45
+us6000u2td,50,1791571346,reviewed,"13 km SE of Río Grande, Panama",7.62,-81.25
+us6000u197,50,1791572689,reviewed,"8 km SE of Río Grande, Panama",7.67,-81.27
+us6000u19h,52,1791575335,reviewed,"11 km SE of Río Grande, Panama",7.64,-81.26
+us6000u19s,50,1791577222,reviewed,"15 km SSW of Tebario, Panama",7.58,-81.01
+us6000u19t,50,1791577298,reviewed,"10 km W of Flores, Panama",7.49,-80.5
+us6000u19w,66,1791577538,reviewed,"13 km WSW of Río Grande, Panama",7.68,-81.45
+us6000u2un,56,1791577681,reviewed,"13 km WNW of Río Grande, Panama",7.77,-81.44
+us6000u2tu,51,1791578157,reviewed,"16 km WNW of Río Grande, Panama",7.75,-81.48
+us6000u1aa,50,1791578528,reviewed,"16 km W of Río Grande, Panama",7.7,-81.48
+us6000u1ax,51,1791587402,reviewed,"4 km ESE of La Tronosa, Panama",7.42,-80.55
+us6000u1ay,54,1791587558,reviewed,"6 km SE of Oria Arriba, Panama",7.46,-80.17
+us6000u1az,50,1791588193,reviewed,"4 km NE of Río Grande, Panama",7.75,-81.31
+us6000u1bs,51,1791597642,reviewed,"127 km E of Bitung, Indonesia",1.42,126.27
+us6000u1bu,50,1791599193,reviewed,"5 km WSW of Flores, Panama",7.47,-80.45
+us6000u1cd,53,1791604698,reviewed,"40 km NE of Yigo Village, Guam",13.84,145.1
+us6000u1cf,60,1791605641,reviewed,"4 km NNE of La Tronosa, Panama",7.48,-80.57
+us6000u1cv,50,1791610321,reviewed,"136 km E of Bitung, Indonesia",1.51,126.36
+us6000u1gs,53,1791668042,reviewed,southeast of Easter Island,-37.11,-95.31
+us6000u1i6,52,1791689417,reviewed,"193 km S of Pelabuhanratu, Indonesia",-8.73,106.5
+us6000u1kt,53,1791726178,reviewed,"28 km SSW of Camaná, Peru",-16.86,-72.82
+us6000u1kv,62,1791727640,reviewed,"86 km SSE of Panguna, Papua New Guinea",-7.05,155.75
+us6000u1ld,53,1791738026,reviewed,"108 km SSW of Severo-Kuril’sk, Russia",49.73,155.8
+us6000u1mj,52,1791754494,reviewed,"149 km W of Gorontalo, Indonesia",0.52,121.72
+us6000u1pl,55,1791779891,reviewed,"119 km W of Neiafu, Tonga",-18.57,-175.11
+us6000u1rh,54,1791804523,reviewed,Mid-Indian Ridge,-8.9,67.46
+us6000u1wn,61,1791847236,reviewed,"15 km W of Río Grande, Panama",7.71,-81.47
+us6000u3vr,50,1791847670,reviewed,"8 km NW of Río Grande, Panama",7.78,-81.38
+us6000u1ye,51,1791864015,reviewed,"107 km S of Gambiran Satu, Indonesia",-9.36,114.0
+us6000u1z5,67,1791870281,reviewed,central Mid-Atlantic Ridge,-0.53,-19.12
+us6000u1zc,50,1791871283,reviewed,"79 km N of Claveria, Philippines",19.32,120.96
+us6000u207,53,1791880708,reviewed,southern Mid-Atlantic Ridge,-28.59,-12.65
+us6000u214,68,1791894187,reviewed,central Mid-Atlantic Ridge,-0.35,-19.39
+us6000u21s,53,1791902172,reviewed,"129 km S of Kokopo, Papua New Guinea",-5.51,152.16
+us6000u23d,51,1791908893,reviewed,"122 km S of Kokopo, Papua New Guinea",-5.44,152.14
+us6000u24c,60,1791917103,reviewed,"128 km S of Kokopo, Papua New Guinea",-5.5,152.15
+us6000u28y,59,1791974988,reviewed,Fiji region,-21.02,-178.86
+us6000u2ec,51,1792035389,reviewed,"37 km E of Safotu, Samoa",-13.41,-172.06
+us6000u2ev,53,1792041931,reviewed,"46 km SSE of Otorohanga, New Zealand",-38.58,175.38
+aka2026ukynnb,56,1792062421,reviewed,"43 km NNW of Lake Minchumina, Alaska",64.22,-152.75
+us6000u2gd,54,1792063003,reviewed,off the coast of Ecuador,0.9,-85.36
+us6000u2hp,52,1792069611,reviewed,"161 km W of Sola, Vanuatu",-13.89,166.06
+us6000u2hv,52,1792070971,reviewed,"92 km NNE of Hihifo, Tonga",-15.25,-173.32
+us6000u2mq,69,1792121732,reviewed,"72 km NE of Ozernovskiy, Russia",52.02,157.13
+us6000u2v8,52,1792179250,reviewed,off the coast of Ecuador,1.3,-85.27
+us6000u2y1,57,1792213617,reviewed,"47 km WNW of Khuzdar, Pakistan",28.02,66.19
+us6000u309,52,1792245574,reviewed,"86 km SW of Brisas Barra de Suchiate, Mexico",14.05,-92.86
+us6000u34e,52,1792310405,reviewed,"60 km NNW of Ruteng, Indonesia",-8.1,120.29
+us6000u37h,52,1792351948,reviewed,"71 km ESE of ‘Ohonua, Tonga",-21.54,-174.3
+us6000u38g,51,1792362703,reviewed,"127 km SSE of Kokopo, Papua New Guinea",-5.44,152.62
+us6000u3bc,60,1792396144,reviewed,"186 km NW of Port-Olry, Vanuatu",-14.05,165.68
+us6000u3be,53,1792396536,reviewed,"188 km NW of Port-Olry, Vanuatu",-13.98,165.7
+us6000u3bi,54,1792397558,reviewed,"184 km WNW of Port-Olry, Vanuatu",-14.14,165.64
+us6000u3bk,52,1792398107,reviewed,"211 km WNW of Port-Olry, Vanuatu",-14.15,165.33
+us6000u3c6,54,1792406421,reviewed,"196 km NW of Port-Olry, Vanuatu",-14.04,165.57
+us7000ttse,53,1792406447,reviewed,"221 km NW of Port-Olry, Vanuatu",-13.92,165.37
+us6000u3c7,50,1792407427,reviewed,"15 km WNW of Jiangyou, China",31.82,104.56
+us6000u3ct,53,1792421064,reviewed,"106 km WNW of Höfn, Iceland",64.51,-17.34
+us6000u3ft,51,1792431950,reviewed,South Sandwich Islands region,-56.35,-27.09
+us6000u3ga,57,1792435956,reviewed,"198 km NW of Port-Olry, Vanuatu",-14.04,165.55
+us6000u3ge,57,1792436137,reviewed,"203 km WNW of Port-Olry, Vanuatu",-14.03,165.5
+us6000u3j1,50,1792456707,reviewed,"193 km NW of Port-Olry, Vanuatu",-14.03,165.61
+us6000u3jl,63,1792470038,reviewed,"197 km NW of Port-Olry, Vanuatu",-13.99,165.59
+us6000u3k5,52,1792477762,reviewed,"204 km NW of Port-Olry, Vanuatu",-13.88,165.59
+us6000u3ka,51,1792478483,reviewed,"266 km WSW of Yanglong, China",37.83,95.65
+us6000u3lf,50,1792492840,reviewed,"81 km S of Sand Point, Alaska",54.61,-160.33
+us6000u3nc,50,1792513778,reviewed,"21 km SW of Meulaboh, Indonesia",4.0,95.99
+us6000u3nl,54,1792515947,reviewed,"210 km S of Burica, Panama",6.16,-82.52
+us6000u3p1,51,1792519637,reviewed,"41 km WNW of Mosteiros, Portugal",37.98,-26.28
+us6000u3rr,50,1792545602,reviewed,south of Panama,4.7,-82.8
+us6000u3t4,51,1792568656,reviewed,"164 km NE of Lospalos, Timor Leste",-7.56,128.14
+us6000u3t6,52,1792571861,reviewed,"68 km NE of Cabatuan, Philippines",13.03,125.59
+us6000u3ue,50,1792594587,reviewed,"191 km NW of Port-Olry, Vanuatu",-14.09,165.59
+us6000u3wh,51,1792606355,reviewed,south of Africa,-52.81,27.46
+us6000u3xx,50,1792608064,reviewed,"190 km WNW of Port-Olry, Vanuatu",-14.12,165.58
+us6000u3x2,50,1792609565,reviewed,Reykjanes Ridge,56.95,-34.23
+us6000u3yj,54,1792618734,reviewed,Reykjanes Ridge,56.77,-34.19
+us6000u3yp,51,1792619927,reviewed,Reykjanes Ridge,56.83,-34.12
+us6000u3zp,50,1792628738,reviewed,South Sandwich Islands region,-55.98,-27.11
+us6000u43g,70,1792679620,reviewed,"189 km ENE of Nagqu, China",32.34,93.78
+us6000u44n,52,1792681924,reviewed,"197 km ENE of Nagqu, China",32.41,93.84
+us6000u45j,50,1792692404,reviewed,"207 km ENE of Nagqu, China",32.37,93.99
+us6000u473,50,1792699504,reviewed,"153 km S of Kokopo, Papua New Guinea",-5.73,152.26
+us6000u4bk,57,1792750756,reviewed,"61 km WNW of Leni, Italy",38.72,14.15
+us6000u4dc,52,1792763736,reviewed,"50 km WNW of Malfa, Italy",38.77,14.31
+us6000u4e2,51,1792771670,reviewed,"73 km ENE of Noda, Japan",40.35,142.62
+us6000u4h7,51,1792793111,reviewed,"206 km NW of Port-Olry, Vanuatu",-13.9,165.56
+us6000u4j2,68,1792809088,reviewed,"203 km NW of Port-Olry, Vanuatu",-13.94,165.56
+us6000u4jb,61,1792809357,reviewed,"163 km NW of Port-Olry, Vanuatu",-14.11,165.89
+us6000u4ji,51,1792811325,reviewed,"170 km NW of Port-Olry, Vanuatu",-14.12,165.81
+us6000u4jl,52,1792811875,reviewed,"202 km NW of Port-Olry, Vanuatu",-13.88,165.62
+us6000u4ju,57,1792814736,reviewed,"205 km NW of Port-Olry, Vanuatu",-13.91,165.56
+us6000u4jw,58,1792815125,reviewed,"203 km NW of Port-Olry, Vanuatu",-13.9,165.6
+us6000u4jy,53,1792815578,reviewed,"216 km W of Sola, Vanuatu",-13.73,165.55
+us6000u4k2,50,1792817085,reviewed,"161 km NW of Port-Olry, Vanuatu",-14.16,165.87
+us6000u4k1,51,1792817361,reviewed,"217 km NW of Port-Olry, Vanuatu",-13.85,165.47
+us6000u4k6,58,1792819420,reviewed,"182 km NW of Port-Olry, Vanuatu",-14.08,165.7
+us6000u4kj,53,1792821856,reviewed,"174 km NW of Port-Olry, Vanuatu",-14.13,165.75
+us6000u4kq,55,1792824189,reviewed,"55 km NNE of Port-Olry, Vanuatu",-14.59,167.31
+us6000u4ku,50,1792824724,reviewed,"219 km NW of Port-Olry, Vanuatu",-13.88,165.42
+us6000u4l9,51,1792830166,reviewed,"218 km NW of Port-Olry, Vanuatu",-13.83,165.47
+us6000u4lc,51,1792830482,reviewed,"209 km NW of Port-Olry, Vanuatu",-13.8,165.61
+us6000u4lg,53,1792831193,reviewed,"223 km ENE of Nagqu, China",32.56,94.05
+us6000u4lm,59,1792832188,reviewed,"196 km NW of Port-Olry, Vanuatu",-13.94,165.65
+us6000u4lp,50,1792832820,reviewed,"224 km WNW of Port-Olry, Vanuatu",-14.09,165.23
+us6000u4lr,51,1792834728,reviewed,"170 km NW of Port-Olry, Vanuatu",-14.17,165.76
+us6000u4m5,51,1792840440,reviewed,"210 km NW of Port-Olry, Vanuatu",-13.84,165.56
+us6000u4m6,50,1792840827,reviewed,"141 km NNW of Kilmia, Yemen",13.25,51.52
+us6000u4mn,59,1792855459,reviewed,Bouvet Island region,-54.03,7.04
+us6000u4nv,50,1792868835,reviewed,"193 km NW of Port-Olry, Vanuatu",-13.97,165.66
+us6000u4pa,53,1792874104,reviewed,"101 km SSE of Vilyuchinsk, Russia",52.16,159.2
+us6000u4q8,50,1792882029,reviewed,"229 km NW of Port-Olry, Vanuatu",-13.83,165.35
+us6000u4qp,50,1792885498,reviewed,"198 km NW of Port-Olry, Vanuatu",-13.88,165.67
+us6000u4qq,51,1792886377,reviewed,"46 km ESE of Miyazaki, Japan",31.79,131.89
+us6000u4r3,51,1792892783,reviewed,"166 km WNW of Port-Olry, Vanuatu",-14.38,165.69
+us6000u4r7,51,1792893970,reviewed,"161 km WNW of Port-Olry, Vanuatu",-14.45,165.7
+us6000u4r9,65,1792894163,reviewed,"Bonin Islands, Japan region",27.8,139.62
+us6000u4rf,61,1792895040,reviewed,"25 km ENE of Port-Olry, Vanuatu",-15.0,167.3
+us6000u4s5,52,1792898950,reviewed,"63 km NNE of Lae, Papua New Guinea",-6.17,147.17
+us6000u4tc,54,1792917660,reviewed,"205 km NW of Port-Olry, Vanuatu",-13.88,165.58
+us6000u4tq,54,1792924227,reviewed,"33 km ESE of Ambunti, Papua New Guinea",-4.36,143.08
+us6000u4tx,51,1792927454,reviewed,"199 km ENE of Nagqu, China",32.37,93.89
+us6000u4ty,59,1792927557,reviewed,"218 km ENE of Nagqu, China",32.46,94.05
+us6000u4va,52,1792950263,reviewed,"59 km SW of Ashkāsham, Afghanistan",36.27,71.1
+us6000u4we,53,1792966455,reviewed,"Bonin Islands, Japan region",27.86,139.68
+us6000u4xa,50,1792977741,reviewed,"204 km NW of Port-Olry, Vanuatu",-13.9,165.58
+us6000u4y1,50,1792990420,reviewed,"45 km NNW of Ende, Indonesia",-8.44,121.57
+us6000u4yr,55,1793009581,reviewed,"283 km E of Levuka, Fiji",-18.28,-178.01
+us6000u4z6,50,1793013475,reviewed,"218 km NW of Port-Olry, Vanuatu",-13.94,165.39
+us6000u4zb,52,1793016810,reviewed,"205 km NW of Port-Olry, Vanuatu",-13.86,165.6
+us7000ttfb,58,1793091323,reviewed,"196 km NW of Port-Olry, Vanuatu",-13.91,165.67
+us7000ttfc,50,1793092065,reviewed,"95 km NNE of Hihifo, Tonga",-15.17,-173.41
+us7000ttfe,50,1793092855,reviewed,"206 km NW of Port-Olry, Vanuatu",-13.9,165.56
+us7000ttfj,50,1793095591,reviewed,"184 km NW of Port-Olry, Vanuatu",-13.94,165.79
+us7000ttfk,52,1793098235,reviewed,"191 km NW of Port-Olry, Vanuatu",-14.01,165.65
+us7000ttgf,54,1793112241,reviewed,"126 km S of Pundong, Indonesia",-9.1,110.39
+us7000ttgm,50,1793114763,reviewed,"29 km W of Río Grande, Panama",7.68,-81.6
+us7000ttis,54,1793127473,reviewed,"210 km ENE of Nagqu, China",32.54,93.9
+us7000ttke,54,1793142856,reviewed,"192 km WSW of Merizo Village, Guam",12.76,142.97
+us7000ttkk,51,1793144631,reviewed,"8 km WNW of Sugal, Philippines",5.7,125.4
+us7000ttlc,52,1793149914,reviewed,"6 km NW of Balangonan, Philippines",5.61,125.31
+us7000ttld,55,1793151551,reviewed,"221 km NW of Port-Olry, Vanuatu",-13.89,165.39
+us7000ttlk,52,1793153835,reviewed,"220 km NW of Port-Olry, Vanuatu",-13.81,165.46
+us7000ttlm,60,1793154105,reviewed,"214 km NW of Port-Olry, Vanuatu",-13.93,165.45
+us7000ttlt,56,1793156388,reviewed,"174 km NW of Port-Olry, Vanuatu",-14.07,165.8
+us7000ttm2,50,1793161864,reviewed,"200 km W of Sola, Vanuatu",-13.74,165.7
+us7000ttmb,50,1793167967,reviewed,"205 km SSE of Vilyuchinsk, Russia",51.23,159.54
+us7000ttnc,55,1793187469,reviewed,Reykjanes Ridge,58.1,-32.15
+us7000ttnk,50,1793188577,reviewed,Reykjanes Ridge,58.36,-32.24
+us7000ttnz,50,1793191628,reviewed,Reykjanes Ridge,58.22,-32.33
+us7000ttpe,55,1793200072,reviewed,"5 km ESE of Asahi, Japan",35.7,140.71
+us7000ttth,52,1793216732,reviewed,Reykjanes Ridge,58.11,-32.11
+us7000tttl,53,1793217407,reviewed,"161 km WNW of Tobelo, Indonesia",2.43,126.74
+us7000ttua,57,1793225205,reviewed,"271 km WSW of Tual, Indonesia",-6.32,130.4
+us7000ttvf,54,1793232500,reviewed,"109 km ENE of Luganville, Vanuatu",-15.12,168.1
+us7000ttw2,54,1793243874,reviewed,"113 km ENE of Barcelona, Philippines",8.37,127.44
+us7000ttw3,58,1793243945,reviewed,"110 km ENE of Barcelona, Philippines",8.36,127.42
+us7000ttw5,57,1793244402,reviewed,"82 km NE of Kiunga, Papua New Guinea",-5.7,141.9
+us7000ttx0,54,1793250408,reviewed,South Sandwich Islands region,-60.21,-27.95
+us7000ttx8,51,1793252016,reviewed,Balleny Islands region,-61.33,161.16
+us7000ttxn,54,1793259090,reviewed,"114 km ENE of Barcelona, Philippines",8.47,127.43
+us7000ttxz,64,1793260190,reviewed,southeast of Easter Island,-36.41,-98.05
+us7000tty7,51,1793263782,reviewed,"218 km NNW of Bamboo Flat, India",13.38,91.66
+us7000tu3j,50,1793304872,reviewed,"143 km S of False Pass, Alaska",53.58,-163.03
+us7000tu3u,50,1793305931,reviewed,"131 km NNW of Tual, Indonesia",-4.47,132.49
+us7000tu4f,62,1793310404,reviewed,"43 km ESE of Port-Olry, Vanuatu",-15.19,167.45
+us7000tu5q,51,1793329457,reviewed,"97 km NNE of Finschhafen, Papua New Guinea",-5.81,148.32
+us7000tu7j,51,1793355148,reviewed,Balleny Islands region,-62.45,155.26
+us7000tuif,50,1793446272,reviewed,"196 km NW of Port-Olry, Vanuatu",-13.91,165.68
+us7000tujf,52,1793461818,reviewed,"4 km E of La Miel, Panama",7.57,-80.29
+us7000tukm,50,1793481639,reviewed,"115 km SE of Bushehr, Iran",28.11,51.51
+us7000tuku,60,1793484902,reviewed,"58 km SSE of Shima, Japan",33.82,136.99
+us7000tuky,52,1793486559,reviewed,"200 km NW of Port-Olry, Vanuatu",-13.87,165.65
+us7000tun8,54,1793514402,reviewed,"203 km NW of Port-Olry, Vanuatu",-13.87,165.62
+us7000tund,51,1793516454,reviewed,"201 km NW of Port-Olry, Vanuatu",-13.86,165.65
+us7000tupl,60,1793533623,reviewed,"165 km NW of Port-Olry, Vanuatu",-14.17,165.82
+us7000tuqk,51,1793553116,reviewed,South Sandwich Islands region,-56.26,-27.2
+us7000tuqx,50,1793558079,reviewed,Mid-Indian Ridge,-23.87,69.52
+us7000tusv,51,1793580790,reviewed,Banda Sea,-6.92,129.95
+us7000tut4,51,1793582296,reviewed,Kermadec Islands region,-31.22,-177.72
+us7000tuuy,51,1793607194,reviewed,"19 km WNW of Tomohon, Indonesia",1.39,124.65
+us7000tuxg,51,1793633293,reviewed,"50 km WSW of Huarmey, Peru",-10.17,-78.6
+us7000tuxy,53,1793638157,reviewed,"81 km SSE of Palekastro, Greece",34.48,26.47
+us7000tv4i,54,1793697194,reviewed,"24 km NNW of Rioblanco, Colombia",3.74,-75.72
+us7000tv5i,50,1793712844,reviewed,South Sandwich Islands region,-58.8,-26.29
+us7000tvie,52,1793724492,reviewed,"Volcano Islands, Japan region",24.18,141.67
+us7000tvs3,52,1793730073,reviewed,Mid-Indian Ridge,-35.52,78.3
+us7000tvtj,52,1793741648,reviewed,"91 km ESE of Kyzyl-Eshme, Kyrgyzstan",39.36,73.3
+us7000tvwj,50,1793778012,reviewed,"207 km ESE of Sarangani, Philippines",4.39,127.03
+us7000tw76,51,1793870552,reviewed,"19 km NNW of Masumbwe, Tanzania",-3.46,32.15
+us7000tw8p,50,1793897785,reviewed,"130 km NE of Thang, India",35.63,77.94
+us7000tw8r,61,1793899305,reviewed,Fiji region,-21.2,-178.71
+us7000twg9,61,1793961567,reviewed,"144 km SE of Hasaki, Japan",34.97,142.12
