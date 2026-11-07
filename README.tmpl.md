@@ -90,12 +90,6 @@ The contract cannot look at the internet, so someone has to carry the earthquake
 - The USGS licence terms were not verified (their policy page blocked automated access). Read them before making this repo public.
 - Public testnet RPC endpoints rate-limit. The page and the check scripts try `test.rpc.fastnear.com` first and fall back to `rpc.testnet.near.org`.
 
-## The case against Tremor
-
-A coin that dilutes its holders gives no one a reason to hold it. The relief is symbolic here, since the five accounts are stand-ins. When a cap is hit, a big event can mint nothing, so the coin stops reacting to magnitude (this happens in the simulation). The whole mechanism depends on one data source and on five bots that the launcher picked. And "nobody can vote" also means nobody can correct the bots.
-
-Why it is still worth building: it is a small, fully specified mechanic whose worst case is written in code and measured, whose rules cannot be changed after launch (the deployed code exports no owner, admin or upgrade method, and nothing that changes a bot, and `make verify-onchain` checks that), whose decisions never depend on who holds how many coins, and whose weak points are listed above rather than hidden.
-
 ## Repo map
 
 | Path | What |

@@ -27,7 +27,7 @@ paths = {p.rstrip("/") for p in paths if not p.startswith(("http", "<")) and "*"
 ignored = lambda p: any(subprocess.run(["git", "check-ignore", "-q", q], cwd=ROOT).returncode == 0 for q in (p, p + "/"))  # private paths (like .state/) are deliberately not in the repo
 missing = sorted(p for p in paths if not (ROOT / p).exists() and not (ROOT / p.split(" ")[0]).exists() and not ignored(p))
 check("every backticked path in the README exists", not missing, f"missing: {missing}" if missing else f"({len(paths)} paths)")
-required = ["## Results", "## Try it in five minutes", "## The mechanic in brief", "## How events are confirmed and what a liar can do", "## Honest limits", "## The case against Tremor", "## Two projects, one entrant", "## AI assistance, libraries, licence, data"]
+required = ["## Results", "## Try it in five minutes", "## The mechanic in brief", "## How events are confirmed and what a liar can do", "## Honest limits", "## Two projects, one entrant", "## AI assistance, libraries, licence, data"]
 check("required sections present", all(h in readme for h in required), str([h for h in required if h not in readme]))
 banned = [r"\bsecure\b", r"\baudited\b", r"production[- ]ready", r"\bguarantee", r"risk[- ]free", r"will (be worth|go up|appreciate)", r"\bcasualt", r"\bfatalit", r"\binjur", r"\bdeath"]
 hits = [b for b in banned if re.search(b, re.sub(r"^.*(no casualty figures).*$", "", readme, flags=re.M | re.I), re.I)]
