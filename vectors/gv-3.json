@@ -1,7 +1,8 @@
 {
  "name": "GV-3 too little turnout",
  "params": {
-  "s0": 1015225750000
+  "s0": 1015225750000,
+  "base_ppm": 5000
  },
  "scenario": "challenge",
  "votes": [

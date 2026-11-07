@@ -3,7 +3,7 @@
 These numbers are typed from the spec (NOT produced by the reference) so the reference is checked against them."""
 import json, pathlib
 U = 10**6
-P = dict(s0=1_000_000 * U)
+P = dict(s0=1_000_000 * U, base_ppm=5000)  # GV numbers use the spec-default 0.5% base (not the Gate A choice)
 out = pathlib.Path(__file__).resolve().parent.parent / "vectors"
 T0 = 20000 * 86400  # day boundary
 H = 3600

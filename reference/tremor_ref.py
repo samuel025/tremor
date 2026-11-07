@@ -14,7 +14,7 @@ class Reject(Exception):
 class Params:
     s0: int = 1_000_000 * UNIT
     min_mag_x10: int = 60
-    base_ppm: int = 5000
+    base_ppm: int = 2500  # confirmed at Gate A (DECISIONS.md)
     max_event_ppm: int = 15000
     cooldown_s: int = DAY
     week_cap_ppm: int = 15000
@@ -28,7 +28,7 @@ class Params:
     relief: tuple = ("relief1", "relief2", "relief3", "relief4", "relief5")
 
     def validate(self):
-        if min(self.week_cap_ppm, self.month_cap_ppm, self.base_ppm, self.max_event_ppm) <= 0:
+        if min(self.week_cap_ppm, self.month_cap_ppm, self.base_ppm, self.max_event_ppm, self.cooldown_s, self.bond) <= 0:
             raise Reject("caps and shares must be nonzero")
         if not 0 <= self.slash_pct <= 100:
             raise Reject("slash_pct must be 0..100")
@@ -205,8 +205,7 @@ class Tremor:
 
     def claim_vote(self, a, eid, now):
         e, p = self._get(eid), self.p
-        if e.status not in ("counted", "rejected") or (e.status == "counted" and e.winner is None and not e.votes):
-            raise Reject("not final")
+        if e.status not in ("counted", "rejected"): raise Reject("not final")
         if a not in e.votes or a in e.claimed: raise Reject("nothing to claim")
         side, n = e.votes[a]
         e.claimed.add(a)
@@ -242,3 +241,10 @@ class Tremor:
         for k in self.buckets:  # supply only grows, so the final supply bounds every earlier allowance
             assert self.minted_last(k * DAY, 7) <= self.supply * self.p.week_cap_ppm // 10**6, "weekly cap"
             assert self.minted_last(k * DAY, 30) <= self.supply * self.p.month_cap_ppm // 10**6, "monthly cap"
+
+    # ---- snapshot used by the conformance vectors (must match the Rust core exactly)
+    def snapshot(self):
+        nz = lambda d: {k: v for k, v in sorted(d.items()) if v}
+        return dict(supply=self.supply, tok=nz(self.tok), bal=nz(self.bal), locked=nz(self.locked),
+                    buckets=nz(self.buckets), recent=list(self.recent),
+                    events={k: [e.status, e.minted, e.pot, e.win_left, e.winner or "", e.clipped] for k, e in sorted(self.ev.items())})
