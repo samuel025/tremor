@@ -16,7 +16,7 @@
     <nav aria-label="Sections"><a href="#events">Events</a><a href="#map">Map</a><a href="#params">Rules</a><a href="#sim">Simulation</a><a href="#check">Check</a></nav>
     <span class="launch">Testnet · no value</span>
   </div></div>
-  <div class="lnav"><div class="lnav-in"><b>Tremor</b><span class="sp"></span><a class="out" href="#map">Explore</a><a class="blue" href="#live">Live state</a></div></div>
+  <div class="lnav"><div class="lnav-in"><b>Tremor</b><div class="seg" id="netseg" role="group" aria-label="Which contract"><button type="button" data-net="live">Live</button><button type="button" data-net="demo">Demo</button></div><span class="sp"></span><a class="out" href="#map">Explore</a><a class="blue" href="#live">Live state</a></div></div>
 </header>
 <main id="top">
 <section class="hero" id="hero">
@@ -38,7 +38,7 @@
   <p class="fine">The seismogram replays real events from the committed USGS catalog. It is an animation, not a live sensor.</p>
 </section>
 
-<div class="wrap"><div id="banner" class="banner" hidden></div></div>
+<div class="wrap"><p class="netnote" id="netnote"></p><div id="banner" class="banner" hidden></div></div>
 
 <section id="live" class="band mist"><div class="wrap reveal">
   <div class="head"><h2>The most it can ever dilute you</h2><a class="more" href="#params">The rules ›</a></div>
@@ -75,9 +75,11 @@
 </div></section>
 
 <section id="mine" class="band"><div class="wrap reveal">
-  <h2>Look up any account</h2>
-  <p class="sub">No wallet needed to read. Acting (depositing a bond, reporting, challenging, voting) is done from the command line for now; see “How to check me”.</p>
-  <form id="lookup" class="card lookup"><label for="acct">Testnet account</label><div class="row"><input id="acct" placeholder="ada.example.testnet" autocomplete="off" spellcheck="false"><button class="btn" type="submit">Look up</button></div><p id="lookup-out" class="note" aria-live="polite"></p></form>
+  <h2>Play the whole process</h2>
+  <p class="sub" id="mine-sub">Connect a free testnet wallet and go through every step on the real contract: starter coins, a bond, a report, a challenge, a vote, the result. Nothing here has any value.</p>
+  <div class="grid2"><div class="card" id="wallet-card"></div>
+  <div class="card"><h3>The steps</h3><ol class="steps" id="steps"></ol></div></div>
+  <form id="lookup" class="card lookup"><label for="acct">Or just look up any testnet account (no wallet needed)</label><div class="row"><input id="acct" placeholder="ada.example.testnet" autocomplete="off" spellcheck="false"><button class="btn" type="submit">Look up</button></div><p id="lookup-out" class="note" aria-live="polite"></p></form>
 </div></section>
 
 <section id="params" class="band mist"><div class="wrap reveal">
@@ -107,6 +109,7 @@ make verify-onchain    # read the live contract and compare</code></pre></div>
 </div></section>
 
 </main>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 <footer class="foot"><div class="wrap">
   <p><b>Tremor is a testnet prototype.</b> It has no value and promises none. Holding it dilutes you when quakes happen. The relief accounts donate nothing real, and nothing here claims real-world impact.</p>
   <p>Earthquake data: U.S. Geological Survey, Earthquake Hazards Program (ANSS ComCat). Contract: <a id="contract-link" href="#" rel="noopener">–</a>. Code written from Nov 7, 2026 with AI assistance; MIT licence.</p>

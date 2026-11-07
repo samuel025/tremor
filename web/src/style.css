@@ -124,3 +124,14 @@ details.full{margin-top:8px}summary{cursor:pointer;font-weight:600}.md{margin-to
 .card ul{margin:0;padding-left:1.2em}.card li{margin:8px 0}
 .banner{margin-top:18px;padding:14px 20px;border-radius:20px;background:var(--mist);color:var(--orange);font-weight:600;font-size:14px}
 .foot{background:var(--mist);padding:44px 0 70px;color:var(--slate);font-size:12px;letter-spacing:-.12px}.foot p{margin:0 0 10px;max-width:60em}
+
+/* net switch, wallet, actions */
+.seg{display:inline-flex;background:var(--mist);border-radius:9999px;padding:2px;margin-left:12px}.seg button{border:0;background:none;font:400 12px/16px var(--text);padding:5px 14px;border-radius:9999px;cursor:pointer;color:var(--ink);letter-spacing:-.12px}.seg button.on{background:var(--white);font-weight:600;box-shadow:0 0 0 1px var(--ctl)}
+.netnote{text-align:center;font-size:14px;color:var(--slate);margin:18px 0 0;letter-spacing:-.224px}
+.acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;align-items:center}.vote{display:inline-flex;flex-wrap:wrap;gap:8px;align-items:center}
+.acts input,.vote input{flex:none;width:110px;padding:6px 12px;font-size:14px}.acts button:disabled{opacity:.5;cursor:default}
+.two{display:flex;gap:32px;margin:8px 0}.two small{display:block;color:var(--slate);font-size:12px}.two b{font:600 28px/1.1 var(--display);letter-spacing:-.4px}.two span{font-size:12px;color:var(--slate);margin-left:4px}
+.mk{margin:12px 0 8px;font-size:14px}.mk summary{color:var(--link);font-weight:400}.mk .vote{margin-top:10px}#w-fid{width:150px}
+.steps{margin:0;padding-left:1.3em;font-size:15px}.steps li{margin:8px 0}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);max-width:min(92vw,560px);background:var(--ink);color:#fff;padding:12px 20px;border-radius:22px;font-size:14px;z-index:70;letter-spacing:-.224px}
+.row.slim .out{white-space:nowrap}

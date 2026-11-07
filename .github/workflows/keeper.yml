@@ -1,0 +1,21 @@
+# Keeps the LIVE testnet contract busy: every 20 minutes it reports new real M6+ quakes from USGS and finalizes events whose window is over.
+# TESTNET ONLY. The key below is a function-call key that can only call report_event and finalize on the contract; it holds coins with no value.
+# Setup: repo Settings > Secrets and variables > Actions > New repository secret named KEEPER_PRIVATE_KEY (value from .state/keeper_key.json).
+name: keeper
+on:
+  schedule: [{ cron: "*/20 * * * *" }]
+  workflow_dispatch: {}
+concurrency: keeper
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci
+        working-directory: keeper
+      - run: node keeper.mjs --net live --days 3
+        working-directory: keeper
+        env:
+          KEEPER_PRIVATE_KEY: ${{ secrets.KEEPER_PRIVATE_KEY }}

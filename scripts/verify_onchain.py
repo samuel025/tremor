@@ -8,10 +8,10 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "reference"))
 from replaylog import replay
 
-ap = argparse.ArgumentParser(); ap.add_argument("--save"); ap.add_argument("--final", action="store_true"); ap.add_argument("--contract")
+ap = argparse.ArgumentParser(); ap.add_argument("--save"); ap.add_argument("--final", action="store_true"); ap.add_argument("--contract"); ap.add_argument("--net", choices=["demo", "live"], help="read the contract from deployments.json")
 a = ap.parse_args()
 RPCS = ["https://test.rpc.fastnear.com", "https://rpc.testnet.near.org"]  # the official one rate-limits
-C = a.contract or f"tremor.{(ROOT / '.state/parent_account').read_text().strip()}"
+C = a.contract or (json.loads((ROOT / "deployments.json").read_text())[a.net]["contract"] if a.net else f"tremor.{(ROOT / '.state/parent_account').read_text().strip()}")
 fails = 0
 ALLOWED = {"bond_balance_of", "challenge", "claim_vote", "contract_source_metadata", "deposit_bond", "finalize", "ft_balance_of", "ft_metadata",
            "ft_resolve_transfer", "ft_total_supply", "ft_transfer", "ft_transfer_call", "get_event", "get_log", "get_params", "get_state",

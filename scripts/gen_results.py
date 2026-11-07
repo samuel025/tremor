@@ -35,10 +35,12 @@ if "--sandbox" in sys.argv:
         report_gas_tgas=int(need(r"with 63 open: (\d+) Tgas", out, "report gas").group(1)), date=now)
 
 if "--live" in sys.argv:
-    rc, out = run("python3 scripts/verify_onchain.py 2>&1")
-    res["verify_onchain"] = dict(pass_=len(re.findall(r"^PASS", out, re.M)), fail=len(re.findall(r"^FAIL", out, re.M)), ok=rc == 0, date=now,
-                                 contract=need(r"verify-onchain: (\S+) on testnet", out, "contract id").group(1),
-                                 keys=int(need(r"access keys on the contract: (\d+)", out, "key count").group(1)))
+    res["verify_onchain"] = {}
+    for net in ("demo", "live"):
+        rc, out = run(f"python3 scripts/verify_onchain.py --net {net} 2>&1")
+        res["verify_onchain"][net] = dict(pass_=len(re.findall(r"^PASS", out, re.M)), fail=len(re.findall(r"^FAIL", out, re.M)), ok=rc == 0, date=now,
+                                          contract=need(r"verify-onchain: (\S+) on testnet", out, "contract id").group(1),
+                                          keys=int(need(r"access keys on the contract: (\d+)", out, "key count").group(1)))
 
 demo_log = ROOT / ".state/demo2.log"
 if demo_log.exists() and "--keep-demo" not in sys.argv:
