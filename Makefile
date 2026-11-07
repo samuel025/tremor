@@ -1,4 +1,4 @@
-.PHONY: test fetch-usgs vectors
+.PHONY: test vectors fetch-usgs sim conformance-vectors conformance test-rust build-wasm sandbox-test demo replay verify-onchain web-dev web-build results results-full readme check-readme
 test:
 	python3 -m unittest discover -s tests -v
 vectors:
