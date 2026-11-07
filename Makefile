@@ -22,7 +22,8 @@ demo:
 replay:
 	python3 scripts/replay.py
 verify-onchain:
-	python3 scripts/verify_onchain.py
+	python3 scripts/verify_onchain.py --net demo
+	python3 scripts/verify_onchain.py --net live
 web-dev:
 	cd web && npm install && npm run dev
 web-build:
