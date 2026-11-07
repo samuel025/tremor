@@ -239,4 +239,6 @@ class Tremor:
         assert all(v >= 0 for d in (self.tok, self.bal, self.locked) for v in d.values())
         for e in self.ev.values():
             assert e.minted == 0 or e.status == "counted"
-        assert all(self.minted_last(k * DAY, 7) <= self.p.week_cap_ppm * 10**6 and True for k in self.buckets)
+        for k in self.buckets:  # supply only grows, so the final supply bounds every earlier allowance
+            assert self.minted_last(k * DAY, 7) <= self.supply * self.p.week_cap_ppm // 10**6, "weekly cap"
+            assert self.minted_last(k * DAY, 30) <= self.supply * self.p.month_cap_ppm // 10**6, "monthly cap"
