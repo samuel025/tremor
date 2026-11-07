@@ -21,7 +21,7 @@ export function renderJourney(c: Ctx): string {
   const now = done.findIndex((d) => !d); const cur = now === -1 ? 6 : now; // 6 = the last step (the result)
   const pool = c.state ? BigInt(c.state.tap_pool) : 0n;
   const q = c.unreported[0];
-  const dep = c.tok < 3000n * 1_000_000n ? c.tok : 3000n * 1_000_000n;
+  const dep = c.tok < bondAmt ? c.tok : bondAmt; // exactly what one report needs
   const steps: { title: string; sum: string; body: string }[] = [
     { title: "Connect a free wallet", sum: c.me ? `Connected as ${esc(c.me)}` : "",
       body: `<p>You need a free testnet account. It takes a minute in the Meteor wallet (switch it to <b>testnet</b>). Nothing here has any value.</p><button class="blue big" data-j="connect">Connect wallet</button>` },
@@ -30,7 +30,7 @@ export function renderJourney(c: Ctx): string {
         : `<p>Press the button for ${trem(tapAmt, 0)} TREM. They are free, have no value, and you can take them once.</p><button class="blue big" data-j="tap">Get ${trem(tapAmt, 0)} TREM</button><p class="hint">Your wallet may ask for a tiny storage fee (0.00125 NEAR) the first time.</p>` },
     { title: "Put a deposit down", sum: `Deposit ready: ${trem(c.bond)} TREM`,
       body: `<p>Reporting an earthquake needs a ${trem(bondAmt, 0)} TREM <b>deposit</b>. You get it back if you turn out to be right, and lose it if you are wrong. That is what stops people posting lies for free.</p>
-        ${c.tok > 0n ? `<button class="blue big" data-j="deposit" data-amt="${dep}">Put ${trem(dep, 0)} TREM down</button>` : `<p class="hint">You need coins first (step 2).</p>`}` },
+        ${c.tok >= bondAmt ? `<button class="blue big" data-j="deposit" data-amt="${dep}">Put ${trem(dep, 0)} TREM down</button>` : `<p class="hint">You need at least ${trem(bondAmt, 0)} TREM in your wallet first (step 2).</p>`}` },
     { title: "Report an earthquake", sum: ev ? `You reported ${esc(ev.event_id)} (${mag(ev.mag_x10)})` : "",
       body: c.net === "live" && !q
         ? `<p>The bot has already reported every recent real quake on the <b>Live</b> contract. Switch to the Demo (top bar) to report one yourself, or make up a fake one below.</p>`
@@ -61,6 +61,7 @@ function progress(ev: Ev, t: number): string {
 function voteUi(ev: Ev, c: Ctx): string {
   const real = BigInt(ev.real_locked), no = BigInt(ev.not_real_locked), left = ev.vote_ends ? ev.vote_ends - c.now : 0;
   return `<p class="note">Locked so far: ${trem(real, 0)} “real”, ${trem(no, 0)} “not real”. ${left > 0 ? `Voting ends in <b class="cd" data-end="${ev.vote_ends}">${duration(left)}</b>.` : "Voting is over."}</p>
+    ${left > 0 && c.bond < 2500n * 1_000_000n && c.tok >= 2500n * 1_000_000n ? `<p class="hint">Voting uses coins from your deposit balance (${trem(c.bond, 0)} TREM there now).</p><button class="out" data-j="deposit" data-amt="${2500n * 1_000_000n}">Add 2,500 TREM to my deposit</button>` : ""}
     ${left > 0 ? `<div class="vote"><input type="number" min="1" value="2500" aria-label="Coins to lock, in TREM"><button class="out" data-j="vote" data-side="real" data-id="${esc(ev.event_id)}">Vote real</button><button class="out" data-j="vote" data-side="not_real" data-id="${esc(ev.event_id)}">Vote not real</button></div><p class="hint">Voting locks coins. If your side loses, you lose a fifth of what you locked.</p>` : ""}`;
 }
 
