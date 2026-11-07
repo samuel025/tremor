@@ -8,6 +8,11 @@ def lock_version(lock, crate):
     m = re.search(r'name = "%s"\nversion = "([^"]+)"' % re.escape(crate), lock.read_text()); return m[1] if m else "?"
 
 
+def npm_version(lock, pkg):
+    """Version of an npm package from a committed package-lock.json (so no node_modules are needed)."""
+    return json.loads(lock.read_text())["packages"][f"node_modules/{pkg}"]["version"]
+
+
 def build(results=None):
     R = results or json.loads((ROOT / "results/results.json").read_text())
     S = R["simulation"]; c = S["chosen"]
@@ -34,7 +39,7 @@ def build(results=None):
         "sim.selfish": f"{S['selfish30_pen20_counted_pct']:.0f}", "sim.catalog_events": str(S["catalog_events"]), "sim.catalog_m6": str(S["catalog_m6"]),
         "sim.clipped_pct": f"{S['clipped_weeks'] * 100:.0f}", "sim.default_clipped": f"{S['default_clipped_weeks_pct']:g}",
         "libs.near_sdk": lock_version(ROOT / "contract/Cargo.lock", "near-sdk"), "libs.near_workspaces": lock_version(ROOT / "contract/sandbox/Cargo.lock", "near-workspaces"),
-        "libs.vite": json.loads((ROOT / "web/node_modules/vite/package.json").read_text())["version"], "libs.wallet_selector": json.loads((ROOT / "web/node_modules/@near-wallet-selector/core/package.json").read_text())["version"], "libs.near_api_js": json.loads((ROOT / "keeper/node_modules/near-api-js/package.json").read_text())["version"], "libs.typescript": json.loads((ROOT / "web/node_modules/typescript/package.json").read_text())["version"],
+        "libs.vite": npm_version(ROOT / "web/package-lock.json", "vite"), "libs.wallet_selector": npm_version(ROOT / "web/package-lock.json", "@near-wallet-selector/core"), "libs.near_api_js": npm_version(ROOT / "keeper/package-lock.json", "near-api-js"), "libs.typescript": npm_version(ROOT / "web/package-lock.json", "typescript"),
         "RESULTS": "\n".join(res), "GV1": "\n".join(rows),
     }
     text = (ROOT / "README.tmpl.md").read_text()
