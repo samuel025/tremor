@@ -24,3 +24,6 @@ Interpretations (the spec is silent): D-6 "half the watchers challenge" = 5 inde
 - Finding F-2: a 40% holder profits from blocking real events when honest turnout is partial (scenario 4). Stated as a limit, not fixed.
 - Finding F-3: overlapping disputes lock the same coins, so turnout can fall under quorum even with no selfish voters.
 - D-10: sim helpers (sim/simulate.py) drive the real reference state machine; report/grid code lives in sim/run_all.py and sim/report.py.
+
+## Gate A: parameters confirmed by the human (2026-11-07)
+base_ppm 2500 (0.25% at M6.0, 2x at M7, 3x at M8, max 1.5%), weekly cap 15000 ppm, monthly cap 50000 ppm, slash 20%, quorum 2000 ppm, bond 1,000 TREM, window 24h, vote 48h, cooldown 24h.
