@@ -2,7 +2,7 @@
  "python_tests": {
   "passed": 3,
   "ok": true,
-  "date": "2026-11-07"
+  "date": "2026-11-08"
  },
  "conformance": {
   "scenarios": 200,
@@ -10,28 +10,28 @@
   "mismatches": 0,
   "tests_passed": 2,
   "ok": true,
-  "date": "2026-11-07"
+  "date": "2026-11-08"
  },
  "replay": {
   "pass_": 14,
   "fail": 0,
   "ok": true,
-  "date": "2026-11-07"
+  "date": "2026-11-08"
  },
  "verify_onchain": {
   "demo": {
-   "pass_": 15,
+   "pass_": 19,
    "fail": 0,
    "ok": true,
-   "date": "2026-11-07",
+   "date": "2026-11-08",
    "contract": "tremor.rounds-indep-5928.testnet",
    "keys": 1
   },
   "live": {
-   "pass_": 14,
+   "pass_": 20,
    "fail": 0,
    "ok": true,
-   "date": "2026-11-07",
+   "date": "2026-11-08",
    "contract": "tremor-live.rounds-fund-5928.testnet",
    "keys": 1
   }
@@ -73,7 +73,15 @@
   "pass_": 27,
   "fail": 0,
   "ok": true,
-  "date": "2026-11-07"
+  "date": "2026-11-08"
  },
- "tap_amount": 5000
+ "tap_amount": 5000,
+ "web_conformance": {
+  "scenarios": 200,
+  "steps": 28021,
+  "mismatches": 0,
+  "golden": true,
+  "ok": true,
+  "date": "2026-11-08"
+ }
 }

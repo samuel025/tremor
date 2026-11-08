@@ -13,10 +13,10 @@
 <header class="top">
   <div class="gnav"><canvas id="navtrace" aria-hidden="true"></canvas><div class="gnav-in">
     <a class="glyph" href="#top" aria-label="Tremor home"><svg viewBox="0 0 32 32" width="18" height="18" aria-hidden="true"><path d="M2 17h6l4-10 6 18 4-11 2 3h6" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
-    <nav aria-label="Sections"><a class="go-test" href="#try">Test it</a><a href="#bots">The bots</a><a href="#events">Events</a><a href="#map">Map</a><a href="#params">Rules</a><a href="#sim">Simulation</a></nav>
+    <nav aria-label="Sections"><a href="#try">Try it</a><a href="#bots">The bots</a><a href="#events">Events</a><a href="#map">Map</a><a href="#params">Rules</a><a href="#sim">Simulation</a></nav>
     <span class="launch">Testnet · no value</span>
   </div></div>
-  <div class="lnav"><div class="lnav-in"><b>Tremor</b><div class="seg" id="netseg" role="group" aria-label="Which contract"><button type="button" data-net="demo" title="Quakes are confirmed within seconds: use this one to test">Demo · test here</button><button type="button" data-net="live" title="Real timing: results take hours">Live · real timing</button></div><span class="sp"></span><a class="out" href="#bots">How the bots decide</a><a class="blue go-test" href="#try">Test it on the Demo</a></div></div>
+  <div class="lnav"><div class="lnav-in"><b>Tremor</b><span class="sp"></span><a class="out" href="#bots">How the bots decide</a><a class="blue" href="#try">Try it</a></div></div>
 </header>
 <main id="top">
 <section class="hero" id="hero">
@@ -33,19 +33,20 @@
     <div class="cs"><small>Total supply</small><b id="c-supply" data-v="0">–</b><span id="c-supply-sub">TREM</span></div>
     <div class="cs"><small>New coins, last 7 days</small><b id="c-7d" data-v="0">–</b><span>TREM</span></div>
     <div class="cs"><small>Quakes waiting for bots</small><b id="c-open" data-v="0">–</b><span id="c-live"><i class="dot-live"></i>live from testnet</span></div>
-    <div class="cbtns"><button class="out" id="feel" type="button">Feel a replay</button><a class="blue go-test" href="#try">Test it on the Demo</a></div>
+    <div class="cbtns"><button class="out" id="feel" type="button">Feel a replay</button><a class="blue" href="#try">Try it yourself</a></div>
   </div>
   <p class="fine">The seismogram replays real events from the committed USGS catalog. It is an animation, not a live sensor.</p>
 </section>
 
-<div class="wrap"><p class="netnote" id="netnote"></p><div id="banner" class="banner" hidden></div></div>
+<div class="wrap"><div id="banner" class="banner" hidden></div></div>
 
 <section id="try" class="band mist"><div class="wrap">
-  <h2>Test it yourself <span class="tag" id="try-tag">on the Demo</span></h2>
-  <p class="sub" id="try-sub">Four steps. You will tell the contract about a real earthquake and watch the five bots confirm it.</p>
-  <div id="modebar" class="modebar"></div>
-  <div id="journey-host"><div class="skeleton tall"></div></div>
-  <details class="card more"><summary>More: your wallet, starter coins, claim a made-up quake, look up any account</summary>
+  <h2>Try it yourself <span class="tag">simulation</span></h2>
+  <p class="sub">Play with the whole mechanism in your browser: tell the contract about a quake, watch five bots decide, and see the coins appear. No wallet, nothing to install, and nothing that can be offline.</p>
+  <div id="sim-host"><div class="skeleton tall"></div></div>
+  <details class="card more" id="real"><summary>Do it for real on the Live contract (needs a free wallet, and takes hours)</summary>
+    <div id="modebar" class="modebar"></div>
+    <div id="journey-host"><div class="skeleton tall"></div></div>
     <div id="wallet-card"></div>
     <form id="lookup" class="lookup"><label for="acct">Look up any testnet account (no wallet needed)</label><div class="row"><input id="acct" placeholder="ada.example.testnet" autocomplete="off" spellcheck="false"><button class="btn" type="submit">Look up</button></div><p id="lookup-out" class="note" aria-live="polite"></p></form>
   </details>

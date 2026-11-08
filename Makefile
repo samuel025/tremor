@@ -1,4 +1,4 @@
-.PHONY: test vectors fetch-usgs sim conformance-vectors conformance test-rust build-wasm sandbox-test demo replay verify-onchain web-dev web-build results results-full readme check-readme demo-bots live-bots
+.PHONY: test vectors fetch-usgs sim conformance-vectors conformance-web conformance test-rust build-wasm sandbox-test demo replay verify-onchain web-dev web-build results results-full readme check-readme demo-bots live-bots
 test:
 	python3 -m unittest discover -s tests -v
 vectors:
@@ -9,6 +9,8 @@ sim:
 	python3 sim/run_all.py && python3 sim/report.py
 conformance-vectors:
 	python3 tests/gen_conformance.py 200
+conformance-web:
+	cd web && node tests/conformance.ts
 conformance:
 	cd contract && cargo test --test conformance -- --nocapture
 test-rust:

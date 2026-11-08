@@ -24,6 +24,10 @@ rc, out = run("cd contract && cargo test --test conformance -- --nocapture 2>&1"
 m = need(r"conformance: (\d+) scenarios, (\d+) steps, (\d+) mismatches", out, "conformance line")
 res["conformance"] = dict(scenarios=int(m[1]), steps=int(m[2]), mismatches=int(m[3]), tests_passed=int(need(r"test result: ok\. (\d+) passed", out, "rust test result").group(1)), ok=rc == 0, date=now)
 
+rc, out = run("cd web && node tests/conformance.ts 2>&1")
+m = need(r"web-conformance: (\d+) scenarios, (\d+) steps, (\d+) mismatches; golden vector 1 (\w+)", out, "web conformance line")
+res["web_conformance"] = dict(scenarios=int(m[1]), steps=int(m[2]), mismatches=int(m[3]), golden=m[4] == "ok", ok=rc == 0, date=now)
+
 rc, out = run("python3 scripts/replay.py 2>&1")
 res["replay"] = dict(pass_=len(re.findall(r"^PASS", out, re.M)), fail=len(re.findall(r"^FAIL", out, re.M)), ok=rc == 0, date=now)
 

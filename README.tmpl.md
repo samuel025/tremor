@@ -6,7 +6,7 @@
 
 - Live page: TODO(human): add the hosted URL. Until then run it yourself: `make web-dev`.
 - Live contract (testnet, real timing: a quake is confirmed after it is 6 hours old): `{{verify.live}}`
-- Demo contract (testnet, a quake can be confirmed after 10 seconds so a whole round takes about a minute): `{{verify.demo}}`
+- Demo contract (testnet; used only by `make demo`, the scripted on-chain scene, and not by the page): `{{verify.demo}}`
 - Demo video and X post: TODO(human): add the links.
 - Built for the NEAR HACKATHON, track **Memecoins With Mechanics**. All code was written from Nov 7, 2026.
 
@@ -26,22 +26,21 @@ Every number below is read from `results/results.json`, which `make results` fil
 | `make sim` | The five simulation scenarios on the real catalog; `results/sim/SUMMARY.md` and `results/sim/supply.svg`. |
 | `make replay` | An offline recomputation of a saved testnet log (`fixtures/testnet-demo.json`): every check PASS. |
 | `make verify-onchain` | Both live contracts are read and compared with the reference: every check PASS, plus an INFO line about the access key. |
+| `make conformance-web` | The TypeScript copy of the rules, used by the page's simulation, matches the Python reference: {{web.scenarios}} scenarios, {{web.steps}} steps, {{web.mismatches}} mismatches. |
 | `make demo` | The scripted scene on testnet with the reference's expected value next to the real one at each step. Needs your own funded testnet accounts in `.state/` and no bots running; takes a couple of minutes. |
 
 ## Take part as a judge
 
-The page opens on the **Demo** contract and walks you through the whole process in four steps. The current step is worked out from the chain and your wallet, so it moves on by itself:
+**The interactive part of the page is a simulation that runs in your browser.** No wallet, no testnet, nothing to install, and nothing that can be offline. It uses the same rules code as the contract (`web/src/sim/engine.ts`), and `make conformance-web` proves that copy identical to the Python reference on the same {{web.scenarios}} random scenarios the Rust contract is checked against. Nothing in the simulation is on the blockchain, and the page says so.
 
-1. Connect a free testnet wallet (Meteor, set to testnet). Logging in gives the page a key that can call Tremor and nothing else.
-2. Tell the contract about an earthquake. The page picks a real, recent one from USGS for you. A claim creates nothing by itself.
-3. Watch the five bots decide. Each bot checks the USGS record on its own; when three attest the same record, the quake counts.
-4. See what it did: how many new coins were created and what each relief account received.
+1. Pick a quake: one of the real ones from the committed USGS catalog, or make one up.
+2. Set each of the five bots to **Honest** (attests only quakes the USGS has), **Bad** (attests anything) or **Offline**.
+3. Press the button and watch the bots decide one by one. A quake counts when three attest the same record. Then see the coins created, the split between the five relief accounts, the weekly and monthly caps, and what the cooldown does to a quake near another one.
+4. Or press a scenario: a real quake, a made-up quake, two bad bots, three bad bots, three bots offline. Two bad bots mint nothing; three can push a made-up quake through (to the caps); three offline bots mint nothing. "Skip ahead a week" shows the weekly cap resetting.
 
-You can also claim a **made-up** quake and watch the bots ignore it: it stays unconfirmed and creates nothing. No deposits, no coins, no votes are involved, so a wallet with no coins works. If you want to hold some coins to see them diluted, the **tap** gives {{tap}} free starter TREM once per account; it creates no new coins.
+**The real thing is the Live contract**, shown on the same page: its event board, caps, relief balances and rules are read from testnet, kept up to date by the real bots. Live is slow on purpose: a quake is only confirmed once it is 6 hours old, and the bots run every 20 minutes. A judge with a free Meteor wallet can still claim a quake on Live (a fold-out in "Try it yourself"); a claim creates nothing by itself, and made-up claims are never confirmed. **Watch the bots decide** replays a recorded real run on testnet, including the honest worst case. The tap gives {{tap}} free starter TREM once per account if you want to hold coins; it creates no new coins.
 
-**Watch the bots decide** replays a recorded real run on testnet: a claim confirmed by three bots, a quake the bots disagree about, and the honest worst case where three bad bots attest a made-up quake.
-
-The bots are `bots/bots.mjs`. On Live they run every 20 minutes (`.github/workflows/bots-live.yml`) and attest every recent M6+ quake. On Demo they only confirm visitors' claims, in a loop that polls every few seconds. All bot keys are private. Whoever runs the project starts the Demo bots with `make demo-bots` (or by hand in GitHub: Actions, bots-demo, Run workflow, `.github/workflows/bots-demo.yml`), and the Live bots with `make live-bots` or the GitHub schedule. If nobody has started the Demo bots, a claim of a real quake just sits there, and the page says so. Details and limits are in `docs/LIVE.md`.
+**Who plays the bots on Live.** `bots/bots.mjs`, run every 20 minutes by `.github/workflows/bots-live.yml`; the bot keys are private and never in this repo. The Demo contract has no bots running: it exists so `make demo` can replay a scripted scene on testnet.
 
 ## The mechanic in brief
 
@@ -77,7 +76,7 @@ The contract cannot look at the internet, so someone has to carry the earthquake
 ## Honest limits
 
 - The five bots are chosen at launch by whoever launches, and three of them decide. If three are bad, fakes count up to the caps and real quakes can be blocked. The caps and the fixed relief list bound the damage; they do not remove it.
-- In the demo and on Live, all five bots run in one process from one place. That demonstrates the mechanism, not independence. A real launch would need five independent operators.
+- On Live all five bots run in one process from one place. That demonstrates the mechanism, not independence. A real launch would need five independent operators.
 - The bots trust one source, USGS, and USGS revises events. The relief list is chosen by whoever launches; here its five accounts are stand-ins on testnet.
 - Removing votes also removed the incentive structure: nobody is rewarded for reporting or punished for lying, and bots are not paid. A bad bot loses nothing on chain.
 - The simulation uses one real 60-day window ({{sim.catalog_events}} events of M5+, {{sim.catalog_m6}} of M6+): a small sample. The bad-bot and offline scenarios hold by the rules (three of five), so they confirm the contract rather than discover anything.
@@ -86,7 +85,8 @@ The contract cannot look at the internet, so someone has to carry the earthquake
 - `make replay` and `make verify-onchain` check supply, mints, caps, which events counted, who attested what, and relief balances. The on-chain log does not record plain transfers, so they do not check every holder's balance.
 - The page's wallet buttons (Meteor wallet, testnet) call only contract functions that the tests above exercise, but the author has not completed a full wallet round trip in a real browser session. The command-line path (`make demo`) does the same calls.
 - The tap pool is finite and any account can use it. Anyone can also claim made-up quakes; they never count.
-- The bots run on GitHub's scheduled jobs, which can be delayed or skipped, and the Demo bot loop is started by hand. While the bots are down nothing is confirmed and nothing is created.
+- The Live bots run on a GitHub scheduled job, which can be delayed or skipped. While they are down nothing new is confirmed on Live and nothing is created.
+- The interactive demo is a simulation, not the chain. It can show the rules, but not a wallet signing a transaction; the Live contract shows the real thing, slowly. The simulation's bots are scripted, so it demonstrates the mechanism, not the trustworthiness of any real bot.
 - The USGS licence terms were not verified (their policy page blocked automated access). Read them before making this repo public.
 - Public testnet RPC endpoints rate-limit. The page and the check scripts try `test.rpc.fastnear.com` first and fall back to `rpc.testnet.near.org`.
 
@@ -102,9 +102,9 @@ The contract cannot look at the internet, so someone has to carry the earthquake
 | `data/usgs_60d.csv` | The committed 60-day USGS catalog extract (M5+) with query URL and retrieval date |
 | `scripts/` | Deploy, demo, replay, verify-onchain, README generation and checks |
 | `bots/` | The five publisher bots that read USGS and attest quakes |
-| `deployments.json`, `docs/LIVE.md` | Which contracts the page and tools use, and how Live and Demo differ |
-| `.github/workflows/` | The bot schedules and the page hosting |
-| `web/` | The static page (Vite and TypeScript; reads the chain and USGS in the browser) |
+| `deployments.json`, `docs/LIVE.md` | Which contracts the page and tools use, and how Live and the scripted Demo differ |
+| `.github/workflows/` | The Live bot schedule and the page hosting |
+| `web/` | The static page (Vite and TypeScript; reads the chain and USGS in the browser); `web/src/sim/engine.ts` is the rules engine behind the simulation and `web/tests/conformance.ts` proves it matches the reference |
 | `docs/NOTES.md`, `docs/DECISIONS.md` | What was learned, and every departure from the spec |
 | `AGENTS.md` | Rules for coding agents working in this repo |
 

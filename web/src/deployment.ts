@@ -6,11 +6,7 @@ export let ALL: Record<string, Dep> = {};
 
 export async function loadDeployments() {
   ALL = await (await fetch("deployments.json")).json();
-  const q = new URLSearchParams(location.search).get("net");
-  let saved: string | null = null; try { saved = localStorage.getItem("tremor-net"); } catch { /* private mode */ }
-  const want = q ?? saved ?? "demo";
-  NET = want === "live" && ALL.live?.contract ? "live" : "demo";
-  DEP = ALL[NET];
+  NET = "live"; DEP = ALL.live; // the page reads the real Live contract; the interactive demo is the in-browser simulation
 }
 export function switchNet(net: "live" | "demo", hash = "") {
   try { localStorage.setItem("tremor-net", net); } catch { /* ignore */ }

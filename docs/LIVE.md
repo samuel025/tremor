@@ -1,3 +1,5 @@
+> **Update 2026-11-08:** the page no longer uses the Demo contract. Its interactive part is an in-browser simulation (DECISIONS D-25). The Demo contract below is kept only for `make demo`, and nothing runs bots on it. Everything about Live still applies.
+
 # Live and demo deployments (testnet)
 
 Two copies of the same contract code run on NEAR testnet. Both have fixed parameters, five fixed publisher bots, five fixed relief accounts, no owner and no upgrade path (`make verify-onchain` checks the deployed code).
