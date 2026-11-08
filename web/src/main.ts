@@ -31,7 +31,11 @@ function meter(prefix: "wk" | "mo", minted: string, left: string, label: string)
   const m = BigInt(minted), l = BigInt(left), total = m + l, used = total ? Number((m * 10000n) / total) / 10000 : 0;
   $(`#${prefix}-t`).textContent = `${trem(m, 0)} of ${trem(total, 0)} TREM used`;
   requestAnimationFrame(() => ($(`#${prefix}-bar`).style.width = Math.max(1.5, used * 100) + "%"));
-  $(`#${prefix}-n`).textContent = `${pct(used)} of the ${label} allowance is used. ${trem(l, 0)} TREM can still be created.`;
+  const window_ = prefix === "wk" ? "7" : "30";
+  const full = used >= 0.95
+    ? ` <b>The allowance is nearly full.</b> This happens when the bots count several older quakes at once (for example after the contract starts, or after the bots were off): the cap goes by when coins are created, not when the quake happened, so they all land in the same ${prefix === "wk" ? "week" : "month"}. Quakes counted now are cut to almost nothing until older days leave the ${window_}-day window. It is the cap doing its job, not a fault.`
+    : "";
+  $(`#${prefix}-n`).innerHTML = `${pct(used)} of the ${esc(label)} allowance is used. ${trem(l, 0)} TREM can still be created.${full}`;
 }
 
 function renderMeters(s: State, p: Params) {
