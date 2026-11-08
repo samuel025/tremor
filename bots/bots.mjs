@@ -28,7 +28,18 @@ async function rpc(method, params) {
 }
 const view = async (m, args = {}) => JSON.parse(Buffer.from((await rpc("query", { request_type: "call_function", finality: "final", account_id: dep.contract, method_name: m, args_base64: Buffer.from(JSON.stringify(args)).toString("base64") })).result).toString());
 
-const keys = process.env.BOT_KEYS ? JSON.parse(process.env.BOT_KEYS) : (existsSync(new URL(`../.state/bot_keys_${net}.json`, import.meta.url)) ? JSON.parse(readFileSync(new URL(`../.state/bot_keys_${net}.json`, import.meta.url))) : null);
+// BOT_KEYS may be pasted in slightly different shapes (JSON with or without the braces or quotes, one line per bot, extra spaces or blank lines):
+// anything that contains "<account>.testnet" followed by "ed25519:<key>" pairs is accepted. Errors never print key material.
+function parseKeys(raw) {
+  const text = String(raw ?? "");
+  try { const j = JSON.parse(text); if (j && typeof j === "object" && !Array.isArray(j)) return j; } catch { /* fall through to the forgiving reader */ }
+  const out = {};
+  for (const m of text.matchAll(/([a-z0-9][a-z0-9._-]*\.testnet)["'\s:=,{}\[\]]+(ed25519:[1-9A-HJ-NP-Za-km-z]{40,})/g)) out[m[1]] = m[2];
+  if (!Object.keys(out).length) throw new Error(`BOT_KEYS is set but could not be read. It should look like {"bot1.<parent>.testnet": "ed25519:...", ...} (five entries). It is ${text.length} characters long and its first non-space character is ${JSON.stringify(text.trimStart()[0] ?? "(none)")}. Copy the WHOLE contents of .state/bot_keys_${net}.json into the secret.`);
+  return out;
+}
+const keys = process.env.BOT_KEYS ? parseKeys(process.env.BOT_KEYS) : (existsSync(new URL(`../.state/bot_keys_${net}.json`, import.meta.url)) ? parseKeys(readFileSync(new URL(`../.state/bot_keys_${net}.json`, import.meta.url), "utf8")) : null);
+if (keys && !dry) { const missing = dep.bots.filter((b) => !keys[b]); if (missing.length) throw new Error(`BOT_KEYS has no key for: ${missing.join(", ")}. Those five accounts must all be in the secret.`); }
 if (!keys && !dry) throw new Error("no keys: set BOT_KEYS or create .state/bot_keys_" + net + ".json");
 const accounts = {};
 async function signer(bot) {
