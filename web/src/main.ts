@@ -240,6 +240,10 @@ async function act(label: string, fn: () => Promise<unknown>) {
   for (const ms of [2500, 5000, 9000, 15000]) setTimeout(() => { refresh(); loadMine(); }, ms);
 }
 
+// "Open the Live walkthrough": unfold the real-contract section and bring it into view
+function openReal() { const d = document.querySelector<HTMLDetailsElement>("details#real"); if (d) { d.open = true; setTimeout(() => d.scrollIntoView({ behavior: "smooth", block: "start" }), 50); } }
+document.addEventListener("click", (ev) => { const a = (ev.target as HTMLElement).closest<HTMLElement>("[data-open=real]"); if (a) { ev.preventDefault(); openReal(); } });
+if (location.hash === "#real") setTimeout(openReal, 600);
 document.addEventListener("click", (ev) => {
   const t = ev.target as HTMLElement; const el = t.closest<HTMLElement>("button,a[data-j]"); if (!el) return;
   const j = el.dataset.j;
