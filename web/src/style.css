@@ -172,3 +172,5 @@ h2 .tag{display:inline-block;vertical-align:middle;font:600 14px/1 var(--text);l
 .mode.warn{box-shadow:0 0 0 2px var(--orange)}.mode.warn b{color:var(--orange)}.mode.warn .blue.big{flex:none;margin:0;white-space:nowrap}
 @media(max-width:760px){.mode.warn{flex-direction:column;align-items:flex-start}h2 .tag{margin:8px 0 0}}
 .seg button{white-space:nowrap}
+
+.mode.slim{padding:14px 20px;margin-top:10px}.mode.slim b{font-size:17px}.mode.slim p{font-size:14px}

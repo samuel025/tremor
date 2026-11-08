@@ -211,7 +211,7 @@ const mine = { tok: 0n, tapped: false, reg: false };
 let unreported: Quake[] = [], checkingQuakes = true;
 let ignoreBefore = Number((() => { try { return sessionStorage.getItem("tremor-ignore"); } catch { return 0; } })() ?? 0);
 function renderJourneyNow() {
-  const c: Ctx = { me, params, state: state0, evs: lastEvs, now: nowS(), tok: mine.tok, tapped: mine.tapped, unreported, net: NET, ignoreBefore, checking: checkingQuakes };
+  const c: Ctx = { me, params, state: state0, evs: lastEvs, now: nowS(), tok: mine.tok, tapped: mine.tapped, unreported, net: NET, ignoreBefore, checking: checkingQuakes, realQuake: (() => { const e = me ? lastEvs.filter((x) => x.claimer === me && x.created_at > ignoreBefore).sort((a, b) => b.created_at - a.created_at)[0] : undefined; return e ? flags.get(e.event_id)?.kind === "match" : undefined; })() };
   const host = $("#journey-host");
   const active = document.activeElement as HTMLElement | null;
   if (active && host.contains(active) && active.tagName === "INPUT") return; // do not rebuild under someone who is typing

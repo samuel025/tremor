@@ -76,3 +76,7 @@ Cloned the repo into an empty folder and ran the README commands: `make test` (3
 - Results worth remembering: with 2 bad bots no fake counts; with 3 all do (to the caps); with 3 bots offline nothing is created (fails safe); claim spam filled the 32-claim limit and no real quake was blocked.
 - Removed: bonds, deposit step, challenge, vote, claim_vote, quorum, penalty, the dispute replay, scripts/tn.sh, scripts/reporter.py history, the keeper (now bots/).
 - The old contracts' state and the demo/live recordings from the voting design are gone (both contracts were redeployed with --reset).
+
+## Demo bots stay private (2026-11-08)
+- The browser-plays-the-bots idea was built and tested, then dropped at the human's request: no keys in the repo. See DECISIONS D-24. Added instead: the "bots have not answered yet" message in the walkthrough, and `make demo-bots` / `make live-bots`.
+- A first attempt to purge the local key commit (hard reset plus aggressive garbage collection) was blocked as irreversible; the branch was renamed to `main-with-demo-keys` and a fresh `main` was made from origin/main instead. Only `main` is ever pushed. Delete the other branch when you are sure you do not want it.

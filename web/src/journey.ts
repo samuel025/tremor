@@ -6,7 +6,7 @@ import { duration, esc, mag, short, trem } from "./util";
 
 export interface Ctx {
   me: string | null; params: Params | null; state: State | null; evs: Ev[]; now: number; tok: bigint; tapped: boolean;
-  unreported: Quake[]; net: "live" | "demo"; ignoreBefore: number; checking: boolean;
+  unreported: Quake[]; net: "live" | "demo"; ignoreBefore: number; checking: boolean; realQuake?: boolean; // realQuake: the USGS check says my claimed quake exists
 }
 
 export const myEvent = (c: Ctx): Ev | undefined =>
@@ -39,6 +39,7 @@ export function renderJourney(c: Ctx): string {
     { title: "Watch the five bots decide", sum: final ? "Confirmed" : "Not confirmed",
       body: !ev ? "" : `<p>${ev.attestations} of ${ev.needed} needed bots agree on this quake. ${/^fake/i.test(ev.event_id) ? "No bot will confirm it: the USGS has no such event." : "Each bot checks the USGS record on its own and says so only if it finds the same quake."}</p>
         ${botChips(ev, p)}${dead ? "" : `<p class="note">${c.net === "live" ? `Live bots wait ${duration(p?.min_age_s ?? 0)} after a quake (it can still be revised) and run every 20 minutes.` : "On the Demo the bots check every few seconds."}</p>`}
+        ${stuck(ev, c) ? `<div class="mode warn slim"><div><b>The bots have not answered yet.</b><p>${c.net === "demo" ? "On the Demo the five bots are run by the project owner, from a computer or a GitHub job. If nobody started them, nothing gets confirmed, even for a real quake. Please tell the project owner (they start them with <code>make demo-bots</code>)." : "On Live the bots run every 20 minutes once a quake is old enough, so this can simply take a little longer."}</p></div></div>` : ""}
         ${ev.claim_open_until && !final ? `<p class="note">Your claim stays open for <b class="cd" data-end="${ev.claim_open_until}">${duration(ev.claim_open_until - t)}</b>.</p>` : ""}` },
     { title: "See what it did", sum: "", body: result(ev, dead) },
   ];
@@ -47,6 +48,13 @@ export function renderJourney(c: Ctx): string {
     return `<li class="step ${state}"><span class="num" aria-hidden="true">${state === "done" ? "✓" : i + 1}</span><div><h3>${i + 1}. ${esc(s.title)}</h3>${state === "done" && s.sum ? `<p class="sum">${s.sum}</p>` : ""}${state === "now" ? s.body : ""}</div></li>`;
   }).join("");
   return `<ol class="journey">${li}</ol>`;
+}
+
+/** a REAL quake (USGS has it), old enough, still has no attestation after a while: the bots are probably not running */
+function stuck(ev: Ev, c: Ctx): boolean {
+  if (ev.status !== "pending" || ev.attestations > 0 || !c.realQuake || !c.params) return false;
+  if (c.now - ev.origin_s < c.params.min_age_s) return false; // not old enough to be confirmed yet
+  return c.now - ev.created_at > (c.net === "demo" ? 30 : 2400);
 }
 
 function result(ev: Ev | undefined, dead: boolean): string {

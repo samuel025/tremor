@@ -41,7 +41,7 @@ You can also claim a **made-up** quake and watch the bots ignore it: it stays un
 
 **Watch the bots decide** replays a recorded real run on testnet: a claim confirmed by three bots, a quake the bots disagree about, and the honest worst case where three bad bots attest a made-up quake.
 
-The bots are `bots/bots.mjs`. On Live they run every 20 minutes (`.github/workflows/bots-live.yml`) and attest every recent M6+ quake. On Demo they only confirm visitors' claims, in a loop that polls every few seconds (`.github/workflows/bots-demo.yml`, started by hand on judging days). Details and limits are in `docs/LIVE.md`.
+The bots are `bots/bots.mjs`. On Live they run every 20 minutes (`.github/workflows/bots-live.yml`) and attest every recent M6+ quake. On Demo they only confirm visitors' claims, in a loop that polls every few seconds. All bot keys are private. Whoever runs the project starts the Demo bots with `make demo-bots` (or by hand in GitHub: Actions, bots-demo, Run workflow, `.github/workflows/bots-demo.yml`), and the Live bots with `make live-bots` or the GitHub schedule. If nobody has started the Demo bots, a claim of a real quake just sits there, and the page says so. Details and limits are in `docs/LIVE.md`.
 
 ## The mechanic in brief
 

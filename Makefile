@@ -1,4 +1,4 @@
-.PHONY: test vectors fetch-usgs sim conformance-vectors conformance test-rust build-wasm sandbox-test demo replay verify-onchain web-dev web-build results results-full readme check-readme
+.PHONY: test vectors fetch-usgs sim conformance-vectors conformance test-rust build-wasm sandbox-test demo replay verify-onchain web-dev web-build results results-full readme check-readme demo-bots live-bots
 test:
 	python3 -m unittest discover -s tests -v
 vectors:
@@ -36,3 +36,7 @@ readme:
 	python3 scripts/make_readme.py
 check-readme:
 	python3 scripts/check_readme.py
+demo-bots:
+	cd bots && node bots.mjs --net demo --claims-only --loop 4
+live-bots:
+	cd bots && node bots.mjs --net live --days 13 --loop 300
