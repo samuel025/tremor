@@ -1,8 +1,8 @@
 {
  "python_tests": {
-  "passed": 3,
+  "passed": 9,
   "ok": true,
-  "date": "2026-11-08"
+  "date": "2026-11-09"
  },
  "conformance": {
   "scenarios": 200,

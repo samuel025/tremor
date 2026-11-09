@@ -74,7 +74,9 @@ export class Tremor {
     split(m).forEach((n, i) => this.tok.set(this.p.relief[i], this.bal(this.p.relief[i]) + n));
     this.supply += m;
     const day = Math.floor(now / DAY); this.buckets.set(day, (this.buckets.get(day) ?? 0n) + m);
-    this.recent = [...this.recent, origin].slice(-16);
+    // Keep every counted origin that can still be within cooldown_s of a valid future event (not just the last 16):
+    // events can be counted out of origin order, so a fixed count can drop an origin that a later event is near.
+    this.recent = [...this.recent, origin].filter((o) => o >= now - this.p.max_age_s - this.p.cooldown_s);
     e.status = "counted"; e.minted = m; e.clipped = clipped; e.mag_x10 = mag; e.origin_s = origin;
     this.log.push({ kind: "event_counted", id: eid, minted: m, clipped, now });
     return [m, raw, clipped];

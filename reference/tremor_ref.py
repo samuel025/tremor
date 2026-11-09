@@ -81,7 +81,7 @@ class Tremor:
         for a in p.relief: self.tok.setdefault(a, 0)
         self.supply = p.s0
         self.ev = {}
-        self.recent = []   # last 16 counted origin times
+        self.recent = []   # counted origin times that can still lie within cooldown_s of a future valid event
         self.buckets = {}  # day -> minted
         self.tapped = set()
         self.log = []
@@ -121,7 +121,11 @@ class Tremor:
             self.tok[a] += n
         self.supply += m
         self.buckets[now // DAY] = self.buckets.get(now // DAY, 0) + m
-        self.recent = (self.recent + [origin_s])[-16:]
+        # Keep every counted origin that can still be within cooldown_s of a valid future event. A future origin is at
+        # least now - max_age_s, so an origin older than now - max_age_s - cooldown_s can never affect a later gap.
+        # Pruning by time (not by count) keeps out-of-order counts correct: the last 16 counted origins is not enough.
+        horizon = max(0, now - self.p.max_age_s - self.p.cooldown_s)
+        self.recent = [o for o in self.recent + [origin_s] if o >= horizon]
         e.status, e.minted, e.clipped, e.mag_x10, e.origin_s = "counted", m, clipped, mag_x10, origin_s
         self.log.append(("event_counted", eid, m, clipped, now))
         return m, raw, clipped

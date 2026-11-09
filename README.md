@@ -14,7 +14,7 @@
 
 Every number below is read from `results/results.json`, which `make results` fills by running the commands. `make check-readme` fails if this README is out of date.
 
-- `make test`: 3 Python tests pass (2026-11-08), including the three golden vectors.
+- `make test`: 9 Python tests pass (2026-11-09), including the three golden vectors.
 - `make conformance`: the Rust contract logic and the Python reference agree on 200 seeded random scenarios, 28,021 steps, 0 mismatches (2026-11-08).
 - `make sandbox-test`: 8 simulated-network tests pass, 0 fail (2026-11-07). One pending event costs about 308 bytes of storage; `attest` burns about 3 Tgas with 63 events pending.
 - `make conformance-web`: the TypeScript rules engine behind the page's simulation matches the Python reference on 200 seeded scenarios, 28,021 steps, 0 mismatches, and golden vector 1 (2026-11-08).

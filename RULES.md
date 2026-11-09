@@ -12,11 +12,11 @@ Five fixed publisher accounts (set at launch, never changed) are bots that read 
 
 ## Mint for one counted event
 - `share_ppm = min(max_event_ppm, base_ppm * max(0, mag_x10 - 50) / 10)`  (base at M6.0, 2x at M7.0, 3x at M8.0)
-- `gap = min(cooldown_s, min |origin_s - o|)` over the last 16 counted origin times
+- `gap = min(cooldown_s, min |origin_s - o|)` over every counted origin `o` that can still be within `cooldown_s` of a valid future event, i.e. `o >= now - max_age_s - cooldown_s` (not a fixed count: events may be counted out of origin order)
 - `raw = S * share_ppm * gap / (10^6 * cooldown_s)`
 - `m7`, `m30` = coins minted in day buckets `floor(block_time / 86400)` over the current day and the previous 6 / 29
 - `week_left = max(0, S * week_cap_ppm / 10^6 - m7)`, `month_left = max(0, S * month_cap_ppm / 10^6 - m30)`
-- `mint = min(raw, week_left, month_left)`; `clipped = mint < raw`. S is the supply just before this mint.
+- `mint = min(raw, week_left, month_left)`; `clipped = mint < raw`. S is the total supply just before this mint (there is no burn). The caps are shares of the supply at mint time, so their absolute allowance grows with supply: they bound dilution over a window, not total issuance, and they compound with supply across windows.
 - Split: each relief account gets `mint / 5`; the remainder (< 5 base units) goes to the first account.
 
 ## Starter coins

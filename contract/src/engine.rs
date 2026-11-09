@@ -93,7 +93,7 @@ pub struct Core {
     pub tok: BTreeMap<String, u128>,
     pub supply: u128,
     pub ev: BTreeMap<String, Ev>,
-    pub recent: Vec<u64>,              // last 16 counted origin times
+    pub recent: Vec<u64>,              // counted origin times that can still lie within cooldown_s of a future valid event
     pub buckets: BTreeMap<u64, u128>,  // day -> minted
     pub tapped: BTreeSet<String>,      // accounts that already took their starter coins
     #[borsh(skip)]
@@ -162,8 +162,12 @@ impl Core {
         for (a, n) in relief.iter().zip(split(m)) { add(&mut self.tok, a, n); }
         self.supply += m;
         *self.buckets.entry(now / DAY).or_insert(0) += m;
+        // Keep every counted origin that can still be within cooldown_s of a valid future event. A future origin is at
+        // least now - max_age_s, so anything older than now - max_age_s - cooldown_s can never affect a later gap.
+        // Pruning by time (not by count) keeps out-of-order counts correct: the last 16 counted origins is not enough.
         self.recent.push(origin);
-        if self.recent.len() > 16 { self.recent.remove(0); }
+        let horizon = now.saturating_sub(self.p.max_age_s.saturating_add(self.p.cooldown_s));
+        self.recent.retain(|o| *o >= horizon);
         let e = self.ev.get_mut(eid).unwrap();
         e.status = Status::Counted; e.minted = m; e.clipped = clipped; e.mag_x10 = mag; e.origin_s = origin;
         self.emit("event_counted", format!("{{\"event_id\":{},\"mag_x10\":{},\"origin_s\":{},\"minted\":\"{}\",\"clipped\":{},\"supply\":\"{}\",\"time\":{}}}", q(eid), mag, origin, m, clipped, self.supply, now));
