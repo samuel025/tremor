@@ -1,6 +1,7 @@
 """Tremor Python reference. Source of truth for the math is RULES.md.
 Exact integer arithmetic only; every division floors. Amounts are base units (6 decimals).
-Quakes are published by five fixed bots (publishers); an event counts when `threshold` different publishers attest the same record."""
+Quakes are published by five fixed bots (publishers); an event counts when `threshold` different publishers attest the same record
+(event id, magnitude, origin time and USGS PAGER alert level; the alert must be at least `min_alert`)."""
 from dataclasses import dataclass, field
 DAY = 86400
 UNIT = 10**6
@@ -16,6 +17,7 @@ class Reject(Exception):
 class Params:
     s0: int = 1_000_000 * UNIT
     min_mag_x10: int = 60
+    min_alert: int = 2             # USGS PAGER alert level a quake needs: 1 green, 2 yellow, 3 orange, 4 red. Chosen: yellow
     base_ppm: int = 2500           # confirmed at Gate A (DECISIONS.md)
     max_event_ppm: int = 15000
     cooldown_s: int = DAY
@@ -67,11 +69,12 @@ def split(mint: int):
 class Ev:
     created_at: int
     claimer: str = None
-    versions: dict = field(default_factory=dict)   # (mag_x10, origin_s) -> set of publishers
+    versions: dict = field(default_factory=dict)   # (mag_x10, origin_s, alert) -> set of publishers
     attested: set = field(default_factory=set)     # publishers that already attested this id (any version)
     status: str = "pending"                        # pending | counted
     mag_x10: int = 0
     origin_s: int = 0
+    alert: int = 0
     minted: int = 0
     clipped: bool = False
 
@@ -186,7 +189,7 @@ class Tremor:
                     week_left=max(0, self.supply * self.p.week_cap_ppm // 10**6 - m7),
                     month_left=max(0, self.supply * self.p.month_cap_ppm // 10**6 - m30))
 
-    def _count(self, eid, mag_x10, origin_s, now):
+    def _count(self, eid, mag_x10, origin_s, alert, now):
         e = self.ev[eid]
         gap = cooldown_gap(origin_s, self.recent, self.p.cooldown_s)
         m, raw, clipped = mint_amount(self.p, self.supply, mag_x10, gap, self.minted_last(now, 7), self.minted_last(now, 30))
@@ -200,14 +203,16 @@ class Tremor:
         # Pruning by time (not by count) keeps out-of-order counts correct: the last 16 counted origins is not enough.
         horizon = max(0, now - self.p.max_age_s - self.p.cooldown_s)
         self.recent = [o for o in self.recent + [origin_s] if o >= horizon]
-        e.status, e.minted, e.clipped, e.mag_x10, e.origin_s = "counted", m, clipped, mag_x10, origin_s
+        e.status, e.minted, e.clipped, e.mag_x10, e.origin_s, e.alert = "counted", m, clipped, mag_x10, origin_s, alert
         self.log.append(("event_counted", eid, m, clipped, now))
         return m, raw, clipped
 
     # ---- events
-    def _check(self, eid, mag_x10, origin_s, now, fresh_ok=False):
+    def _check(self, eid, mag_x10, origin_s, now, fresh_ok=False, alert=2):
         p = self.p
         if mag_x10 < p.min_mag_x10 or mag_x10 > 100: raise Reject("magnitude out of range")
+        if not 1 <= alert <= 4: raise Reject("alert level out of range")
+        if alert < p.min_alert: raise Reject("expected impact too low")
         if origin_s > now: raise Reject("origin in the future")
         if now - origin_s > p.max_age_s: raise Reject("origin too old")
         if not fresh_ok and now - origin_s < p.min_age_s: raise Reject("too recent")
@@ -215,39 +220,39 @@ class Tremor:
 
     def _open_pending(self, now):
         """pending events started by bots that can still be attested."""
-        return sum(1 for e in self.ev.values() if e.status == "pending" and e.claimer is None and now - min(o for _, o in e.versions) <= self.p.max_age_s)
+        return sum(1 for e in self.ev.values() if e.status == "pending" and e.claimer is None and now - min(o for _, o, _a in e.versions) <= self.p.max_age_s)
 
     def _open_claims(self, now):
         return [e for e in self.ev.values() if e.status == "pending" and e.claimer is not None and now < e.created_at + self.p.claim_wait_s]
 
-    def submit_claim(self, a, eid, mag_x10, origin_s, now):
+    def submit_claim(self, a, eid, mag_x10, origin_s, now, alert=2):
         """Anyone: tell the contract about a quake. It stays pending until publishers confirm it; a made-up claim never mints."""
         self.roll(now)
-        self._check(eid, mag_x10, origin_s, now, fresh_ok=True)
+        self._check(eid, mag_x10, origin_s, now, fresh_ok=True, alert=alert)
         if eid in self.ev: raise Reject("event id already exists")
         open_claims = self._open_claims(now)
         if any(e.claimer == a for e in open_claims): raise Reject("you already have an open claim")
         if len(open_claims) >= self.p.max_claims: raise Reject("too many open claims")
-        e = Ev(created_at=now, claimer=a); e.versions[(mag_x10, origin_s)] = set()
+        e = Ev(created_at=now, claimer=a); e.versions[(mag_x10, origin_s, alert)] = set()
         self.ev[eid] = e
-        self.log.append(("claim_submitted", eid, a, mag_x10, origin_s, now))
+        self.log.append(("claim_submitted", eid, a, mag_x10, origin_s, now, alert))
 
-    def attest(self, pub, eid, mag_x10, origin_s, now):
+    def attest(self, pub, eid, mag_x10, origin_s, now, alert=2):
         """A publisher confirms a quake it found in USGS. Counts (and mints) when `threshold` different publishers attest the same record."""
         self.roll(now)
         if pub not in self.p.publishers: raise Reject("not a publisher")
-        self._check(eid, mag_x10, origin_s, now)
+        self._check(eid, mag_x10, origin_s, now, alert=alert)
         e = self.ev.get(eid)
         if e is not None and e.status == "counted": raise Reject("already counted")
         if e is not None and pub in e.attested: raise Reject("already attested")
         if e is None:
             if self._open_pending(now) >= self.p.max_open: raise Reject("too many pending events")
             e = Ev(created_at=now); self.ev[eid] = e
-        key = (mag_x10, origin_s)
+        key = (mag_x10, origin_s, alert)
         e.versions.setdefault(key, set()).add(pub); e.attested.add(pub)
-        self.log.append(("attested", eid, pub, mag_x10, origin_s, len(e.versions[key]), now))
+        self.log.append(("attested", eid, pub, mag_x10, origin_s, len(e.versions[key]), now, alert))
         if len(e.versions[key]) >= self.p.threshold:
-            return self._count(eid, mag_x10, origin_s, now)
+            return self._count(eid, mag_x10, origin_s, alert, now)
         return None
 
     # ---- invariants (RULES.md)
@@ -259,7 +264,7 @@ class Tremor:
         for e in self.ev.values():
             assert e.minted == 0 or e.status == "counted"
             if e.status == "counted":
-                assert len(e.versions[(e.mag_x10, e.origin_s)]) >= self.p.threshold
+                assert len(e.versions[(e.mag_x10, e.origin_s, e.alert)]) >= self.p.threshold and e.alert >= self.p.min_alert, "counted with enough agreement and impact"
         for k in self.buckets:
             assert self.minted_last(k * DAY, 7) <= self.supply * self.p.week_cap_ppm // 10**6, "weekly cap"
             assert self.minted_last(k * DAY, 30) <= self.supply * self.p.month_cap_ppm // 10**6, "monthly cap"
@@ -270,4 +275,4 @@ class Tremor:
                     div=[str(self.acc), self.div_pot, self.div_total, self.calm_days, -1 if self.settled_to is None else self.settled_to, -1 if self.quake_day is None else self.quake_day],
                     paid={k: str(v) for k, v in sorted(self.paid.items()) if v},
                     events={k: [e.status, e.minted, e.clipped, e.claimer or "", e.created_at,
-                                [[m, o, sorted(s)] for (m, o), s in sorted(e.versions.items())]] for k, e in sorted(self.ev.items())})
+                                [[m, o, a, sorted(s)] for (m, o, a), s in sorted(e.versions.items())]] for k, e in sorted(self.ev.items())})

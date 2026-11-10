@@ -1,0 +1,109 @@
+{
+ "name": "GV-6 impact bar: a green quake is refused, and three bots must agree on the alert level too",
+ "params": {
+  "s0": 1000000000000,
+  "base_ppm": 5000,
+  "min_age_s": 0
+ },
+ "steps": [
+  {
+   "op": "attest",
+   "who": "bot1",
+   "event_id": "g1",
+   "mag_x10": 60,
+   "origin_s": 1728000000,
+   "alert": 1,
+   "now": 1728000005,
+   "expect_ok": false,
+   "expect_supply": 1000000000000
+  },
+  {
+   "op": "claim",
+   "who": "judge",
+   "event_id": "g2",
+   "mag_x10": 60,
+   "origin_s": 1728000000,
+   "alert": 1,
+   "now": 1728000005,
+   "expect_ok": false,
+   "expect_supply": 1000000000000
+  },
+  {
+   "op": "attest",
+   "who": "bot1",
+   "event_id": "g3",
+   "mag_x10": 60,
+   "origin_s": 1728000000,
+   "alert": 0,
+   "now": 1728000005,
+   "expect_ok": false,
+   "expect_supply": 1000000000000
+  },
+  {
+   "op": "attest",
+   "who": "bot1",
+   "event_id": "g3",
+   "mag_x10": 60,
+   "origin_s": 1728000000,
+   "alert": 5,
+   "now": 1728000005,
+   "expect_ok": false,
+   "expect_supply": 1000000000000
+  },
+  {
+   "op": "attest",
+   "who": "bot1",
+   "event_id": "a2",
+   "mag_x10": 60,
+   "origin_s": 1728000000,
+   "alert": 3,
+   "now": 1728000005,
+   "expect_ok": true,
+   "expect_supply": 1000000000000
+  },
+  {
+   "op": "attest",
+   "who": "bot2",
+   "event_id": "a2",
+   "mag_x10": 60,
+   "origin_s": 1728000000,
+   "alert": 3,
+   "now": 1728000006,
+   "expect_ok": true,
+   "expect_supply": 1000000000000
+  },
+  {
+   "op": "attest",
+   "who": "bot3",
+   "event_id": "a2",
+   "mag_x10": 60,
+   "origin_s": 1728000000,
+   "alert": 2,
+   "now": 1728000007,
+   "expect_ok": true,
+   "expect_supply": 1000000000000
+  },
+  {
+   "op": "attest",
+   "who": "bot4",
+   "event_id": "a2",
+   "mag_x10": 60,
+   "origin_s": 1728000000,
+   "alert": 3,
+   "now": 1728000008,
+   "expect_ok": true,
+   "expect_supply": 1005000000000
+  },
+  {
+   "op": "attest",
+   "who": "bot5",
+   "event_id": "a2",
+   "mag_x10": 60,
+   "origin_s": 1728000000,
+   "alert": 3,
+   "now": 1728000009,
+   "expect_ok": false,
+   "expect_supply": 1005000000000
+  }
+ ]
+}

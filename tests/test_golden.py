@@ -31,8 +31,8 @@ class GV(unittest.TestCase):
         g = load(n); t = Tremor(Params(**g["params"]), "ada")
         for st in g["steps"]:
             try:
-                if st.get("op") == "claim": t.submit_claim(st["who"], st["event_id"], st["mag_x10"], st["origin_s"], st["now"]); ok = True
-                else: t.attest(st["who"], st["event_id"], st["mag_x10"], st["origin_s"], st["now"]); ok = True
+                if st.get("op") == "claim": t.submit_claim(st["who"], st["event_id"], st["mag_x10"], st["origin_s"], st["now"], st.get("alert", 2)); ok = True
+                else: t.attest(st["who"], st["event_id"], st["mag_x10"], st["origin_s"], st["now"], st.get("alert", 2)); ok = True
             except Reject: ok = False
             self.assertEqual(ok, st["expect_ok"], st)
             if "expect_supply" in st: self.assertEqual(t.supply, st["expect_supply"], st)
@@ -48,6 +48,11 @@ class GV(unittest.TestCase):
         t = self.run_steps(3)
         self.assertEqual(t.ev["d1"].status, "counted"); self.assertEqual((t.ev["d1"].mag_x10), 60)
         self.assertEqual(t.ev["fake-1"].status, "pending"); self.assertEqual(t.ev["fake-1"].minted, 0)
+
+    def test_gv6(self):
+        t = self.run_steps(6)
+        self.assertEqual((t.ev["a2"].status, t.ev["a2"].alert), ("counted", 3))
+        self.assertNotIn("g1", t.ev); self.assertNotIn("g2", t.ev); self.assertNotIn("g3", t.ev)   # refused records leave no trace
 
     def test_gv4(self):
         g = load(4); t = Tremor(Params(**g["params"]), "ada")

@@ -28,6 +28,7 @@ pub trait FtResolver {
 pub struct ParamsArg {
     pub s0: U128,
     pub min_mag_x10: u32,
+    pub min_alert: u32,   // USGS PAGER alert level a quake needs: 1 green, 2 yellow, 3 orange, 4 red
     pub base_ppm: u32,
     pub max_event_ppm: u32,
     pub cooldown_s: u64,
@@ -68,7 +69,7 @@ pub struct StateView {
 pub struct GiverView { pub account_id: AccountId, pub given: U128 }
 
 #[near(serializers = [json])]
-pub struct VersionView { pub mag_x10: u32, pub origin_s: u64, pub attesters: Vec<AccountId> }
+pub struct VersionView { pub mag_x10: u32, pub origin_s: u64, pub alert: u32, pub attesters: Vec<AccountId> }
 
 #[near(serializers = [json])]
 pub struct EventView {
@@ -78,6 +79,7 @@ pub struct EventView {
     pub created_at: u64,
     pub mag_x10: u32,              // the counted record, or the leading version while pending
     pub origin_s: u64,
+    pub alert: u32,                // USGS PAGER alert level of that record: 1 green, 2 yellow, 3 orange, 4 red
     pub attestations: u32,         // for the leading version
     pub needed: u32,
     pub versions: Vec<VersionView>,
@@ -114,7 +116,7 @@ impl Contract {
     #[init]
     pub fn new(params: ParamsArg, publisher_accounts: Vec<AccountId>, relief_accounts: Vec<AccountId>, launcher: AccountId) -> Self {
         let p = Params {
-            s0: params.s0.0, min_mag_x10: params.min_mag_x10, base_ppm: params.base_ppm as u128, max_event_ppm: params.max_event_ppm as u128,
+            s0: params.s0.0, min_mag_x10: params.min_mag_x10, min_alert: params.min_alert, base_ppm: params.base_ppm as u128, max_event_ppm: params.max_event_ppm as u128,
             cooldown_s: params.cooldown_s, week_cap_ppm: params.week_cap_ppm as u128, month_cap_ppm: params.month_cap_ppm as u128,
             min_age_s: params.min_age_s, max_age_s: params.max_age_s, max_open: params.max_open, max_claims: params.max_claims,
             claim_wait_s: params.claim_wait_s, threshold: params.threshold, calm_ppm: params.calm_ppm as u128, tap_amount: params.tap_amount.0,
@@ -250,21 +252,22 @@ impl Contract {
 
     // ---------------- quakes
     /// Only the five fixed publisher accounts. They post what they found in USGS; the event counts when `threshold` different publishers
-    /// post exactly the same record (id, magnitude to one decimal, origin time in seconds).
-    pub fn attest(&mut self, event_id: String, mag_x10: u32, origin_s: u64) {
-        unwrap_or_panic(self.core.attest(&caller(), &event_id, mag_x10, origin_s, now_s()));
+    /// post exactly the same record (id, magnitude to one decimal, origin time in seconds, USGS PAGER alert level 1 green to 4 red).
+    /// Refused if the alert is below the fixed `min_alert`: a quake USGS expects to have little impact never counts.
+    pub fn attest(&mut self, event_id: String, mag_x10: u32, origin_s: u64, alert: u32) {
+        unwrap_or_panic(self.core.attest(&caller(), &event_id, mag_x10, origin_s, alert, now_s()));
         self.flush();
     }
     /// Anyone: tell the contract about a quake. Nothing is created unless publishers confirm it from USGS; a made-up claim just expires.
-    pub fn submit_claim(&mut self, event_id: String, mag_x10: u32, origin_s: u64) {
-        unwrap_or_panic(self.core.submit_claim(&caller(), &event_id, mag_x10, origin_s, now_s()));
+    pub fn submit_claim(&mut self, event_id: String, mag_x10: u32, origin_s: u64, alert: u32) {
+        unwrap_or_panic(self.core.submit_claim(&caller(), &event_id, mag_x10, origin_s, alert, now_s()));
         self.flush();
     }
 
     // ---------------- views
     pub fn get_params(&self) -> ParamsArg {
         let p = &self.core.p;
-        ParamsArg { s0: U128(p.s0), min_mag_x10: p.min_mag_x10, base_ppm: p.base_ppm as u32, max_event_ppm: p.max_event_ppm as u32, cooldown_s: p.cooldown_s,
+        ParamsArg { s0: U128(p.s0), min_mag_x10: p.min_mag_x10, min_alert: p.min_alert, base_ppm: p.base_ppm as u32, max_event_ppm: p.max_event_ppm as u32, cooldown_s: p.cooldown_s,
             week_cap_ppm: p.week_cap_ppm as u32, month_cap_ppm: p.month_cap_ppm as u32, min_age_s: p.min_age_s, max_age_s: p.max_age_s, max_open: p.max_open,
             max_claims: p.max_claims, claim_wait_s: p.claim_wait_s, threshold: p.threshold, calm_ppm: p.calm_ppm as u32, tap_amount: U128(p.tap_amount),
             publisher_accounts: Some(p.publishers.iter().map(|a| a.parse().unwrap()).collect()),
@@ -292,11 +295,11 @@ impl Contract {
 impl Contract {
     fn rolled(&self) -> Core { let mut c = self.core.clone(); c.roll(now_s()); c.pending_log.clear(); c }
     fn view(&self, id: &str, e: &engine::Ev) -> EventView {
-        let versions: Vec<VersionView> = e.versions.iter().map(|((m, o), s)| VersionView { mag_x10: *m, origin_s: *o, attesters: s.iter().map(|a| a.parse().unwrap()).collect() }).collect();
-        let lead = e.versions.iter().max_by_key(|(_, s)| s.len()).map(|((m, o), s)| (*m, *o, s.len() as u32)).unwrap_or((0, 0, 0));
-        let (mag, origin, n) = if e.status == Status::Counted { (e.mag_x10, e.origin_s, e.versions[&(e.mag_x10, e.origin_s)].len() as u32) } else { lead };
+        let versions: Vec<VersionView> = e.versions.iter().map(|((m, o, a), s)| VersionView { mag_x10: *m, origin_s: *o, alert: *a, attesters: s.iter().map(|a| a.parse().unwrap()).collect() }).collect();
+        let lead = e.versions.iter().max_by_key(|(_, s)| s.len()).map(|((m, o, a), s)| (*m, *o, *a, s.len() as u32)).unwrap_or((0, 0, 0, 0));
+        let (mag, origin, alert, n) = if e.status == Status::Counted { (e.mag_x10, e.origin_s, e.alert, e.versions[&(e.mag_x10, e.origin_s, e.alert)].len() as u32) } else { lead };
         EventView { event_id: id.to_string(), status: e.status.as_str().to_string(), claimer: e.claimer.as_ref().map(|c| c.parse().unwrap()), created_at: e.created_at,
-            mag_x10: mag, origin_s: origin, attestations: n, needed: self.core.p.threshold, versions,
+            mag_x10: mag, origin_s: origin, alert, attestations: n, needed: self.core.p.threshold, versions,
             claim_open_until: e.claimer.as_ref().map(|_| e.created_at + self.core.p.claim_wait_s), minted: U128(e.minted), clipped: e.clipped }
     }
     fn do_transfer(&mut self, sender: &AccountId, receiver: &AccountId, amount: u128, memo: Option<String>) {

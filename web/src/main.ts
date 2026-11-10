@@ -5,7 +5,7 @@ import { DEP, NET, loadDeployments } from "./deployment";
 const wallet = () => import("./wallet");
 const send = async (m: string, a: object, d = "0") => (await wallet()).send(m, a, d);
 import { accessKeyCount, listEvents, listGivers, registered, unconfirmed, view, type Ev, type Params, type State } from "./chain";
-import { checkEvent, loadCatalog, recentM6, usgsPage, type Flag, type Quake } from "./usgs";
+import { alertName, checkEvent, loadCatalog, recentM6, usgsPage, type Flag, type Quake } from "./usgs";
 import { $, ago, countUp, duration, esc, mag, md, pct, reveal, short, trem } from "./util";
 import { renderCharts } from "./charts";
 import { botChips, renderJourney, type Ctx } from "./journey";
@@ -67,7 +67,7 @@ function card(e: Ev, p: Params): string {
   else line = `${e.attestations} of ${e.needed} bots agree${e.claim_open_until ? ` · claim open for <b class="cd" data-end="${e.claim_open_until}">${duration(e.claim_open_until - nowS())}</b>` : ""}`;
   const by = e.claimer ? `claimed by ${esc(short(e.claimer))}` : "found by the bots";
   return `<article class="ev ${st.key}"><header><span class="mag">${mag(e.mag_x10)}</span><span class="pill st-${st.key}">${st.text}</span></header>
-    <p class="meta"><code>${esc(e.event_id)}</code> · ${by} ${ago(nowS() - e.created_at)}</p>${flagHtml(e.event_id)}${botChips(e, p)}
+    <p class="meta"><code>${esc(e.event_id)}</code> · ${by} ${ago(nowS() - e.created_at)}${e.alert ? ` · USGS expected impact: ${alertName(e.alert)}` : ""}</p>${flagHtml(e.event_id)}${botChips(e, p)}
     <p class="line">${line}</p>
     <a class="usgs" href="${usgsPage(e.event_id)}" target="_blank" rel="noopener">USGS page ↗</a></article>`;
 }
@@ -80,7 +80,7 @@ function renderBoard(evs: Ev[], p: Params) {
   boardSig = sig;
   if (!evs.length) { board.innerHTML = `<div class="empty card">No events yet. The first report will appear here.</div>`; return; }
   board.innerHTML = [...evs].sort((a, b) => b.created_at - a.created_at).map((e) => card(e, p)).join("");
-  evs.forEach((e) => { const k = e.event_id; if (!flags.has(k) && e.mag_x10) checkEvent(k, e.mag_x10, e.origin_s).then((f) => { flags.set(k, f); renderBoardFlags(); }); });
+  evs.forEach((e) => { const k = e.event_id; if (!flags.has(k) && e.mag_x10) checkEvent(k, e.mag_x10, e.origin_s, e.alert ?? 0).then((f) => { flags.set(k, f); renderBoardFlags(); }); });
 }
 let lastEvs: Ev[] = [], lastState: State | null = null;
 function renderBoardFlags() { if (params && lastState) renderBoard(lastEvs, params); }
@@ -97,10 +97,11 @@ async function renderUnreported(evs: Ev[], p: Params) {
   const host = $("#unrep");
   try {
     const known = new Set(evs.map((e) => e.event_id));
-    const qs = (await recentM6(Math.min(60, Math.floor(p.max_age_s / 86400)))).filter((q: Quake) => !known.has(q.id));
+    const all = (await recentM6(Math.min(60, Math.floor(p.max_age_s / 86400)))).filter((q: Quake) => !known.has(q.id));
+    const bar = p.min_alert ?? 1, qs = all.filter((q: Quake) => q.alert >= bar), below = all.length - qs.length; // the rest are below the impact bar (or have no alert yet) and cannot count
     unreported = qs; checkingQuakes = false; renderJourneyNow();
     const rows = qs.map((q, i) => `<div class="row card slim${i >= 6 ? " extra" : ""}"${i >= 6 ? " hidden" : ""}><span class="mag sm">${mag(q.mag_x10)}</span><span>${esc(q.place || "Unnamed region")}</span><span class="note">${ago(nowS() - q.origin_s)} · USGS ${esc(q.status)}</span><a href="${usgsPage(q.id)}" target="_blank" rel="noopener">USGS ↗</a></div>`).join("");
-    host.innerHTML = qs.length ? rows + (qs.length > 6 ? `<button class="btn" id="more">Show all ${qs.length}</button>` : "") : `<div class="card slim">Every USGS event of M6+ in the last 60 days has been reported.</div>`;
+    host.innerHTML = (qs.length ? rows + (qs.length > 6 ? `<button class="btn" id="more">Show all ${qs.length}</button>` : "") : `<div class="card slim">Every USGS event of M6+ with expected impact of ${alertName(bar)} or higher in the last 60 days has been reported.</div>`) + (below ? `<p class="note">${below} other M6+ quake${below > 1 ? "s" : ""} in that time ${below > 1 ? "are" : "is"} below the impact bar (or USGS has not published an alert level yet), so ${below > 1 ? "they do" : "it does"} not count.</p>` : "");
     const more = host.querySelector<HTMLButtonElement>("#more");
     if (more) more.onclick = () => { host.querySelectorAll<HTMLElement>(".extra").forEach((n) => (n.hidden = false)); more.remove(); };
   } catch { checkingQuakes = false; host.innerHTML = `<div class="card slim">Could not reach USGS right now.</div>`; }
@@ -108,7 +109,7 @@ async function renderUnreported(evs: Ev[], p: Params) {
 
 function renderParams(p: Params) {
   const rows: [string, string][] = [
-    ["Initial supply", `${trem(p.s0, 0)} TREM`], ["Minimum magnitude", `M${(p.min_mag_x10 / 10).toFixed(1)}`],
+    ["Initial supply", `${trem(p.s0, 0)} TREM`], ["Minimum magnitude", `M${(p.min_mag_x10 / 10).toFixed(1)}`], ...(p.min_alert ? [["Minimum expected impact (USGS PAGER alert)", `${alertName(p.min_alert)} or higher`] as [string, string]] : []),
     ["Bots that decide (fixed at launch)", `${p.publisher_accounts.length}`], ["Bots that must agree", `${p.threshold} of ${p.publisher_accounts.length}`],
     ["A quake must be this old before bots confirm it", duration(p.min_age_s)],
     ["Mint at M6.0 (×2 at M7, ×3 at M8)", `${(p.base_ppm / 1e4).toFixed(2)}% of supply`], ["Most one event can mint", `${(p.max_event_ppm / 1e4).toFixed(1)}% of supply`],
@@ -148,10 +149,10 @@ async function renderGivers(s: State) {
 async function initSim() {
   try {
     const ch = await (await fetch("sim/chosen.json")).json(); const c = ch.chosen;
-    $("#sim-sub").textContent = `The rules ran against 60 real days of USGS data and six scenarios (honest bots, a swarm, bad bots, offline bots, claim spam, holders giving). ${ch.n_pass} of ${ch.n_grid} parameter combinations passed every threshold we wrote down first; this is the one we chose.`;
+    $("#sim-sub").textContent = `The rules ran against 60 real days of USGS data and eight scenarios (honest bots, a swarm, bad bots, offline bots, claim spam, holders giving, the calm-day dividend, the impact bar). ${ch.n_pass} of ${ch.n_grid} parameter combinations passed every threshold we wrote down first; we kept the rules we had already confirmed.`;
     $("#sim-cards").innerHTML = [
       ["Chosen rules", `${(c.base_ppm / 1e4).toFixed(2)}% base · ${(c.week_ppm / 1e4).toFixed(1)}% weekly · ${(c.month_ppm / 1e4).toFixed(0)}% monthly cap`, "Picked from the grid by the simulation, then confirmed"],
-      ["A passive holder, 60 real days", `${pct(c.s1_dilution, 2)} diluted`, `Caps bound in ${pct(c.s1_clipped_weeks, 0)} of weeks, right at our 25% limit`],
+      ["A passive holder, 60 real days", `${pct(c.s1_dilution, 2)} diluted`, `Only quakes USGS expects to affect people count: 5 of the 28 M6+ quakes. Caps bound in ${pct(c.s1_clipped_weeks, 0)} of weeks.`],
       ["Trust sits in the bots", "3 of 5 must agree", "Two bad bots mint nothing; three can mint fakes, but only up to the caps. Three offline bots mint nothing."],
     ].map(([a, b, d]) => `<div class="card stat reveal"><small>${esc(a)}</small><b>${esc(b)}</b><p class="note">${esc(d)}</p></div>`).join("");
     await renderCharts($("#charts"), Number(BigInt(params?.s0 ?? "1000000000000")));
@@ -197,7 +198,7 @@ function initHero(cat: Quake[]) {
   if (!big.length) return;
   const cap = $("#quake-cap"), hero = $("#hero"), main = $("main");
   const parts = [$(".shake-a"), $(".shake-b")];
-  const caption = (q: Quake) => { cap.innerHTML = `<b>${esc2(mag(q.mag_x10))}</b> · ${esc2(q.place || "unnamed region")} · replayed from the committed USGS catalog`; };
+  const caption = (q: Quake) => { cap.innerHTML = `<b>${esc2(mag(q.mag_x10))}</b> · ${esc2(q.place || "unnamed region")} · USGS expected impact: ${esc2(alertName(q.alert))}${q.alert >= 2 ? " (counts)" : " (does not count)"} · replayed from the committed catalog`; };
   const onS = (amp: number) => { const a = 2 + amp * 9; parts.forEach((el, i) => shake(el, a * (i ? 0.8 : 1))); shake(main, a * 0.35, 1400); };
   const seismo = new Seismo($<HTMLCanvasElement>("#seismo"), { speed: 110, color: "#1d1d1f", grid: "#e6e6e8", labels: true, onS });
   let i = Math.floor(Math.random() * big.length), timer: number | undefined;
@@ -276,8 +277,8 @@ document.addEventListener("click", (ev) => {
     ev.preventDefault();
     if (j === "connect") return void wallet().then((w) => w.connectWallet());
     if (j === "tap") return void registered(me!).then((reg) => act("Starter coins", () => send("tap", {}, reg ? "0" : "1250000000000000000000")));
-    if (j === "claim") return void act("Claim", () => send("submit_claim", { event_id: el.dataset.id, mag_x10: Number(el.dataset.mag), origin_s: Number(el.dataset.origin) }));
-    if (j === "fake") return void act("Claim", () => send("submit_claim", { event_id: "fake-" + Math.floor(100 + Math.random() * 900), mag_x10: 74, origin_s: nowS() - 120 }));
+    if (j === "claim") return void act("Claim", () => send("submit_claim", { event_id: el.dataset.id, mag_x10: Number(el.dataset.mag), origin_s: Number(el.dataset.origin), alert: Number(el.dataset.alert) }));
+    if (j === "fake") return void act("Claim", () => send("submit_claim", { event_id: "fake-" + Math.floor(100 + Math.random() * 900), mag_x10: 74, origin_s: nowS() - 120, alert: 2 }));
     if (j === "again") { ignoreBefore = nowS(); try { sessionStorage.setItem("tremor-ignore", String(ignoreBefore)); } catch { /* ignore */ } return void renderJourneyNow(); }
     return;
   }
@@ -288,7 +289,7 @@ document.addEventListener("click", (ev) => {
     if (!(n > 0) || BigInt(n) * 1_000_000n > mine.tok) return void toast("Enter a whole number of TREM, no more than you hold.");
     return void act("Gift", () => send("give", { amount: String(BigInt(n) * 1_000_000n) }, "1")); }
   if (el.id === "w-fake") { const id = ($("#w-fid") as HTMLInputElement).value.trim(), m = Math.round(Number(($("#w-fmag") as HTMLInputElement).value) * 10);
-    return void act("Claim", () => send("submit_claim", { event_id: id, mag_x10: m, origin_s: nowS() - 120 })); }
+    return void act("Claim", () => send("submit_claim", { event_id: id, mag_x10: m, origin_s: nowS() - 120, alert: 2 })); }
 });
 
 async function start() {

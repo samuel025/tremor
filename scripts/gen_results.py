@@ -25,7 +25,7 @@ m = need(r"conformance: (\d+) scenarios, (\d+) steps, (\d+) mismatches", out, "c
 res["conformance"] = dict(scenarios=int(m[1]), steps=int(m[2]), mismatches=int(m[3]), tests_passed=int(need(r"test result: ok\. (\d+) passed", out, "rust test result").group(1)), ok=rc == 0, date=now)
 
 rc, out = run("cd web && node tests/conformance.ts 2>&1")
-m = need(r"web-conformance: (\d+) scenarios, (\d+) steps, (\d+) mismatches; golden vectors 1 and 5 (\w+)", out, "web conformance line")
+m = need(r"web-conformance: (\d+) scenarios, (\d+) steps, (\d+) mismatches; golden vectors 1, 5 and 6 (\w+)", out, "web conformance line")
 res["web_conformance"] = dict(scenarios=int(m[1]), steps=int(m[2]), mismatches=int(m[3]), golden=m[4] == "ok", ok=rc == 0, date=now)
 
 rc, out = run("python3 scripts/replay.py 2>&1")
@@ -78,5 +78,11 @@ res["simulation"] = dict(grid=ch["n_grid"], passing=ch["n_pass"], chosen={k: c[k
     spam_real_counted_pct=float(spam[1]), spam_fakes_counted=int(spam[2]), spam_fakes_total=int(spam[3]), spam_max_open=int(spam2[1]), spam_limit=int(spam2[2]), spam_refused=int(spam2[3]),
     calm=(lambda cj: (lambda on, off: dict(ppm=on["calm_ppm"], days=on["calm_days"], holders=on["holders_minted"] // 10**6, relief=on["relief_minted"] // 10**6, relief_without=off["relief_minted"] // 10**6,
         dilution=on["s1_dilution"], dilution_without=off["s1_dilution"]))(next(x for x in cj["candidates"] if x["calm_ppm"] == cj["chosen_calm_ppm"]), cj["candidates"][0]))(json.loads((ROOT / "results/sim/calm.json").read_text())),
+    bar=dict(counted=sum(1 for l in catalog if int(l.split(",")[1]) >= 60 and l.rstrip().split(",")[-1] in ("yellow", "orange", "red")),
+             green=sum(1 for l in catalog if int(l.split(",")[1]) >= 60 and l.rstrip().split(",")[-1] == "green"),
+             dilution_on=float(need(r"a passive holder is diluted by ([\d.]+)%", section("Scenario 8"), "bar-on dilution").group(1)),
+             dilution_off=float(need(r"gave ([\d.]+)% and a cap", section("Scenario 8"), "bar-off dilution").group(1)),
+             clipped_off=float(need(r"gave [\d.]+% and a cap that bound in ([\d.]+)% of weeks", section("Scenario 8"), "bar-off clipped weeks").group(1)),
+             grid_pick=json.loads((ROOT / "results/sim/chosen.json").read_text())["grid_pick"]),
     catalog_events=len(catalog), catalog_m6=sum(1 for l in catalog if int(l.split(",")[1]) >= 60))
 OUT.write_text(json.dumps(res, indent=1) + "\n"); print(json.dumps({k: v for k, v in res.items() if k != "simulation"}, indent=1))

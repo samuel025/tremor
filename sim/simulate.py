@@ -12,12 +12,18 @@ HOURS = 60 * 24
 BOTS = ["bot1", "bot2", "bot3", "bot4", "bot5"]
 
 
-def load_catalog(min_mag=60):
+LEVEL = {"green": 1, "yellow": 2, "orange": 3, "red": 4}  # USGS PAGER alert level, as the rules number it
+
+
+def load_catalog(min_mag=60, min_alert=0):
     rows = [l for l in open(ROOT / "data/usgs_60d.csv") if not l.startswith("#")]
-    return [(r["event_id"], int(r["mag_x10"]), int(r["origin_s"])) for r in csv.DictReader(rows) if int(r["mag_x10"]) >= min_mag]
+    return [(r["event_id"], int(r["mag_x10"]), int(r["origin_s"])) for r in csv.DictReader(rows)
+            if int(r["mag_x10"]) >= min_mag and LEVEL.get(r["alert"], 0) >= min_alert]
 
 
-CAT = load_catalog()
+ALERT = {r["event_id"]: LEVEL.get(r["alert"], 0) for r in csv.DictReader([l for l in open(ROOT / "data/usgs_60d.csv") if not l.startswith("#")])}
+ALL6 = load_catalog()                 # every real M6+ quake in the window
+CAT = load_catalog(min_alert=2)       # the ones that count: USGS expects at least yellow impact (the contract's bar)
 
 
 def params(base=5000, week=15000, month=50000, calm=0):
@@ -26,7 +32,7 @@ def params(base=5000, week=15000, month=50000, calm=0):
 
 class Sim:
     def __init__(self, p, seed):
-        self.p, self.rng = p, random.Random(seed)
+        self.p, self.rng, self.seed = p, random.Random(seed), seed
         self.t = Tremor(p, "launcher"); self.t.ft_transfer("launcher", "passive", p.s0 // 100)
         self.act = {}; self.series = []; self.prev_minted = 0
         self.refused = {}  # reason -> count, for attempts the contract refused
@@ -42,9 +48,9 @@ class Sim:
     def bots_attest(self, bots, eid, mag, origin, first_hour):
         """each listed bot attests this record at its own lag (1 h to 3 h after the origin, never before the event is old enough)"""
         for b in bots:
-            h = first_hour + self.rng.randrange(0, 3)
+            h = first_hour + random.Random(f"{self.seed}|{eid}|{b}").randrange(0, 3)  # keyed by (seed, event, bot), so it does not depend on what else was sent
             def go(hh, b=b):
-                r = self.try_(lambda: self.t.attest(b, eid, mag, origin, self.now(hh)), "attest")
+                r = self.try_(lambda: self.t.attest(b, eid, mag, origin, self.now(hh), ALERT.get(eid, 2)), "attest")  # swarm and made-up quakes are attested as yellow
                 if r and self.on_count: self.on_count(hh, eid, mag)
             self.at(h, go)
 
@@ -119,6 +125,11 @@ def run_s4(p, offline, seed):
     s = Sim(p, seed); s.real_events(CAT, BOTS[offline:]); s.real_ids = [e for e, _, _ in CAT]; return s.run()
 
 
+def run_a1(p, seed):
+    """A1: honest bots attest every real M6+ quake, the green ones too; the contract must refuse the green ones."""
+    s = Sim(p, seed); s.real_events(ALL6, BOTS); s.real_ids = [e for e, _, _ in CAT]; return s.run()
+
+
 def run_s5(p, seed=5, spammers=80):
     """A spammer tries to fill the open-claim limit with made-up claims all through the window while honest bots confirm the real catalog.
     Each spammer account may hold one open claim, so many accounts are needed; claims stay open for claim_wait_s."""
@@ -127,7 +138,7 @@ def run_s5(p, seed=5, spammers=80):
         for j in range(6):  # six spam claims every hour from rotating accounts
             eid = f"spam{k:04d}{j}"; s.fake_ids.append(eid)
             def claim(h, eid=eid, who=f"spam{r.randrange(spammers)}"):
-                s.try_(lambda: s.t.submit_claim(who, eid, 70, s.now(h) - 100, s.now(h)), "claim")
+                s.try_(lambda: s.t.submit_claim(who, eid, 70, s.now(h) - 100, s.now(h), 2), "claim")
                 s.max_open_claims = max(s.max_open_claims, len(s.t._open_claims(s.now(h))))
             s.at(k, claim)
     return s.run()

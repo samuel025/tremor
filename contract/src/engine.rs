@@ -14,6 +14,7 @@ pub const MAX_ROLL: u32 = 400;                     // most calm days settled in 
 pub struct Params {
     pub s0: u128,
     pub min_mag_x10: u32,
+    pub min_alert: u32,     // USGS PAGER alert level a quake needs: 1 green, 2 yellow, 3 orange, 4 red
     pub base_ppm: u128,
     pub max_event_ppm: u128,
     pub cooldown_s: u64,
@@ -57,11 +58,12 @@ impl Status {
 pub struct Ev {
     pub created_at: u64,
     pub claimer: Option<String>,
-    pub versions: BTreeMap<(u32, u64), BTreeSet<String>>, // (magnitude x10, origin) -> publishers that attested exactly that
+    pub versions: BTreeMap<(u32, u64, u32), BTreeSet<String>>, // (magnitude x10, origin, alert) -> publishers that attested exactly that
     pub attested: BTreeSet<String>,                        // publishers that already attested this id (any version)
     pub status: Status,
     pub mag_x10: u32,
     pub origin_s: u64,
+    pub alert: u32,
     pub minted: u128,
     pub clipped: bool,
 }
@@ -243,7 +245,7 @@ impl Core {
          (self.supply * self.p.month_cap_ppm / MILLION).saturating_sub(m30))
     }
 
-    fn count(&mut self, eid: &str, mag: u32, origin: u64, now: u64) -> (u128, u128, bool) {
+    fn count(&mut self, eid: &str, mag: u32, origin: u64, alert: u32, now: u64) -> (u128, u128, bool) {
         let gap = cooldown_gap(origin, &self.recent, self.p.cooldown_s);
         let (m, raw, clipped) = mint_amount(&self.p, self.supply, mag, gap, self.minted_last(now, 7), self.minted_last(now, 30));
         let relief = self.p.relief.clone();
@@ -258,15 +260,17 @@ impl Core {
         let horizon = now.saturating_sub(self.p.max_age_s.saturating_add(self.p.cooldown_s));
         self.recent.retain(|o| *o >= horizon);
         let e = self.ev.get_mut(eid).unwrap();
-        e.status = Status::Counted; e.minted = m; e.clipped = clipped; e.mag_x10 = mag; e.origin_s = origin;
-        self.emit("event_counted", format!("{{\"event_id\":{},\"mag_x10\":{},\"origin_s\":{},\"minted\":\"{}\",\"clipped\":{},\"supply\":\"{}\",\"time\":{}}}", q(eid), mag, origin, m, clipped, self.supply, now));
+        e.status = Status::Counted; e.minted = m; e.clipped = clipped; e.mag_x10 = mag; e.origin_s = origin; e.alert = alert;
+        self.emit("event_counted", format!("{{\"event_id\":{},\"mag_x10\":{},\"origin_s\":{},\"alert\":{},\"minted\":\"{}\",\"clipped\":{},\"supply\":\"{}\",\"time\":{}}}", q(eid), mag, origin, alert, m, clipped, self.supply, now));
         (m, raw, clipped)
     }
 
     // ---- events
-    fn check(&self, eid: &str, mag: u32, origin: u64, now: u64, fresh_ok: bool) -> Result<(), String> {
+    fn check(&self, eid: &str, mag: u32, origin: u64, alert: u32, now: u64, fresh_ok: bool) -> Result<(), String> {
         let p = &self.p;
         if mag < p.min_mag_x10 || mag > 100 { return Err("magnitude out of range".into()); }
+        if alert < 1 || alert > 4 { return Err("alert level out of range".into()); }
+        if alert < p.min_alert { return Err("expected impact too low".into()); }
         if origin > now { return Err("origin in the future".into()); }
         if now - origin > p.max_age_s { return Err("origin too old".into()); }
         if !fresh_ok && now - origin < p.min_age_s { return Err("too recent".into()); }
@@ -284,39 +288,39 @@ impl Core {
     }
 
     /// Anyone: tell the contract about a quake. It stays pending until publishers confirm it; a made-up claim never mints.
-    pub fn submit_claim(&mut self, a: &str, eid: &str, mag: u32, origin: u64, now: u64) -> Result<(), String> {
+    pub fn submit_claim(&mut self, a: &str, eid: &str, mag: u32, origin: u64, alert: u32, now: u64) -> Result<(), String> {
         self.roll(now);
-        self.check(eid, mag, origin, now, true)?;
+        self.check(eid, mag, origin, alert, now, true)?;
         if self.ev.contains_key(eid) { return Err("event id already exists".into()); }
         let open = self.open_claims(now);
         if open.iter().any(|e| e.claimer.as_deref() == Some(a)) { return Err("you already have an open claim".into()); }
         if open.len() as u32 >= self.p.max_claims { return Err("too many open claims".into()); }
-        let mut versions = BTreeMap::new(); versions.insert((mag, origin), BTreeSet::new());
-        self.ev.insert(eid.to_string(), Ev { created_at: now, claimer: Some(a.to_string()), versions, attested: BTreeSet::new(), status: Status::Pending, mag_x10: 0, origin_s: 0, minted: 0, clipped: false });
-        self.emit("claim_submitted", format!("{{\"event_id\":{},\"claimer\":{},\"mag_x10\":{},\"origin_s\":{},\"time\":{}}}", q(eid), q(a), mag, origin, now));
+        let mut versions = BTreeMap::new(); versions.insert((mag, origin, alert), BTreeSet::new());
+        self.ev.insert(eid.to_string(), Ev { created_at: now, claimer: Some(a.to_string()), versions, attested: BTreeSet::new(), status: Status::Pending, mag_x10: 0, origin_s: 0, alert: 0, minted: 0, clipped: false });
+        self.emit("claim_submitted", format!("{{\"event_id\":{},\"claimer\":{},\"mag_x10\":{},\"origin_s\":{},\"alert\":{},\"time\":{}}}", q(eid), q(a), mag, origin, alert, now));
         Ok(())
     }
 
     /// A publisher confirms a quake it found in USGS. Counts (and mints) when `threshold` different publishers attest the same record.
-    pub fn attest(&mut self, publ: &str, eid: &str, mag: u32, origin: u64, now: u64) -> Result<Option<(u128, u128, bool)>, String> {
+    pub fn attest(&mut self, publ: &str, eid: &str, mag: u32, origin: u64, alert: u32, now: u64) -> Result<Option<(u128, u128, bool)>, String> {
         self.roll(now);
         if !self.p.publishers.iter().any(|x| x == publ) { return Err("not a publisher".into()); }
-        self.check(eid, mag, origin, now, false)?;
+        self.check(eid, mag, origin, alert, now, false)?;
         if let Some(e) = self.ev.get(eid) {
             if e.status == Status::Counted { return Err("already counted".into()); }
             if e.attested.contains(publ) { return Err("already attested".into()); }
         } else {
             if self.open_pending(now) >= self.p.max_open { return Err("too many pending events".into()); }
-            self.ev.insert(eid.to_string(), Ev { created_at: now, claimer: None, versions: BTreeMap::new(), attested: BTreeSet::new(), status: Status::Pending, mag_x10: 0, origin_s: 0, minted: 0, clipped: false });
+            self.ev.insert(eid.to_string(), Ev { created_at: now, claimer: None, versions: BTreeMap::new(), attested: BTreeSet::new(), status: Status::Pending, mag_x10: 0, origin_s: 0, alert: 0, minted: 0, clipped: false });
         }
         let e = self.ev.get_mut(eid).unwrap();
-        let set = e.versions.entry((mag, origin)).or_insert_with(BTreeSet::new);
+        let set = e.versions.entry((mag, origin, alert)).or_insert_with(BTreeSet::new);
         set.insert(publ.to_string());
         let n = set.len() as u32;
         e.attested.insert(publ.to_string());
         let threshold = self.p.threshold;
-        self.emit("attested", format!("{{\"event_id\":{},\"publisher\":{},\"mag_x10\":{},\"origin_s\":{},\"attestations\":{},\"time\":{}}}", q(eid), q(publ), mag, origin, n, now));
-        if n >= threshold { return Ok(Some(self.count(eid, mag, origin, now))); }
+        self.emit("attested", format!("{{\"event_id\":{},\"publisher\":{},\"mag_x10\":{},\"origin_s\":{},\"alert\":{},\"attestations\":{},\"time\":{}}}", q(eid), q(publ), mag, origin, alert, n, now));
+        if n >= threshold { return Ok(Some(self.count(eid, mag, origin, alert, now))); }
         Ok(None)
     }
 
@@ -327,7 +331,7 @@ impl Core {
         assert!(self.given.iter().all(|(a, v)| *v > 0 && !self.p.relief.contains(a)), "givers");
         for e in self.ev.values() {
             assert!(e.minted == 0 || e.status == Status::Counted);
-            if e.status == Status::Counted { assert!(e.versions[&(e.mag_x10, e.origin_s)].len() as u32 >= self.p.threshold); }
+            if e.status == Status::Counted { assert!(e.versions[&(e.mag_x10, e.origin_s, e.alert)].len() as u32 >= self.p.threshold && e.alert >= self.p.min_alert); }
         }
         for k in self.buckets.keys() {
             assert!(self.minted_last(k * DAY, 7) <= self.supply * self.p.week_cap_ppm / MILLION, "weekly cap");

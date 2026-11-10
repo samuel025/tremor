@@ -9,7 +9,7 @@ Two copies of the same contract code run on NEAR testnet. Both have fixed parame
 | Contract | `deployments.json` > `demo` | `deployments.json` > `live` |
 | A quake must be this old before bots confirm it | 10 s (so a catalog quake can be confirmed at once) | 6 h (USGS revises fresh events) |
 | Oldest quake that can count | 60 days (the committed catalog) | 14 days |
-| Who confirms | The five bots, **only visitors' claims** (`--claims-only`): the demo starts empty | The five bots, every recent M6+ quake plus claims |
+| Who confirms | The five bots, **only visitors' claims** (`--claims-only`): the demo starts empty | The five bots, every recent M6+ quake whose USGS expected impact is yellow or higher, plus claims |
 | How the bots run | `make demo-bots` (= `bots/bots.mjs --net demo --claims-only --loop 4`) on a computer that stays on (no GitHub job: the page no longer uses the Demo) | `.github/workflows/bots-live.yml`, every 20 minutes |
 | Starter coins (`tap`) | 5,000 TREM once per account, from a 300,000 TREM pool | same |
 

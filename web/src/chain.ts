@@ -2,7 +2,7 @@ import { RPCS } from "./config";
 import { DEP } from "./deployment";
 
 export interface Params {
-  s0: string; min_mag_x10: number; base_ppm: number; max_event_ppm: number; cooldown_s: number; week_cap_ppm: number; month_cap_ppm: number;
+  s0: string; min_mag_x10: number; min_alert?: number; base_ppm: number; max_event_ppm: number; cooldown_s: number; week_cap_ppm: number; month_cap_ppm: number;
   min_age_s: number; max_age_s: number; max_open: number; max_claims: number; claim_wait_s: number; threshold: number; calm_ppm?: number; tap_amount: string;
   publisher_accounts: string[]; relief_accounts: string[];
 }
@@ -10,9 +10,9 @@ export interface State {
   supply: string; initial_supply: string; minted_7d: string; minted_30d: string; week_left: string; month_left: string; pending_events: number;
   tap_pool: string; given_total?: string; givers?: number; dividends_total?: string; dividend_pot?: string; calm_days?: number; log_len: number; now_s: number; // the optional fields: contracts deployed with give() and the calm-day dividend
 }
-export interface Version { mag_x10: number; origin_s: number; attesters: string[] }
+export interface Version { mag_x10: number; origin_s: number; alert?: number; attesters: string[] }
 export interface Ev {
-  event_id: string; status: "pending" | "counted"; claimer: string | null; created_at: number; mag_x10: number; origin_s: number; attestations: number; needed: number;
+  event_id: string; status: "pending" | "counted"; claimer: string | null; created_at: number; mag_x10: number; origin_s: number; alert?: number; attestations: number; needed: number;
   versions: Version[]; claim_open_until: number | null; minted: string; clipped: boolean;
 }
 

@@ -7,7 +7,7 @@ fn strs(v: &Value) -> Vec<String> { v.as_array().unwrap().iter().map(|x| x.as_st
 
 fn params(p: &Value, publishers: &Value, relief: &Value) -> Params {
     let g = |k: &str| p[k].as_u64().unwrap();
-    Params { s0: g("s0") as u128, min_mag_x10: g("min_mag_x10") as u32, base_ppm: g("base_ppm") as u128, max_event_ppm: g("max_event_ppm") as u128,
+    Params { s0: g("s0") as u128, min_mag_x10: g("min_mag_x10") as u32, min_alert: g("min_alert") as u32, base_ppm: g("base_ppm") as u128, max_event_ppm: g("max_event_ppm") as u128,
         cooldown_s: g("cooldown_s"), week_cap_ppm: g("week_cap_ppm") as u128, month_cap_ppm: g("month_cap_ppm") as u128, min_age_s: g("min_age_s"),
         max_age_s: g("max_age_s"), max_open: g("max_open") as u32, max_claims: g("max_claims") as u32, claim_wait_s: g("claim_wait_s"),
         threshold: g("threshold") as u32, calm_ppm: g("calm_ppm") as u128, tap_amount: g("tap_amount") as u128, publishers: strs(publishers), relief: strs(relief) }
@@ -19,7 +19,7 @@ fn snapshot(c: &Core) -> Value {
     let paid: serde_json::Map<String, Value> = c.paid.iter().filter(|(_, v)| **v != 0).map(|(k, v)| (k.clone(), json!(v.to_string()))).collect();
     let given: serde_json::Map<String, Value> = c.given.iter().map(|(k, v)| (k.clone(), json!(*v as u64))).collect();
     let events: serde_json::Map<String, Value> = c.ev.iter().map(|(k, e)| {
-        let versions: Vec<Value> = e.versions.iter().map(|((m, o), s)| json!([*m, *o, s.iter().collect::<Vec<_>>()])).collect();
+        let versions: Vec<Value> = e.versions.iter().map(|((m, o, a), s)| json!([*m, *o, *a, s.iter().collect::<Vec<_>>()])).collect();
         (k.clone(), json!([e.status.as_str(), e.minted as u64, e.clipped, e.claimer.clone().unwrap_or_default(), e.created_at, versions]))
     }).collect();
     json!({"supply": c.supply as u64, "tok": tok, "buckets": buckets, "recent": c.recent, "tapped": c.tapped.iter().collect::<Vec<_>>(), "given": given,
@@ -46,8 +46,8 @@ fn rust_matches_python_reference() {
                 "tap" => c.tap(&s(0), "pool", now).is_ok(),
                 "claim_div" => c.claim_dividend(&s(0), now).is_ok(),
                 "give" => c.give(&s(0), n(1) as u128, now).is_ok(),
-                "attest" => a[3].as_i64().unwrap() >= 0 && c.attest(&s(0), &s(1), n(2) as u32, n(3), now).is_ok(),
-                "claim" => a[3].as_i64().unwrap() >= 0 && c.submit_claim(&s(0), &s(1), n(2) as u32, n(3), now).is_ok(),
+                "attest" => a[3].as_i64().unwrap() >= 0 && c.attest(&s(0), &s(1), n(2) as u32, n(3), n(4) as u32, now).is_ok(),
+                "claim" => a[3].as_i64().unwrap() >= 0 && c.submit_claim(&s(0), &s(1), n(2) as u32, n(3), n(4) as u32, now).is_ok(),
                 other => panic!("unknown op {other}"),
             };
             c.check_invariants();
@@ -66,14 +66,14 @@ fn rust_matches_python_reference() {
 fn golden_vector_one_from_rules_md() {
     // GV-1 straight from RULES.md, independent of the Python reference: each event is confirmed by 3 bots at its own origin time.
     let pubs: Vec<String> = (1..=5).map(|i| format!("bot{i}")).collect();
-    let p = Params { s0: 1_000_000_000_000, min_mag_x10: 60, base_ppm: 5000, max_event_ppm: 15000, cooldown_s: 86400, week_cap_ppm: 15000, month_cap_ppm: 50000,
+    let p = Params { s0: 1_000_000_000_000, min_mag_x10: 60, min_alert: 2, base_ppm: 5000, max_event_ppm: 15000, cooldown_s: 86400, week_cap_ppm: 15000, month_cap_ppm: 50000,
         min_age_s: 0, max_age_s: 5_184_000, max_open: 64, max_claims: 32, claim_wait_s: 43200, threshold: 3, calm_ppm: 0, tap_amount: 0, publishers: pubs.clone(),
         relief: (1..=5).map(|i| format!("r{i}")).collect() };
     let t0 = 20000 * DAY;
     let mut c = Core::new(p, "ada").unwrap();
     let run = |c: &mut Core, id: &str, mag: u32, origin: u64| {
         let mut out = None;
-        for b in &pubs[..3] { out = c.attest(b, id, mag, origin, origin).unwrap(); }
+        for b in &pubs[..3] { out = c.attest(b, id, mag, origin, 2, origin).unwrap(); }
         out.unwrap()
     };
     assert_eq!(run(&mut c, "E1", 60, t0), (5_000_000_000, 5_000_000_000, false));
@@ -87,7 +87,7 @@ fn golden_vector_one_from_rules_md() {
 #[test]
 fn golden_vector_four_from_rules_md() {
     // GV-4 straight from RULES.md: giving moves a holder's own coins to the relief list and creates nothing.
-    let p = Params { s0: 1_000_000_000_000, min_mag_x10: 60, base_ppm: 5000, max_event_ppm: 15000, cooldown_s: 86400, week_cap_ppm: 15000, month_cap_ppm: 50000,
+    let p = Params { s0: 1_000_000_000_000, min_mag_x10: 60, min_alert: 2, base_ppm: 5000, max_event_ppm: 15000, cooldown_s: 86400, week_cap_ppm: 15000, month_cap_ppm: 50000,
         min_age_s: 0, max_age_s: 5_184_000, max_open: 64, max_claims: 32, claim_wait_s: 43200, threshold: 3, calm_ppm: 0, tap_amount: 0,
         publishers: (1..=5).map(|i| format!("bot{i}")).collect(), relief: (1..=5).map(|i| format!("relief{i}")).collect() };
     let t0 = 20000 * DAY;
@@ -100,7 +100,7 @@ fn golden_vector_four_from_rules_md() {
     assert!(c.give("ada", 0, t0 + 4).is_err());
     assert_eq!(c.supply, 1_000_000_000_000);
     let mut out = None;
-    for b in ["bot1", "bot2", "bot3"] { out = c.attest(b, "E1", 60, t0 + 10, t0 + 10).unwrap(); }
+    for b in ["bot1", "bot2", "bot3"] { out = c.attest(b, "E1", 60, t0 + 10, 2, t0 + 10).unwrap(); }
     assert_eq!(out.unwrap(), (5_000_000_000, 5_000_000_000, false));
     assert_eq!((c.supply, c.tok["relief1"], c.tok["relief2"]), (1_005_000_000_000, 1_002_600_003, 1_002_600_000));
     c.check_invariants();
@@ -109,7 +109,7 @@ fn golden_vector_four_from_rules_md() {
 #[test]
 fn golden_vector_five_from_rules_md() {
     // GV-5 straight from RULES.md: calm days pay holders, a quake day pays nothing, relief accounts earn nothing.
-    let p = Params { s0: 1_000_000_000_000, min_mag_x10: 60, base_ppm: 5000, max_event_ppm: 15000, cooldown_s: 86400, week_cap_ppm: 15000, month_cap_ppm: 50000,
+    let p = Params { s0: 1_000_000_000_000, min_mag_x10: 60, min_alert: 2, base_ppm: 5000, max_event_ppm: 15000, cooldown_s: 86400, week_cap_ppm: 15000, month_cap_ppm: 50000,
         min_age_s: 0, max_age_s: 5_184_000, max_open: 64, max_claims: 32, claim_wait_s: 43200, threshold: 3, calm_ppm: 100, tap_amount: 0,
         publishers: (1..=5).map(|i| format!("bot{i}")).collect(), relief: (1..=5).map(|i| format!("relief{i}")).collect() };
     let t0 = 20000 * DAY;
@@ -123,11 +123,32 @@ fn golden_vector_five_from_rules_md() {
     assert!(c.claim_dividend("ada", t0 + 2 * DAY + 11).is_err());
     assert!(c.claim_dividend("relief1", t0 + 2 * DAY + 12).is_err());
     let mut out = None;
-    for b in ["bot1", "bot2", "bot3"] { out = c.attest(b, "E1", 60, t0 + 2 * DAY + 20, t0 + 2 * DAY + 20).unwrap(); }
+    for b in ["bot1", "bot2", "bot3"] { out = c.attest(b, "E1", 60, t0 + 2 * DAY + 20, 2, t0 + 2 * DAY + 20).unwrap(); }
     assert_eq!(out.unwrap().0, 5_001_000_050);
     assert_eq!((c.supply, c.tok["relief1"], c.tok["relief5"]), (1_005_201_010_050, 1_000_200_010, 1_000_200_010));
     assert!(c.claim_dividend("bob", t0 + 3 * DAY + 5).is_err());
     assert_eq!(c.claim_dividend("bob", t0 + 4 * DAY + 5), Ok(10_052_010));
     assert_eq!((c.supply, c.tok["bob"], c.calm_days), (1_005_301_530_151, 100_030_053_010, 3));
+    c.check_invariants();
+}
+
+#[test]
+fn golden_vector_six_from_rules_md() {
+    // GV-6 straight from RULES.md: only quakes with expected human impact count; three bots must agree on the alert level too.
+    let p = Params { s0: 1_000_000_000_000, min_mag_x10: 60, min_alert: 2, base_ppm: 5000, max_event_ppm: 15000, cooldown_s: 86400, week_cap_ppm: 15000, month_cap_ppm: 50000,
+        min_age_s: 0, max_age_s: 5_184_000, max_open: 64, max_claims: 32, claim_wait_s: 43200, threshold: 3, calm_ppm: 0, tap_amount: 0,
+        publishers: (1..=5).map(|i| format!("bot{i}")).collect(), relief: (1..=5).map(|i| format!("relief{i}")).collect() };
+    let t0 = 20000 * DAY;
+    let mut c = Core::new(p, "ada").unwrap();
+    assert!(c.attest("bot1", "g1", 60, t0, 1, t0 + 5).is_err());            // green: below the bar
+    assert!(c.submit_claim("judge", "g2", 60, t0, 1, t0 + 5).is_err());    // a claim is held to the same bar
+    assert!(c.attest("bot1", "g3", 60, t0, 0, t0 + 5).is_err());           // no such level
+    assert!(c.attest("bot1", "g3", 60, t0, 5, t0 + 5).is_err());
+    assert!(c.ev.is_empty(), "refused records leave no trace");
+    for (b, alert, dt) in [("bot1", 3, 5), ("bot2", 3, 6), ("bot3", 2, 7)] { assert_eq!(c.attest(b, "a2", 60, t0, alert, t0 + dt), Ok(None)); }
+    assert_eq!(c.supply, 1_000_000_000_000);                                // 2 orange + 1 yellow: different records, nothing counts
+    assert_eq!(c.attest("bot4", "a2", 60, t0, 3, t0 + 8).unwrap().unwrap().0, 5_000_000_000);
+    assert_eq!(c.supply, 1_005_000_000_000);
+    assert!(c.attest("bot5", "a2", 60, t0, 3, t0 + 9).is_err());            // already counted
     c.check_invariants();
 }

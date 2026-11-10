@@ -13,7 +13,7 @@ impl Env {
 }
 
 fn params(over: Value) -> Value {
-    let mut p = json!({"s0": (1_000_000 * U).to_string(), "min_mag_x10": 60, "base_ppm": 5000, "max_event_ppm": 15000, "cooldown_s": 86400,
+    let mut p = json!({"s0": (1_000_000 * U).to_string(), "min_mag_x10": 60, "min_alert": 2, "base_ppm": 5000, "max_event_ppm": 15000, "cooldown_s": 86400,
         "week_cap_ppm": 15000, "month_cap_ppm": 50000, "min_age_s": 0, "max_age_s": 5_184_000, "max_open": 64, "max_claims": 32, "claim_wait_s": 3600,
         "threshold": 3, "calm_ppm": 0, "tap_amount": "0", "publisher_accounts": null, "relief_accounts": null});
     for (k, v) in over.as_object().unwrap() { p[k] = v.clone(); }
@@ -60,7 +60,7 @@ impl Env {
     /// publishers `bots` (1-based) attest the same record
     async fn attest(&self, bots: &[u32], id: &str, mag: u32, origin: u64) -> anyhow::Result<Gas> {
         let mut g = Gas::from_gas(0);
-        for b in bots { g = self.ok(&format!("bot{b}"), "attest", json!({"event_id": id, "mag_x10": mag, "origin_s": origin})).await?; }
+        for b in bots { g = self.ok(&format!("bot{b}"), "attest", json!({"event_id": id, "mag_x10": mag, "origin_s": origin, "alert": 2})).await?; }
         Ok(g)
     }
 }
@@ -84,15 +84,15 @@ async fn init_once_and_nobody_can_change_anything() -> anyhow::Result<()> {
 #[tokio::test]
 async fn only_publishers_attest_and_bad_records_are_refused() -> anyhow::Result<()> {
     let e = setup(json!({"min_age_s": 3600})).await?; let n = e.now().await; let old = n - 7200;
-    e.fails("judge", "attest", json!({"event_id": "a", "mag_x10": 65, "origin_s": old}), "not a publisher").await?;
-    e.fails("ada", "attest", json!({"event_id": "a", "mag_x10": 65, "origin_s": old}), "not a publisher").await?; // not even the launcher
-    e.fails("bot1", "attest", json!({"event_id": "a", "mag_x10": 59, "origin_s": old}), "magnitude").await?;
-    e.fails("bot1", "attest", json!({"event_id": "a", "mag_x10": 101, "origin_s": old}), "magnitude").await?;
-    e.fails("bot1", "attest", json!({"event_id": "a", "mag_x10": 65, "origin_s": n + 1000}), "future").await?;
-    e.fails("bot1", "attest", json!({"event_id": "a", "mag_x10": 65, "origin_s": n - 6_000_000}), "too old").await?;
-    e.fails("bot1", "attest", json!({"event_id": "a", "mag_x10": 65, "origin_s": n - 5}), "too recent").await?; // finality delay (min_age_s)
-    e.fails("bot1", "attest", json!({"event_id": "", "mag_x10": 65, "origin_s": old}), "bad event id").await?;
-    e.fails("bot1", "attest", json!({"event_id": "x".repeat(33), "mag_x10": 65, "origin_s": old}), "bad event id").await?;
+    e.fails("judge", "attest", json!({"event_id": "a", "mag_x10": 65, "origin_s": old, "alert": 2}), "not a publisher").await?;
+    e.fails("ada", "attest", json!({"event_id": "a", "mag_x10": 65, "origin_s": old, "alert": 2}), "not a publisher").await?; // not even the launcher
+    e.fails("bot1", "attest", json!({"event_id": "a", "mag_x10": 59, "origin_s": old, "alert": 2}), "magnitude").await?;
+    e.fails("bot1", "attest", json!({"event_id": "a", "mag_x10": 101, "origin_s": old, "alert": 2}), "magnitude").await?;
+    e.fails("bot1", "attest", json!({"event_id": "a", "mag_x10": 65, "origin_s": n + 1000, "alert": 2}), "future").await?;
+    e.fails("bot1", "attest", json!({"event_id": "a", "mag_x10": 65, "origin_s": n - 6_000_000, "alert": 2}), "too old").await?;
+    e.fails("bot1", "attest", json!({"event_id": "a", "mag_x10": 65, "origin_s": n - 5, "alert": 2}), "too recent").await?; // finality delay (min_age_s)
+    e.fails("bot1", "attest", json!({"event_id": "", "mag_x10": 65, "origin_s": old, "alert": 2}), "bad event id").await?;
+    e.fails("bot1", "attest", json!({"event_id": "x".repeat(33), "mag_x10": 65, "origin_s": old, "alert": 2}), "bad event id").await?;
     assert_eq!(e.view("get_state", json!({})).await?["pending_events"], 0, "none of the refused records left anything behind");
     Ok(())
 }
@@ -107,10 +107,30 @@ async fn three_of_five_mint_and_split() -> anyhow::Result<()> {
     eprintln!("GAS attest that mints (3rd of 5): {} Tgas", g.as_gas() / 1_000_000_000_000);
     assert_eq!(e.supply().await, 1_005_000 * U);
     for r in &e.relief { assert_eq!(e.tok(r.id().as_str()).await, 1000 * U); }
-    e.fails("bot4", "attest", json!({"event_id": "q1", "mag_x10": 60, "origin_s": o}), "already counted").await?;
+    e.fails("bot4", "attest", json!({"event_id": "q1", "mag_x10": 60, "origin_s": o, "alert": 2}), "already counted").await?;
     let log = e.view("get_log", json!({"from": 0, "limit": 20})).await?;
     let text = log.as_array().unwrap().iter().map(|l| l.as_str().unwrap()).collect::<Vec<_>>().join("\n");
     assert!(text.contains("attested") && text.contains("event_counted"));
+    Ok(())
+}
+
+#[tokio::test]
+async fn only_quakes_with_expected_impact_count() -> anyhow::Result<()> {
+    // GV-6 on a simulated network. alert: 1 green, 2 yellow, 3 orange, 4 red; the bar is yellow.
+    let e = setup(json!({})).await?; let o = e.now().await - 60;
+    let rec = |id: &str, alert: u32| json!({"event_id": id, "mag_x10": 60, "origin_s": o, "alert": alert});
+    e.fails("bot1", "attest", rec("g1", 1), "expected impact too low").await?;
+    e.fails("judge", "submit_claim", rec("g2", 1), "expected impact too low").await?;
+    e.fails("bot1", "attest", rec("g3", 0), "alert level out of range").await?;
+    e.fails("bot1", "attest", rec("g3", 5), "alert level out of range").await?;
+    assert!(e.view("get_event", json!({"event_id": "g1"})).await?.is_null(), "a refused record leaves no trace");
+    for (b, a) in [("bot1", 3), ("bot2", 3), ("bot3", 2)] { e.ok(b, "attest", rec("a2", a)).await?; }
+    assert_eq!(e.supply().await, 1_000_000 * U, "two orange and one yellow are different records");
+    e.ok("bot4", "attest", rec("a2", 3)).await?;
+    assert_eq!(e.supply().await, 1_005_000 * U);
+    let ev = e.view("get_event", json!({"event_id": "a2"})).await?;
+    assert_eq!((ev["status"].as_str(), ev["alert"].as_u64()), (Some("counted"), Some(3)));
+    assert_eq!(e.view("get_params", json!({})).await?["min_alert"], 2);
     Ok(())
 }
 
@@ -120,7 +140,7 @@ async fn disagreement_and_repeats_do_not_mint() -> anyhow::Result<()> {
     e.attest(&[1, 2], "d1", 60, o).await?;
     e.attest(&[3], "d1", 61, o).await?; // a different magnitude: a separate version with one attestation
     assert_eq!(e.supply().await, 1_000_000 * U);
-    e.fails("bot3", "attest", json!({"event_id": "d1", "mag_x10": 60, "origin_s": o}), "already attested").await?; // one attestation per publisher
+    e.fails("bot3", "attest", json!({"event_id": "d1", "mag_x10": 60, "origin_s": o, "alert": 2}), "already attested").await?; // one attestation per publisher
     e.attest(&[4], "d1", 60, o).await?; // the third matching one counts
     assert_eq!(e.supply().await, 1_005_000 * U);
     let ev = e.view("get_event", json!({"event_id": "d1"})).await?; assert_eq!(ev["mag_x10"], 60);
@@ -130,11 +150,11 @@ async fn disagreement_and_repeats_do_not_mint() -> anyhow::Result<()> {
 #[tokio::test]
 async fn visitor_claims_need_bots_to_confirm_and_fakes_never_mint() -> anyhow::Result<()> {
     let e = setup(json!({"max_claims": 2})).await?; let o = e.now().await - 60;
-    e.ok("judge", "submit_claim", json!({"event_id": "real-1", "mag_x10": 63, "origin_s": o})).await?;
-    e.ok("liar", "submit_claim", json!({"event_id": "fake-1", "mag_x10": 74, "origin_s": o})).await?;
-    e.fails("judge", "submit_claim", json!({"event_id": "real-2", "mag_x10": 63, "origin_s": o}), "already have an open claim").await?;
-    e.fails("bot1", "submit_claim", json!({"event_id": "real-3", "mag_x10": 63, "origin_s": o}), "too many open claims").await?; // limit of 2 open claims
-    e.fails("judge", "submit_claim", json!({"event_id": "real-1", "mag_x10": 63, "origin_s": o}), "already exists").await?;
+    e.ok("judge", "submit_claim", json!({"event_id": "real-1", "mag_x10": 63, "origin_s": o, "alert": 2})).await?;
+    e.ok("liar", "submit_claim", json!({"event_id": "fake-1", "mag_x10": 74, "origin_s": o, "alert": 2})).await?;
+    e.fails("judge", "submit_claim", json!({"event_id": "real-2", "mag_x10": 63, "origin_s": o, "alert": 2}), "already have an open claim").await?;
+    e.fails("bot1", "submit_claim", json!({"event_id": "real-3", "mag_x10": 63, "origin_s": o, "alert": 2}), "too many open claims").await?; // limit of 2 open claims
+    e.fails("judge", "submit_claim", json!({"event_id": "real-1", "mag_x10": 63, "origin_s": o, "alert": 2}), "already exists").await?;
     assert_eq!(e.supply().await, 1_000_000 * U, "a claim alone mints nothing");
     // the bots found real-1 in USGS and confirm it; nobody finds fake-1
     e.attest(&[1, 2, 3], "real-1", 63, o).await?;
@@ -238,8 +258,8 @@ async fn gas_and_storage_with_many_pending_events() -> anyhow::Result<()> {
     let s1 = used(&e).await;
     eprintln!("STORAGE per pending event: {} bytes (64 events)", (s1 - s0) / 64);
     eprintln!("GAS attest with 0 pending: {} Tgas ; with 63 pending: {} Tgas", first / 1_000_000_000_000, last / 1_000_000_000_000);
-    e.fails("bot1", "attest", json!({"event_id": "overflow", "mag_x10": 60, "origin_s": o}), "too many pending").await?; // fails safe: nothing new starts
-    e.ok("judge", "submit_claim", json!({"event_id": "still-ok", "mag_x10": 60, "origin_s": o})).await?; // claims have their own limit
+    e.fails("bot1", "attest", json!({"event_id": "overflow", "mag_x10": 60, "origin_s": o, "alert": 2}), "too many pending").await?; // fails safe: nothing new starts
+    e.ok("judge", "submit_claim", json!({"event_id": "still-ok", "mag_x10": 60, "origin_s": o, "alert": 2})).await?; // claims have their own limit
     assert!(last < 250_000_000_000_000, "attest must fit in 250 Tgas at the pending-event limit");
     Ok(())
 }

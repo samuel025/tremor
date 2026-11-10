@@ -63,5 +63,17 @@ gv5 = dict(name="GV-5 calm-day dividend: a day with no counted quake pays holder
     # day 20004: day 20003 was calm: 0.01% of 1,005,201.01005 = 100.520101 TREM, shared over the 1,000,200.01 TREM not held by relief accounts
     dict(op="claim_dividend", who="bob", now=T0 + 4 * D + 5, expect_ok=True, expect_supply=1_005_301_530_151, expect_balance=100_030_053_010, expect_relief=[1_000_200_010] * 5),
 ])
-for n, g in ((1, gv1), (2, gv2), (3, gv3), (4, gv4), (5, gv5)):
+# GV-6: only quakes with expected human impact count. alert 1 green, 2 yellow, 3 orange, 4 red; the bar is yellow (2).
+gv6 = dict(name="GV-6 impact bar: a green quake is refused, and three bots must agree on the alert level too", params=P, steps=[
+    dict(op="attest", who="bot1", event_id="g1", mag_x10=60, origin_s=T0, alert=1, now=T0 + 5, expect_ok=False, expect_supply=1_000_000 * U),   # green: below the bar
+    dict(op="claim", who="judge", event_id="g2", mag_x10=60, origin_s=T0, alert=1, now=T0 + 5, expect_ok=False, expect_supply=1_000_000 * U),   # a claim is held to the same bar
+    dict(op="attest", who="bot1", event_id="g3", mag_x10=60, origin_s=T0, alert=0, now=T0 + 5, expect_ok=False, expect_supply=1_000_000 * U),   # no such level
+    dict(op="attest", who="bot1", event_id="g3", mag_x10=60, origin_s=T0, alert=5, now=T0 + 5, expect_ok=False, expect_supply=1_000_000 * U),
+    dict(op="attest", who="bot1", event_id="a2", mag_x10=60, origin_s=T0, alert=3, now=T0 + 5, expect_ok=True, expect_supply=1_000_000 * U),    # orange
+    dict(op="attest", who="bot2", event_id="a2", mag_x10=60, origin_s=T0, alert=3, now=T0 + 6, expect_ok=True, expect_supply=1_000_000 * U),
+    dict(op="attest", who="bot3", event_id="a2", mag_x10=60, origin_s=T0, alert=2, now=T0 + 7, expect_ok=True, expect_supply=1_000_000 * U),    # same quake, yellow: a different record, 2 + 1 mint nothing
+    dict(op="attest", who="bot4", event_id="a2", mag_x10=60, origin_s=T0, alert=3, now=T0 + 8, expect_ok=True, expect_supply=1_005_000 * U),    # a third orange: counts, M6.0 mints 0.5% as always
+    dict(op="attest", who="bot5", event_id="a2", mag_x10=60, origin_s=T0, alert=3, now=T0 + 9, expect_ok=False, expect_supply=1_005_000 * U),   # already counted
+])
+for n, g in ((1, gv1), (2, gv2), (3, gv3), (4, gv4), (5, gv5), (6, gv6)):
     (out / f"gv-{n}.json").write_text(json.dumps(g, indent=1) + "\n")

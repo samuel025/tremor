@@ -9,17 +9,19 @@ const MAX_ROLL = 400;            // most calm days settled in one call
 export class Reject extends Error {}
 
 export interface Params {
-  s0: bigint; min_mag_x10: number; base_ppm: bigint; max_event_ppm: bigint; cooldown_s: number; week_cap_ppm: bigint; month_cap_ppm: bigint;
+  s0: bigint; min_mag_x10: number; min_alert: number; base_ppm: bigint; max_event_ppm: bigint; cooldown_s: number; week_cap_ppm: bigint; month_cap_ppm: bigint;
   min_age_s: number; max_age_s: number; max_open: number; max_claims: number; claim_wait_s: number; threshold: number; calm_ppm: bigint; tap_amount: bigint;
   publishers: string[]; relief: string[];
 }
 
-export interface Version { mag: number; origin: number; who: Set<string> }
+export interface Version { mag: number; origin: number; alert: number; who: Set<string> }
 export interface Ev {
   created_at: number; claimer: string | null; versions: Map<string, Version>; attested: Set<string>;
-  status: "pending" | "counted"; mag_x10: number; origin_s: number; minted: bigint; clipped: boolean;
+  status: "pending" | "counted"; mag_x10: number; origin_s: number; alert: number; minted: bigint; clipped: boolean;
 }
-const vkey = (mag: number, origin: number) => `${mag}:${origin}`;
+const vkey = (mag: number, origin: number, alert: number) => `${mag}:${origin}:${alert}`;
+/** USGS PAGER alert levels as the rules number them. */
+export const ALERT_NAME = ["", "green", "yellow", "orange", "red"];
 
 export const sharePpm = (p: Params, mag: number): bigint => {
   const steps = BigInt(Math.max(0, mag - 50)); const v = (p.base_ppm * steps) / 10n;
@@ -121,7 +123,7 @@ export class Tremor {
     const wk = (this.supply * this.p.week_cap_ppm) / MILLION, mo = (this.supply * this.p.month_cap_ppm) / MILLION;
     return { supply: this.supply, m7, m30, weekLeft: wk > m7 ? wk - m7 : 0n, monthLeft: mo > m30 ? mo - m30 : 0n };
   }
-  private count(eid: string, mag: number, origin: number, now: number): [bigint, bigint, boolean] {
+  private count(eid: string, mag: number, origin: number, alert: number, now: number): [bigint, bigint, boolean] {
     const e = this.ev.get(eid)!;
     const gap = cooldownGap(origin, this.recent, this.p.cooldown_s);
     const [m, raw, clipped] = mintAmount(this.p, this.supply, mag, gap, this.mintedLast(now, 7), this.mintedLast(now, 30));
@@ -131,13 +133,15 @@ export class Tremor {
     // Keep every counted origin that can still be within cooldown_s of a valid future event (not just the last 16):
     // events can be counted out of origin order, so a fixed count can drop an origin that a later event is near.
     this.recent = [...this.recent, origin].filter((o) => o >= now - this.p.max_age_s - this.p.cooldown_s);
-    e.status = "counted"; e.minted = m; e.clipped = clipped; e.mag_x10 = mag; e.origin_s = origin;
+    e.status = "counted"; e.minted = m; e.clipped = clipped; e.mag_x10 = mag; e.origin_s = origin; e.alert = alert;
     this.log.push({ kind: "event_counted", id: eid, minted: m, clipped, now });
     return [m, raw, clipped];
   }
-  private check(eid: string, mag: number, origin: number, now: number, freshOk = false): void {
+  private check(eid: string, mag: number, origin: number, alert: number, now: number, freshOk = false): void {
     const p = this.p;
     if (mag < p.min_mag_x10 || mag > 100) throw new Reject("magnitude out of range");
+    if (alert < 1 || alert > 4) throw new Reject("alert level out of range");
+    if (alert < p.min_alert) throw new Reject("expected impact too low");
     if (origin > now) throw new Reject("origin in the future");
     if (now - origin > p.max_age_s) throw new Reject("origin too old");
     if (!freshOk && now - origin < p.min_age_s) throw new Reject("too recent");
@@ -150,32 +154,32 @@ export class Tremor {
   }
   openClaims(now: number): Ev[] { return [...this.ev.values()].filter((e) => e.status === "pending" && e.claimer !== null && now < e.created_at + this.p.claim_wait_s); }
 
-  submitClaim(a: string, eid: string, mag: number, origin: number, now: number): void {
+  submitClaim(a: string, eid: string, mag: number, origin: number, now: number, alert = 2): void {
     this.roll(now);
-    this.check(eid, mag, origin, now, true);
+    this.check(eid, mag, origin, alert, now, true);
     if (this.ev.has(eid)) throw new Reject("event id already exists");
     const open = this.openClaims(now);
     if (open.some((e) => e.claimer === a)) throw new Reject("you already have an open claim");
     if (open.length >= this.p.max_claims) throw new Reject("too many open claims");
-    const e: Ev = { created_at: now, claimer: a, versions: new Map(), attested: new Set(), status: "pending", mag_x10: 0, origin_s: 0, minted: 0n, clipped: false };
-    e.versions.set(vkey(mag, origin), { mag, origin, who: new Set() }); this.ev.set(eid, e);
+    const e: Ev = { created_at: now, claimer: a, versions: new Map(), attested: new Set(), status: "pending", mag_x10: 0, origin_s: 0, alert: 0, minted: 0n, clipped: false };
+    e.versions.set(vkey(mag, origin, alert), { mag, origin, alert, who: new Set() }); this.ev.set(eid, e);
     this.log.push({ kind: "claim_submitted", id: eid, who: a, now });
   }
-  attest(pub: string, eid: string, mag: number, origin: number, now: number): [bigint, bigint, boolean] | null {
+  attest(pub: string, eid: string, mag: number, origin: number, now: number, alert = 2): [bigint, bigint, boolean] | null {
     this.roll(now);
     if (!this.p.publishers.includes(pub)) throw new Reject("not a publisher");
-    this.check(eid, mag, origin, now);
+    this.check(eid, mag, origin, alert, now);
     let e = this.ev.get(eid);
     if (e && e.status === "counted") throw new Reject("already counted");
     if (e && e.attested.has(pub)) throw new Reject("already attested");
     if (!e) {
       if (this.openPending(now) >= this.p.max_open) throw new Reject("too many pending events");
-      e = { created_at: now, claimer: null, versions: new Map(), attested: new Set(), status: "pending", mag_x10: 0, origin_s: 0, minted: 0n, clipped: false }; this.ev.set(eid, e);
+      e = { created_at: now, claimer: null, versions: new Map(), attested: new Set(), status: "pending", mag_x10: 0, origin_s: 0, alert: 0, minted: 0n, clipped: false }; this.ev.set(eid, e);
     }
-    const k = vkey(mag, origin); const v = e.versions.get(k) ?? { mag, origin, who: new Set<string>() }; e.versions.set(k, v);
+    const k = vkey(mag, origin, alert); const v = e.versions.get(k) ?? { mag, origin, alert, who: new Set<string>() }; e.versions.set(k, v);
     v.who.add(pub); e.attested.add(pub);
     this.log.push({ kind: "attested", id: eid, who: pub, attestations: v.who.size, now });
-    if (v.who.size >= this.p.threshold) return this.count(eid, mag, origin, now);
+    if (v.who.size >= this.p.threshold) return this.count(eid, mag, origin, alert, now);
     return null;
   }
 
@@ -186,7 +190,7 @@ export class Tremor {
     for (const [a, v] of this.given) if (v <= 0n || this.p.relief.includes(a)) throw new Error("givers");
     for (const e of this.ev.values()) {
       if (e.minted !== 0n && e.status !== "counted") throw new Error("minted but not counted");
-      if (e.status === "counted" && (e.versions.get(vkey(e.mag_x10, e.origin_s))?.who.size ?? 0) < this.p.threshold) throw new Error("counted without enough attestations");
+      if (e.status === "counted" && ((e.versions.get(vkey(e.mag_x10, e.origin_s, e.alert))?.who.size ?? 0) < this.p.threshold || e.alert < this.p.min_alert)) throw new Error("counted without enough attestations or impact");
     }
     for (const k of this.buckets.keys()) {
       if (this.mintedLast(k * DAY, 7) > (this.supply * this.p.week_cap_ppm) / MILLION) throw new Error("weekly cap");
@@ -199,7 +203,7 @@ export class Tremor {
     const nz = (m: Map<string | number, bigint>) => Object.fromEntries([...m.entries()].filter(([, v]) => v !== 0n).sort((a, b) => (String(a[0]) < String(b[0]) ? -1 : 1)).map(([k, v]) => [String(k), Number(v)]));
     const events: Record<string, unknown> = {};
     for (const [id, e] of [...this.ev.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1))) {
-      const versions = [...e.versions.values()].sort((a, b) => a.mag - b.mag || a.origin - b.origin).map((v) => [v.mag, v.origin, [...v.who].sort()]);
+      const versions = [...e.versions.values()].sort((a, b) => a.mag - b.mag || a.origin - b.origin || a.alert - b.alert).map((v) => [v.mag, v.origin, v.alert, [...v.who].sort()]);
       events[id] = [e.status, Number(e.minted), e.clipped, e.claimer ?? "", e.created_at, versions];
     }
     return { supply: Number(this.supply), tok: nz(this.tok), buckets: nz(this.buckets as Map<string | number, bigint>), recent: [...this.recent], tapped: [...this.tapped].sort(), given: nz(this.given),

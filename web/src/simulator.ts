@@ -1,13 +1,13 @@
 // The in-browser simulation: the same rules code as the contract (src/sim/engine.ts, proven identical to the Python reference by
 // tests/conformance.ts), driven by five simulated bots. Nothing here is on-chain.
 import { Tremor, DAY, Reject, type Params } from "./sim/engine.ts";
-import type { Quake } from "./usgs.ts";
+import { alertName, type Quake } from "./usgs.ts";
 import { esc, mag, trem } from "./util.ts";
 
 type Mode = "honest" | "bad" | "offline";
 const BOTS = ["bot1", "bot2", "bot3", "bot4", "bot5"], RELIEF = ["relief1", "relief2", "relief3", "relief4", "relief5"];
 const PLAN: Record<string, Mode[]> = {
-  real: ["honest", "honest", "honest", "honest", "honest"], fake: ["honest", "honest", "honest", "honest", "honest"],
+  low: ["honest", "honest", "honest", "honest", "honest"], real: ["honest", "honest", "honest", "honest", "honest"], fake: ["honest", "honest", "honest", "honest", "honest"],
   bad2: ["bad", "bad", "honest", "honest", "honest"], bad3: ["bad", "bad", "bad", "honest", "honest"], off3: ["offline", "offline", "offline", "honest", "honest"],
 };
 const YOU = "you", START = 5_000_000_000n; // the visitor holds 5,000 simulated TREM, like the Live starter coins
@@ -16,7 +16,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export async function initSimulator(host: HTMLElement, catalog: Quake[], chosen: { base_ppm: number; week_ppm: number; month_ppm: number }, steps?: number) {
   const quakes = catalog.filter((q) => q.mag_x10 >= 60).sort((a, b) => b.origin_s - a.origin_s);
   const byId = new Map(quakes.map((q) => [q.id, q]));
-  const params: Params = { s0: 1_000_000_000_000n, min_mag_x10: 60, base_ppm: BigInt(chosen.base_ppm), max_event_ppm: 15000n, cooldown_s: DAY, week_cap_ppm: BigInt(chosen.week_ppm), month_cap_ppm: BigInt(chosen.month_ppm),
+  const params: Params = { s0: 1_000_000_000_000n, min_mag_x10: 60, min_alert: 2, base_ppm: BigInt(chosen.base_ppm), max_event_ppm: 15000n, cooldown_s: DAY, week_cap_ppm: BigInt(chosen.week_ppm), month_cap_ppm: BigInt(chosen.month_ppm),
     min_age_s: 0, max_age_s: 90 * DAY, max_open: 64, max_claims: 32, claim_wait_s: 3600, threshold: 3, calm_ppm: 100n, tap_amount: 0n, publishers: BOTS, relief: RELIEF };
   let sim: Tremor, now: number, modes: Mode[], claimNo = 0, last: { id: string; fake: boolean; chips: string[]; msg: string; tone: "ok" | "warn" | "info" } | null = null, busy = false;
   const reset = () => { sim = new Tremor(params, "launcher"); now = (quakes[0]?.origin_s ?? Math.floor(Date.now() / 1000)) + 3600; sim.ftTransfer("launcher", YOU, START, now); modes = [...PLAN.real]; claimNo = 0; last = null; };
@@ -29,8 +29,8 @@ export async function initSimulator(host: HTMLElement, catalog: Quake[], chosen:
 
   function render() {
     const st = sim.state(now), used = (id: string) => sim.ev.has(id);
-    const options = quakes.map((q) => `<option value="${esc(q.id)}"${used(q.id) ? " disabled" : ""}>${mag(q.mag_x10)} · ${esc(q.place || "unnamed region")} · ${new Date(q.origin_s * 1000).toISOString().slice(0, 10)}${used(q.id) ? " (used)" : ""}</option>`).join("");
-    const sel = (host.querySelector<HTMLSelectElement>("#sim-q")?.value) ?? quakes.find((q) => !used(q.id))?.id ?? "__fake";
+    const options = quakes.map((q) => `<option value="${esc(q.id)}"${used(q.id) ? " disabled" : ""}>${mag(q.mag_x10)} · ${esc(q.place || "unnamed region")} · ${new Date(q.origin_s * 1000).toISOString().slice(0, 10)} · impact ${alertName(q.alert)}${q.alert >= 2 ? "" : " (too low to count)"}${used(q.id) ? " (used)" : ""}</option>`).join("");
+    const sel = (host.querySelector<HTMLSelectElement>("#sim-q")?.value) ?? quakes.find((q) => !used(q.id) && q.alert >= 2)?.id ?? "__fake";
     const events = [...sim.ev.entries()].reverse().slice(0, 5);
     host.innerHTML = `
       <div class="card simbanner"><b>This is a simulation, running in your browser.</b><p>It uses the same rules code as the contract, checked against ${steps ? steps.toLocaleString("en-US") : "thousands of"} steps of the reference implementation. Nothing here is on the blockchain. The real contract is further down, on Live.</p></div>
@@ -41,9 +41,9 @@ export async function initSimulator(host: HTMLElement, catalog: Quake[], chosen:
           <button class="blue big" id="sim-claim" ${busy ? "disabled" : ""}>Tell the contract about it</button>
           <h3>2. Set up the five bots</h3>
           ${BOTS.map((_, i) => `<div class="botrow"><span class="bot">${i + 1}</span><span class="bn">Bot ${i + 1}</span><span class="seg mini" data-bot="${i}">${(["honest", "bad", "offline"] as Mode[]).map((m) => `<button data-m="${m}" class="${modes[i] === m ? "on" : ""}">${m === "honest" ? "Honest" : m === "bad" ? "Bad" : "Offline"}</button>`).join("")}</span></div>`).join("")}
-          <p class="note"><b>Honest</b> bots attest only quakes the USGS has. <b>Bad</b> bots attest anything. <b>Offline</b> bots do nothing. A quake counts when <b>three</b> bots attest the same record.</p>
+          <p class="note"><b>Honest</b> bots attest only quakes the USGS has. <b>Bad</b> bots attest anything. <b>Offline</b> bots do nothing. A quake counts when <b>three</b> bots attest the same record, and only if the USGS expects at least <b>yellow</b> impact on people (its PAGER alert level, an estimate, not a count). Quakes with a lower level never count.</p>
           <h3>Or try a scenario</h3>
-          <div class="acts"><button class="out" data-sc="real">A real quake</button><button class="out" data-sc="fake">A made-up quake</button><button class="out" data-sc="bad2">Two bad bots</button><button class="out" data-sc="bad3">Three bad bots</button><button class="out" data-sc="off3">Three bots offline</button></div>
+          <div class="acts"><button class="out" data-sc="real">A real quake</button><button class="out" data-sc="low">A quake with low expected impact</button><button class="out" data-sc="fake">A made-up quake</button><button class="out" data-sc="bad2">Two bad bots</button><button class="out" data-sc="bad3">Three bad bots</button><button class="out" data-sc="off3">Three bots offline</button></div>
           <h3>3. Hold coins: quakes cost you a little, calm days pay you a little</h3>
           <p class="note">You hold <b>${trem(sim.bal(YOU), 4)}</b> simulated TREM, which is <b>${(Number((sim.bal(YOU) * 100_000_000n) / sim.supply) / 1e6).toFixed(4)}%</b> of the supply. Each counted quake makes that share a little smaller. Each full day with no counted quake creates ${(Number(params.calm_ppm) / 1e4).toFixed(2)}% of the supply for holders (not for the relief accounts). It is separate from the weekly and monthly caps, which limit quake mints. Your coin count grows; your share barely moves, because nearly every coin is paid the same.</p>
           <div class="acts"><button class="out" id="sim-day">Let a calm day pass</button><span class="note">Calm days paid so far: <b>${sim.calmDays}</b>, ${trem(sim.divTotal)} TREM for holders.</span></div>
@@ -67,11 +67,15 @@ export async function initSimulator(host: HTMLElement, catalog: Quake[], chosen:
 
   async function claimAndRun(value: string) {
     if (busy) return; busy = true;
-    let id: string, magx: number, origin: number, fake = false;
+    let id: string, magx: number, origin: number, fake = false, alert = 2;
     if (value === "__fake" || !byId.has(value)) { fake = true; id = `fake-${100 + ++claimNo}`; magx = 74; origin = now - 120; }
-    else { const q = byId.get(value)!; id = q.id; magx = q.mag_x10; origin = q.origin_s; }
-    try { sim.submitClaim(`visitor-${++claimNo}`, id, magx, origin, now); }
-    catch (e) { last = { id, fake, chips: [], msg: e instanceof Reject ? `The contract refused it: ${e.message}.` : "Something went wrong.", tone: "warn" }; busy = false; render(); return; }
+    else { const q = byId.get(value)!; id = q.id; magx = q.mag_x10; origin = q.origin_s; alert = q.alert; }
+    try { sim.submitClaim(`visitor-${++claimNo}`, id, magx, origin, now, alert); }
+    catch (e) {
+      const low = e instanceof Reject && /impact/.test(e.message);
+      last = { id, fake, chips: [], tone: low ? "info" : "warn", msg: low ? `<b>The contract refused it.</b> The USGS expects ${alertName(alert)} impact on people for this quake, below the yellow bar, so it can never count, even if every bot attested it. Nothing was created. (The alert is a USGS estimate, not a count of people.)` : e instanceof Reject ? `The contract refused it: ${e.message}.` : "Something went wrong." };
+      busy = false; render(); return;
+    }
     const near = [...sim.ev.values()].some((e) => e.status === "counted" && Math.abs(e.origin_s - origin) < DAY); // within a day of an earlier counted quake: the cooldown scales it down
     const chips: string[] = BOTS.map((_, i) => `<span class="bot">${i + 1}</span>`);
     let agree = 0;
@@ -84,8 +88,8 @@ export async function initSimulator(host: HTMLElement, catalog: Quake[], chosen:
       else if (m === "bad") did = "yes";
       else if (rec && !fake) did = "yes"; // an honest bot attests only what the USGS record says
       if (did === "yes") {
-        const useRec = m === "honest" && rec ? { mag: rec.mag_x10, origin: rec.origin_s } : { mag: magx, origin };
-        try { const r = sim.attest(BOTS[i], id, useRec.mag, useRec.origin, now); agree++; chips[i] = `<span class="bot yes" title="attested">✓</span>`; if (r) break; } catch { chips[i] = `<span class="bot" title="refused">–</span>`; }
+        const useRec = m === "honest" && rec ? { mag: rec.mag_x10, origin: rec.origin_s, alert: rec.alert } : { mag: magx, origin, alert };
+        try { const r = sim.attest(BOTS[i], id, useRec.mag, useRec.origin, now, useRec.alert); agree++; chips[i] = `<span class="bot yes" title="attested">✓</span>`; if (r) break; } catch { chips[i] = `<span class="bot" title="refused">–</span>`; }
       } else chips[i] = `<span class="bot ${did === "off" ? "off" : "no"}" title="${did === "off" ? "offline" : "found nothing in the USGS"}">${did === "off" ? "×" : "–"}</span>`;
       last = { id, fake, chips: [...chips], msg: "The bots are checking…", tone: "info" }; render();
     }
@@ -124,8 +128,9 @@ export async function initSimulator(host: HTMLElement, catalog: Quake[], chosen:
     if (t.dataset.m) { const i = Number((t.parentElement as HTMLElement).dataset.bot); modes[i] = t.dataset.m as Mode; return render(); }
     if (t.dataset.sc) {
       const sc = t.dataset.sc; modes = [...PLAN[sc]];
-      const next = quakes.find((q) => !sim.ev.has(q.id));
-      if ((sc === "real" || sc === "off3") && !next) { last = { id: "All real quakes used", fake: false, chips: [], tone: "info", msg: "Every real quake in the catalog has been used. Press “Start over”." }; return render(); }
+      const next = quakes.find((q) => !sim.ev.has(q.id) && q.alert >= 2), low = quakes.find((q) => !sim.ev.has(q.id) && q.alert < 2);
+      if (sc === "low") { if (!low) { last = { id: "No more low-impact quakes", fake: false, chips: [], tone: "info", msg: "Every low-impact quake in the catalog has been tried. Press “Start over”." }; return render(); } return void claimAndRun(low.id); }
+      if ((sc === "real" || sc === "off3") && !next) { last = { id: "All counting quakes used", fake: false, chips: [], tone: "info", msg: "Every quake in the catalog that can count has been used. Press “Start over”." }; return render(); }
       return void claimAndRun(sc === "real" || sc === "off3" ? next!.id : "__fake");
     }
   });

@@ -43,8 +43,10 @@ rows = [dict(zip(("base_ppm", "week_ppm", "month_ppm"), c)) | evaluate(*c, CALM)
 passing = [r for r in rows if r["pass"]]
 dist = lambda r: abs(r["base_ppm"] - 5000) / 5000 + abs(r["week_ppm"] - 15000) / 15000 + abs(r["month_ppm"] - 50000) / 50000
 key = lambda r: (round(r["s1_dilution"], 6), round(r["s2_week"], 6), dist(r))
-chosen = min(passing, key=key) if passing else None
+grid_pick = min(passing, key=key) if passing else None
+# the human confirmed these at Gate A (docs/DECISIONS.md): keep them whenever they still pass, and record what the grid alone would pick
+chosen = next((r for r in passing if (r["base_ppm"], r["week_ppm"], r["month_ppm"]) == CONFIRMED), grid_pick)
 with open(OUT / "grid.csv", "w", newline="") as f:
     w = csv.DictWriter(f, fieldnames=list(rows[0])); w.writeheader(); w.writerows(sorted(rows, key=lambda r: (not r["pass"],) + key(r)))
-json.dump(dict(chosen=chosen, n_pass=len(passing), n_grid=len(rows)), open(OUT / "chosen.json", "w"), indent=1)
+json.dump(dict(chosen=chosen, grid_pick=grid_pick, n_pass=len(passing), n_grid=len(rows)), open(OUT / "chosen.json", "w"), indent=1)
 print("grid", len(rows), "pass", len(passing)); print("chosen", chosen)

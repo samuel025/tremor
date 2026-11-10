@@ -1,12 +1,15 @@
 import { USGS } from "./config";
 
-export interface Quake { id: string; mag_x10: number; origin_s: number; status: string; place: string; lat: number; lon: number }
+/** alert: the USGS PAGER alert level as the rules number it (1 green, 2 yellow, 3 orange, 4 red; 0 = USGS has published none). It is a USGS estimate of expected impact. */
+export interface Quake { id: string; mag_x10: number; origin_s: number; status: string; place: string; lat: number; lon: number; alert: number }
+export const ALERTS: Record<string, number> = { green: 1, yellow: 2, orange: 3, red: 4 };
+export const alertName = (n: number) => ["none yet", "green", "yellow", "orange", "red"][n] ?? "none yet";
 export type Flag = { kind: "match" | "missing" | "mag" | "time" | "unknown"; text: string };
 
 export const usgsPage = (id: string) => `https://earthquake.usgs.gov/earthquakes/eventpage/${encodeURIComponent(id)}`;
 
 /** Compares one on-chain report with the USGS record, in the browser. USGS data is treated as data only. */
-export async function checkEvent(id: string, mag_x10: number, origin_s: number): Promise<Flag> {
+export async function checkEvent(id: string, mag_x10: number, origin_s: number, alert = 0): Promise<Flag> {
   try {
     const r = await fetch(`${USGS}?format=geojson&eventid=${encodeURIComponent(id)}`);
     if (r.status === 404 || r.status === 400) return { kind: "missing", text: "Not found in USGS" };
@@ -15,6 +18,7 @@ export async function checkEvent(id: string, mag_x10: number, origin_s: number):
     const m = Math.round(p.mag * 10);
     if (m !== mag_x10) return { kind: "mag", text: `Magnitude differs: USGS says M${(m / 10).toFixed(1)}` };
     if (Math.abs(Math.floor(p.time / 1000) - origin_s) > 60) return { kind: "time", text: "Origin time differs from USGS" };
+    if (alert && (ALERTS[p.alert] ?? 0) !== alert) return { kind: "mag", text: `Impact level differs: USGS says ${p.alert ?? "none yet"}` };
     return { kind: "match", text: "Matches USGS" };
   } catch { return { kind: "unknown", text: "USGS check unavailable" }; }
 }
@@ -25,7 +29,7 @@ export async function recentM6(days: number): Promise<Quake[]> {
   const j = await r.json();
   return j.features.filter((f: any) => f.properties.type === "earthquake").map((f: any) => ({
     id: f.id, mag_x10: Math.round(f.properties.mag * 10), origin_s: Math.floor(f.properties.time / 1000), status: f.properties.status,
-    place: f.properties.place ?? "", lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0],
+    place: f.properties.place ?? "", lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0], alert: ALERTS[f.properties.alert] ?? 0,
   }));
 }
 
@@ -38,5 +42,5 @@ export function parseCsv(text: string): Record<string, string>[] {
 
 export async function loadCatalog(): Promise<Quake[]> {
   const rows = parseCsv(await (await fetch("data/usgs_60d.csv")).text());
-  return rows.map((r) => ({ id: r.event_id, mag_x10: +r.mag_x10, origin_s: +r.origin_s, status: r.status, place: r.place, lat: +r.lat, lon: +r.lon }));
+  return rows.map((r) => ({ id: r.event_id, mag_x10: +r.mag_x10, origin_s: +r.origin_s, status: r.status, place: r.place, lat: +r.lat, lon: +r.lon, alert: ALERTS[r.alert] ?? 0 }));
 }

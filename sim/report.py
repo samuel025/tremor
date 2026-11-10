@@ -40,14 +40,15 @@ svg.append("</svg>"); (OUT / "supply.svg").write_text("\n".join(svg))
 # ---- tables
 def s1row(p, label):
     s = run_s1(p); return f"| {label} | {pct(s.passive_dilution())} | {pct(s.worst_30d_loss())} | {pct(s.clipped_weeks(),1)} | {s.t.supply/U:,.0f} |"
-r1 = runs["scenario1_real"]; mags = [m for _, m, _ in CAT]; s2 = runs["scenario2_swarm"]
+r1 = runs["scenario1_real"]; s2 = runs["scenario2_swarm"]
 L = ["# Simulation summary", "",
-     f"Real catalog: {len(CAT)} events of M6.0+ in the committed 60-day window (2026-09-08 to 2026-11-07 UTC; M6.0-6.9: {sum(1 for m in mags if m<70)}, M7.0+: {sum(1 for m in mags if m>=70)}). "
+     f"Real catalog: {len(ALL6)} events of M6.0+ in the committed 60-day window (2026-09-08 to 2026-11-07 UTC). Only quakes whose USGS PAGER alert level (an estimate of expected human impact) is yellow or higher count: {len(CAT)} of the {len(ALL6)} "
+     f"({', '.join(f'{n} {k}' for k, n in sorted({k: sum(1 for e, _, _ in ALL6 if ALERT[e] == v) for k, v in LEVEL.items()}.items(), key=lambda kv: LEVEL[kv[0]]))}). Scenarios 1 to 7 use those {len(CAT)}; scenario 8 sends all {len(ALL6)} to the contract. "
      "One window is a small sample. Every number comes from the same integer reference that passes the golden vectors. Five fixed bots, three must agree; bots attest 1 to 3 hours after a quake.", "",
      "Hourly steps, seeds 100..119 (grid uses 100..111), nothing touches the network. Data: U.S. Geological Survey, ANSS ComCat.", "",
      "## Chosen parameters", "",
      f"base share {c['base_ppm']/1e4:.2f}% at M6.0 (2x at M7, 3x at M8, max 1.5%), weekly cap {c['week_ppm']/1e4:.1f}%, monthly cap {c['month_ppm']/1e4:.1f}%, calm-day dividend {CALM/1e4:.2f}% of supply for holders after each full day with no counted quake (outside the caps, which bound quake mints; every scenario below has it switched on). "
-     f"{ch['n_pass']} of {ch['n_grid']} grid combinations passed every threshold in docs/DECISIONS.md. Full grid: `grid.csv` (passing rows first).", "",
+     f"{ch['n_pass']} of {ch['n_grid']} grid combinations passed every threshold in docs/DECISIONS.md. The grid's own pick (lowest passive-holder dilution) is base {ch['grid_pick']['base_ppm']/1e4:.2f}%, weekly {ch['grid_pick']['week_ppm']/1e4:.1f}%, monthly {ch['grid_pick']['month_ppm']/1e4:.1f}%; the confirmed values above are kept because they still pass. Full grid: `grid.csv` (passing rows first).", "",
      "## Scenario 1: real quakes, five honest bots", "", "| parameters | passive dilution (60d) | worst 30-day loss | weeks with a clipped mint | final supply (TREM) |", "|---|---|---|---|---|",
      s1row(P, "chosen"), s1row(DEF, "spec defaults (0.5% base)"), "",
      f"With the spec defaults the weekly cap binds in {pct(run_s1(DEF).clipped_weeks(),1)} of weeks.", "",
@@ -91,6 +92,18 @@ for cd in CJ["candidates"]:
 c0 = CJ["candidates"][0]; cc = next(x for x in CJ["candidates"] if x["calm_ppm"] == CALM)
 L += ["", f"The dividend is outside the weekly and monthly caps, which bound quake mints only, so relief's allowance is never spent on holders: relief received {cc['relief_minted']/U:,.0f} TREM with the chosen dividend and {c0['relief_minted']/U:,.0f} without it (slightly more, because each quake mints a share of a slightly larger supply). Holders received {cc['holders_minted']/U:,.0f} TREM. The dividend's own limit is one per day: at most {CALM/1e4:.2f}% of supply a day, about {7*CALM/1e4:.2f}% a week, on top of the quake caps. "
       f"Said plainly: the dividend makes a holder's coin count grow (by {pct(cc['holders_minted'] / P.s0)} of the starting supply here) but hardly changes their share of the supply, because almost every coin is paid the same percentage. A passive holder's loss of share over the 60 days is {pct(cc['s1_dilution'])} with it and {pct(c0['s1_dilution'])} without. Only the relief accounts are left out, and they hold a few percent of the supply, so that is all the share there is to move. Every other account is paid in proportion to its balance, including the launcher.", "",
+      "## Scenario 8: the impact bar (honest bots send every real M6+ quake, green ones too)", ""]
+import dataclasses
+off_bar = Sim(dataclasses.replace(P, min_alert=1), SEEDS[0]); off_bar.real_events(ALL6, BOTS); off_bar.real_ids = [e for e, _, _ in ALL6]; off_bar.run()
+a1 = [run_a1(P, sd) for sd in SEEDS]; s1s = [run_s1(P, sd) for sd in SEEDS]
+greens = [e for e, _, _ in ALL6 if ALERT[e] < 2]
+same = all([d["supply"] for d in x.series] == [d["supply"] for d in y.series] for x, y in zip(a1, s1s))
+counted_green = max(sum(1 for e in greens if x.t.ev.get(e) and x.t.ev[e].status == "counted") for x in a1)
+L += [f"- Quakes sent to the contract: {len(ALL6)}; below the bar (green): {len(greens)}; at or above it: {len(CAT)}.",
+      f"- Green quakes that counted, in any of {len(SEEDS)} seeds: {counted_green}. Attestations the contract refused as below the bar (mean per run): {mean([x.refused.get('attest', 0) for x in a1]):.0f}.",
+      f"- Supply over the 60 days identical to the run that never sends the green quakes: {'yes' if same else 'NO'}.",
+      f"- With the bar, {len(CAT)} real quakes count in 60 days (about {len(CAT) / 2:.1f} a month), the weekly cap bound in {pct(s1s[0].clipped_weeks(), 1)} of weeks, and a passive holder is diluted by {pct(s1s[0].passive_dilution())}. With the bar off (`min_alert` 1, all {len(ALL6)} count) the same parameters gave {pct(off_bar.passive_dilution())} and a cap that bound in {pct(off_bar.clipped_weeks(), 1)} of weeks.",
+      "- Three bad bots can still lie about the alert level as well (they attest anything); the bar stops honest mistakes and spam, not a majority of bad bots. That is the unchanged weak spot.", "",
       "## Top passing combinations", "", "| base | week | month | s1 dilution | s1 clipped weeks |", "|---|---|---|---|---|"]
 rows = [r for r in csv.DictReader(open(OUT / "grid.csv")) if r["pass"] == "True"][:6]
 L += [f"| {int(r['base_ppm'])/1e4:.2f}% | {int(r['week_ppm'])/1e4:.1f}% | {int(r['month_ppm'])/1e4:.1f}% | {pct(float(r['s1_dilution']))} | {pct(float(r['s1_clipped_weeks']),1)} |" for r in rows]

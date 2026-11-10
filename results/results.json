@@ -1,14 +1,14 @@
 {
  "python_tests": {
-  "passed": 12,
+  "passed": 13,
   "ok": true,
   "date": "2026-11-10"
  },
  "conformance": {
   "scenarios": 202,
-  "steps": 27891,
+  "steps": 27989,
   "mismatches": 0,
-  "tests_passed": 4,
+  "tests_passed": 5,
   "ok": true,
   "date": "2026-11-10"
  },
@@ -28,7 +28,7 @@
    "keys": 1
   },
   "live": {
-   "pass_": 14,
+   "pass_": 13,
    "fail": 0,
    "ok": true,
    "date": "2026-11-10",
@@ -38,18 +38,18 @@
  },
  "simulation": {
   "grid": 27,
-  "passing": 4,
+  "passing": 22,
   "chosen": {
    "base_ppm": 2500,
    "week_ppm": 15000,
    "month_ppm": 50000
   },
-  "passive_dilution": 0.06419340944914709,
-  "clipped_weeks": 0.25,
-  "default_clipped_weeks_pct": 62.5,
+  "passive_dilution": 0.015528801993869856,
+  "clipped_weeks": 0.0,
+  "default_clipped_weeks_pct": 25.0,
   "bad2_fakes_counted": 0.0,
   "bad3_fakes_counted": 10.0,
-  "bad3_extra_supply_pct": 1.19,
+  "bad3_extra_supply_pct": 1.48,
   "offline2_real_counted_pct": 100.0,
   "offline3_real_counted_pct": 0.0,
   "spam_real_counted_pct": 100.0,
@@ -57,29 +57,51 @@
   "spam_fakes_total": 8640,
   "spam_max_open": 32,
   "spam_limit": 32,
-  "spam_refused": 4842,
+  "spam_refused": 4836,
   "calm": {
    "ppm": 100,
-   "days": 43,
-   "holders": 4422,
-   "relief": 68900,
-   "relief_without": 68672,
-   "dilution": 0.06419340944914709,
-   "dilution_without": 0.06425936225168316
+   "days": 59,
+   "holders": 5955,
+   "relief": 15867,
+   "relief_without": 15812,
+   "dilution": 0.015528801993869856,
+   "dilution_without": 0.015566818207395361
+  },
+  "bar": {
+   "counted": 5,
+   "green": 23,
+   "dilution_on": 1.55,
+   "dilution_off": 6.42,
+   "clipped_off": 25.0,
+   "grid_pick": {
+    "base_ppm": 2500,
+    "week_ppm": 10000,
+    "month_ppm": 50000,
+    "s1_dilution": 0.01487001387835396,
+    "s1_clipped_weeks": 0.125,
+    "t1_loss30": 0.015000000000000013,
+    "s2_week": 0.009999999992459055,
+    "s3_week_3bad": 0.009999999999881461,
+    "s3_extra_3bad": 0.02524600850661826,
+    "s3_fakes_2bad": 0,
+    "s4_real_counted_2off": 1.0,
+    "c1_week_dividend": 0.0006997200839755093,
+    "pass": true
+   }
   },
   "catalog_events": 352,
   "catalog_m6": 28
  },
  "sandbox": {
-  "passed": 10,
+  "passed": 11,
   "failed": 0,
   "ok": true,
-  "storage_per_event_bytes": 309,
+  "storage_per_event_bytes": 327,
   "attest_gas_tgas": 3,
   "date": "2026-11-10"
  },
  "demo": {
-  "pass_": 27,
+  "pass_": 30,
   "fail": 0,
   "ok": true,
   "date": "2026-11-10"
@@ -87,7 +109,7 @@
  "tap_amount": 5000,
  "web_conformance": {
   "scenarios": 202,
-  "steps": 27891,
+  "steps": 27989,
   "mismatches": 0,
   "golden": true,
   "ok": true,

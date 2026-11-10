@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
 <title>Tremor · the coin that shakes with the earth</title>
-<meta name="description" content="A NEAR testnet memecoin whose supply grows to a fixed relief list when three of five fixed bots confirm a magnitude 6+ earthquake from the official USGS record. Capped, no votes, no admin key. No value.">
+<meta name="description" content="A NEAR testnet memecoin whose supply grows to a fixed relief list when three of five fixed bots confirm a magnitude 6+ earthquake that USGS expects to affect people, from the official USGS record. Capped, no votes, no admin key. No value.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%231d1d1f'/%3E%3Cpath d='M4 17h5l3-8 5 15 3-9 2 2h6' fill='none' stroke='white' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 </head>
 <body>
@@ -23,7 +23,7 @@
   <div class="hero-text shake-a">
     <p class="kicker">Tremor</p>
     <h1>When the earth shakes, this coin does something.</h1>
-    <p class="lead">Five fixed bots read the official earthquake record. When three of them agree that a magnitude 6 or larger quake happened, Tremor creates a small amount of new supply for a fixed relief list. Calm days pay holders a small dividend. Every mint is limited, nobody votes, and the rules are written into the contract.</p>
+    <p class="lead">Five fixed bots read the official earthquake record. When three of them agree that a magnitude 6 or larger quake happened and the USGS expects it to affect people, Tremor creates a small amount of new supply for a fixed relief list. Calm days pay holders a small dividend. Every mint is limited, nobody votes, and the rules are written into the contract.</p>
   </div>
   <div class="stage" aria-label="Animated seismogram replaying real earthquakes from the committed USGS catalog">
     <canvas id="seismo"></canvas>
@@ -78,7 +78,7 @@
 
 <section id="unreported" class="band mist"><div class="wrap reveal">
   <h2>Real quakes nobody has reported</h2>
-  <p class="sub">USGS events of magnitude 6 or more that the contract has not seen yet. The bots pick these up by themselves once they are old enough.</p>
+  <p class="sub">USGS events of magnitude 6 or more, with expected impact of yellow or higher, that the contract has not seen yet. The bots pick these up by themselves once they are old enough.</p>
   <div id="unrep" class="list"></div>
 </div></section>
 
@@ -96,7 +96,7 @@
 
 <section id="map" class="band"><div class="wrap reveal">
   <h2>Sixty days of real earthquakes</h2>
-  <p class="sub">Every dot is a USGS event of magnitude 5 or more in the committed window. Press replay: each M6+ sends out waves, shakes the map, and the supply responds, using the chosen parameters from the simulation.</p>
+  <p class="sub">Every dot is a USGS event of magnitude 5 or more in the committed window. Press replay: each M6+ sends out waves and shakes the map; orange dots are the ones that count (USGS expects at least yellow impact), and the supply responds to those, using the chosen parameters from the simulation.</p>
   <div class="card" id="mapcard"><div class="skeleton tall"></div></div>
 </div></section>
 

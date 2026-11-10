@@ -99,7 +99,7 @@ h2{font:600 40px/1.05 var(--display);letter-spacing:-.2px;margin:0 0 10px}h3{fon
 @media(max-width:900px){.relief{grid-template-columns:repeat(2,1fr)}}
 /* map: epicentre waves + shake */
 .mapbox{background:var(--white);border-radius:20px;padding:10px;border:1px solid var(--ctl)}.mist .mapbox{background:var(--white)}.mapbox svg{width:100%;height:auto;display:block}
-.gr{stroke:var(--ctl);stroke-width:.25}.dot .core{fill:var(--steel);opacity:0;transition:opacity .5s}.dot.on .core{opacity:.6}.dot.big .core{fill:var(--ink)}.dot.big.on .core{opacity:1}
+.gr{stroke:var(--ctl);stroke-width:.25}.dot .core{fill:var(--steel);opacity:0;transition:opacity .5s}.dot.on .core{opacity:.6}.dot.big .core{fill:var(--steel)}.dot.big.on .core{opacity:.8}.dot.hit .core{fill:var(--orange)}.dot.hit.on .core{opacity:1}
 .dot .ring,.dot .ring2{fill:none;stroke:var(--orange);stroke-width:.4;opacity:0}
 .dot.pulse .ring{animation:ring 1.9s ease-out}.dot.pulse .ring2{animation:ring 1.9s .45s ease-out}
 @keyframes ring{from{r:1.4;opacity:.95;stroke-width:.9}to{r:15;opacity:0;stroke-width:.1}}

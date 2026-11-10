@@ -94,3 +94,8 @@ Cloned the repo into an empty folder and ran the README commands: `make test` (3
 ## Demo redeployed; demo job removed (2026-11-10)
 - The Demo contract now runs the same code as Live (give, calm-day dividend, cooldown fix). `scripts/deploy.py --reset` now clears old state itself when testnet refuses to delete a large account, using `scripts/reset_state/` (a testnet-only tool, not part of Tremor, callable only by the account it is deployed to), then deploys fresh over the same account name. `make demo` ran against it: all checks matched the reference, and `fixtures/testnet-demo.json` was re-recorded from it.
 - `.github/workflows/bots-demo.yml` was deleted (the page no longer uses the Demo). The GitHub secret `BOT_KEYS_DEMO` is now unused and can be removed in repo settings. `make demo-bots` still runs Demo bots locally.
+
+## Impact bar deployed (2026-11-10)
+- Both contracts were redeployed with `min_alert` 2 (yellow) and the alert level in every record (D-35). `deploy.py --reset` deleted the accounts' state directly this time (state was small). `make demo` passed all checks, including a new step 4b: a real but green quake is refused for both a bot's attestation and a visitor's claim. `fixtures/testnet-demo.json` was re-recorded.
+- Live now shows no counted quakes: the bots look back 3 days, and none of the last 13 days' M6+ quakes has a PAGER alert of yellow or higher (a dry run confirmed it). That is the intended behaviour, and it means a judge who looks at Live sees an empty event board until the next impactful quake. The simulation and the Demo run show the full flow.
+- Bots read the alert from the USGS `alert` property; a quake with no alert yet is left alone until USGS publishes one.

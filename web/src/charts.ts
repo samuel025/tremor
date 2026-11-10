@@ -3,7 +3,7 @@ import { esc } from "./util";
 
 interface Series { name: string; label: string; vals: number[] }
 const PANELS: { title: string; note: string; series: [string, string][] }[] = [
-  { title: "1 · Real quakes", note: "28 real M6+ events, five honest bots", series: [["scenario1_real", "real catalog"]] },
+  { title: "1 · Real quakes", note: "5 of 28 real M6+ quakes count (USGS expects yellow impact or more), five honest bots", series: [["scenario1_real", "real catalog"]] },
   { title: "2 · Swarm", note: "12 extra events in 36 hours: the caps hold", series: [["scenario1_real", "real only"], ["scenario2_swarm", "with swarm"]] },
   { title: "3 · Bad bots", note: "10 made-up quakes; 2 bad bots (none count) or 3 (all count, capped)", series: [["scenario3_badbots_k2", "2 bad bots"], ["scenario3_badbots_k3", "3 bad bots"]] },
   { title: "4 · Bots offline", note: "2 offline: nothing changes. 3 offline: nothing is created", series: [["scenario4_offline_m2", "2 offline"], ["scenario4_offline_m3", "3 offline"]] },

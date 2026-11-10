@@ -1,5 +1,6 @@
 // The guided path for a judge: four plain steps. The current step is worked out from the chain and the wallet, so it moves on by itself.
 // Pure HTML generation; main.ts handles the clicks (data-j attributes).
+import { alertName } from "./usgs";
 import { unconfirmed, type Ev, type Params, type State } from "./chain";
 import type { Quake } from "./usgs";
 import { duration, esc, mag, short, trem } from "./util";
@@ -32,7 +33,7 @@ export function renderJourney(c: Ctx): string {
     { title: "Tell the contract about an earthquake", sum: ev ? `You claimed ${esc(ev.event_id)} (${mag(ev.mag_x10)})` : "",
       body: `<p>Anyone can tell the contract about a quake, but a claim creates nothing by itself. Five fixed <b>bots</b> read the official U.S. Geological Survey record, and only quakes they find there can count.</p>
         ${c.net === "live" && !q ? `<p>The bots have already confirmed every recent real quake on the <b>Live</b> contract. You can still make up a fake below, or switch to the Demo (top bar).</p>`
-          : q ? `<p>A real earthquake from the USGS:</p><p class="pick"><b>${mag(q.mag_x10)}</b> ${esc(q.place || "unnamed region")}</p><button class="blue big" data-j="claim" data-id="${esc(q.id)}" data-mag="${q.mag_x10}" data-origin="${q.origin_s}">Tell the contract about it</button>`
+          : q ? `<p>A real earthquake from the USGS whose expected impact is high enough to count:</p><p class="pick"><b>${mag(q.mag_x10)}</b> ${esc(q.place || "unnamed region")} <span class="note">USGS expected impact: ${alertName(q.alert)}</span></p><button class="blue big" data-j="claim" data-id="${esc(q.id)}" data-mag="${q.mag_x10}" data-origin="${q.origin_s}" data-alert="${q.alert}">Tell the contract about it</button>`
           : `<p class="hint">${c.checking ? "Looking up recent earthquakes…" : "No unreported real quake right now."}</p>`}
         <p class="hint">Or <a href="#" data-j="fake">claim a made-up quake</a> and watch the bots ignore it.</p>
         ${tapAmt > 0n && !c.tapped ? `<p class="hint">Want to hold some coins too, to see them get diluted? <a href="#" data-j="tap">Get ${trem(tapAmt, 0)} free starter TREM</a>.</p>` : ""}` },
