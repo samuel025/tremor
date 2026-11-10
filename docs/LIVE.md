@@ -22,7 +22,7 @@ Five publisher accounts (`bot1` to `bot5`, set in `new`, never changed) are the 
 - The bots need NEAR in their accounts for gas (0.25 NEAR each when created, about a thousand attestations). The page is built by `.github/workflows/pages.yml` (Settings > Pages > Source: GitHub Actions).
 
 ## Limits worth knowing
-- All five bots run in one process from one place, so their independence is demonstrated, not real. If three bots were bad, made-up quakes could count (up to the caps); if three are down, nothing is confirmed.
+- All five bots run in one scheduled job on one server. That is for the demo only; a real launch would have five separate operators, each with its own machine and key. If three bots were bad, made-up quakes could count (up to the caps); if three are down, nothing is confirmed.
 - The tap pool is finite (60 accounts) and any account can use it, so someone could drain it; it is testnet.
 - Anyone with a testnet account can claim quakes, including made-up ones. Claims are limited (one open per account, 32 at once) and never mint by themselves.
 - On Live, a visitor's claim of a real but not-yet-confirmed quake is confirmed within the 20 minute bot schedule once it is 6 hours old, so a result there can take hours. Use Demo for a result in seconds.
