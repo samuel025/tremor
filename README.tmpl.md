@@ -5,7 +5,6 @@
 > **Testnet prototype. No value, no real donations.** Tremor promises no value, and holding it dilutes you when quakes happen. The five relief accounts are stand-ins that donate nothing real. Nothing here claims real-world impact. Earthquakes cause real harm; this project uses the word "relief" for a mechanism, not for an outcome, and shows no casualty figures.
 
 - Live page: https://samuel025.github.io/tremor/ (or run it yourself: `make web-dev`).
-- TODO(human): redeploy the Live contract before submitting; the one deployed on Nov 8 predates `give`, the calm-day dividend and the cooldown fix, so those work in the simulation but not yet on Live.
 - Live contract (testnet, real timing: a quake is confirmed after it is 6 hours old): `{{verify.live}}`
 - Demo contract (testnet; used only by `make demo`, the scripted on-chain scene, and not by the page): `{{verify.demo}}`
 - Demo video and X post: TODO(human): add the links.

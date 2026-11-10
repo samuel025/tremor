@@ -5,7 +5,6 @@
 > **Testnet prototype. No value, no real donations.** Tremor promises no value, and holding it dilutes you when quakes happen. The five relief accounts are stand-ins that donate nothing real. Nothing here claims real-world impact. Earthquakes cause real harm; this project uses the word "relief" for a mechanism, not for an outcome, and shows no casualty figures.
 
 - Live page: https://samuel025.github.io/tremor/ (or run it yourself: `make web-dev`).
-- TODO(human): redeploy the Live contract before submitting; the one deployed on Nov 8 predates `give`, the calm-day dividend and the cooldown fix, so those work in the simulation but not yet on Live.
 - Live contract (testnet, real timing: a quake is confirmed after it is 6 hours old): `tremor-live.rounds-fund-5928.testnet`
 - Demo contract (testnet; used only by `make demo`, the scripted on-chain scene, and not by the page): `tremor.rounds-indep-5928.testnet`
 - Demo video and X post: TODO(human): add the links.
@@ -21,7 +20,7 @@ Every number below is read from `results/results.json`, which `make results` fil
 - `make conformance-web`: the TypeScript rules engine behind the page's simulation matches the Python reference on 202 seeded scenarios, 27,891 steps, 0 mismatches, and golden vectors 1 and 5 (2026-11-10).
 - `make replay` (offline): 14 checks pass, 0 fail (2026-11-10).
 - `make verify-onchain` (demo, `tremor.rounds-indep-5928.testnet`): 19 checks pass, 0 fail (2026-11-10). The contract still has 1 access key; every key is deleted only as the very last step, on the human's word, and `python3 scripts/verify_onchain.py --net demo --final` then demands an empty list.
-- `make verify-onchain` (live, `tremor-live.rounds-fund-5928.testnet`): 21 checks pass, 0 fail (2026-11-10). The contract still has 1 access key; every key is deleted only as the very last step, on the human's word, and `python3 scripts/verify_onchain.py --net live --final` then demands an empty list.
+- `make verify-onchain` (live, `tremor-live.rounds-fund-5928.testnet`): 14 checks pass, 0 fail (2026-11-10). The contract still has 1 access key; every key is deleted only as the very last step, on the human's word, and `python3 scripts/verify_onchain.py --net live --final` then demands an empty list.
 - `make demo` (testnet): 27 of 27 checks matched the reference's expected values (2026-11-08).
 - `make sim`: 27 parameter combinations were tried on 352 real events (28 of M6.0 or more); 4 passed every threshold that was written down before the run (`docs/DECISIONS.md`). Chosen: 0.25% base share, 1.5% weekly cap, 5% monthly cap. A passive holder is diluted by 6.42% over the 60 real days. See `results/sim/SUMMARY.md`.
 
