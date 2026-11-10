@@ -1,55 +1,55 @@
 {
  "python_tests": {
-  "passed": 9,
+  "passed": 12,
   "ok": true,
-  "date": "2026-11-09"
+  "date": "2026-11-10"
  },
  "conformance": {
-  "scenarios": 200,
-  "steps": 28021,
+  "scenarios": 202,
+  "steps": 27891,
   "mismatches": 0,
-  "tests_passed": 2,
+  "tests_passed": 4,
   "ok": true,
-  "date": "2026-11-08"
+  "date": "2026-11-10"
  },
  "replay": {
   "pass_": 14,
   "fail": 0,
   "ok": true,
-  "date": "2026-11-08"
+  "date": "2026-11-10"
  },
  "verify_onchain": {
   "demo": {
    "pass_": 19,
    "fail": 0,
    "ok": true,
-   "date": "2026-11-08",
+   "date": "2026-11-10",
    "contract": "tremor.rounds-indep-5928.testnet",
    "keys": 1
   },
   "live": {
-   "pass_": 20,
+   "pass_": 21,
    "fail": 0,
    "ok": true,
-   "date": "2026-11-08",
+   "date": "2026-11-10",
    "contract": "tremor-live.rounds-fund-5928.testnet",
    "keys": 1
   }
  },
  "simulation": {
   "grid": 27,
-  "passing": 5,
+  "passing": 4,
   "chosen": {
    "base_ppm": 2500,
    "week_ppm": 15000,
    "month_ppm": 50000
   },
-  "passive_dilution": 0.06425936225168316,
+  "passive_dilution": 0.06419340944914709,
   "clipped_weeks": 0.25,
   "default_clipped_weeks_pct": 62.5,
   "bad2_fakes_counted": 0.0,
   "bad3_fakes_counted": 10.0,
-  "bad3_extra_supply_pct": 1.24,
+  "bad3_extra_supply_pct": 1.19,
   "offline2_real_counted_pct": 100.0,
   "offline3_real_counted_pct": 0.0,
   "spam_real_counted_pct": 100.0,
@@ -58,16 +58,25 @@
   "spam_max_open": 32,
   "spam_limit": 32,
   "spam_refused": 4842,
+  "calm": {
+   "ppm": 100,
+   "days": 43,
+   "holders": 4422,
+   "relief": 68900,
+   "relief_without": 68672,
+   "dilution": 0.06419340944914709,
+   "dilution_without": 0.06425936225168316
+  },
   "catalog_events": 352,
   "catalog_m6": 28
  },
  "sandbox": {
-  "passed": 8,
+  "passed": 10,
   "failed": 0,
   "ok": true,
-  "storage_per_event_bytes": 308,
+  "storage_per_event_bytes": 309,
   "attest_gas_tgas": 3,
-  "date": "2026-11-07"
+  "date": "2026-11-10"
  },
  "demo": {
   "pass_": 27,
@@ -77,11 +86,11 @@
  },
  "tap_amount": 5000,
  "web_conformance": {
-  "scenarios": 200,
-  "steps": 28021,
+  "scenarios": 202,
+  "steps": 27891,
   "mismatches": 0,
   "golden": true,
   "ok": true,
-  "date": "2026-11-08"
+  "date": "2026-11-10"
  }
 }

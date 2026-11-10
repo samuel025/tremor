@@ -9,7 +9,7 @@ const stable = (x: unknown): string => JSON.stringify(x, (_, v) => (v && typeof 
 const P = (p: any, pubs: string[], rel: string[]): Params => ({
   s0: BigInt(p.s0), min_mag_x10: p.min_mag_x10, base_ppm: BigInt(p.base_ppm), max_event_ppm: BigInt(p.max_event_ppm), cooldown_s: p.cooldown_s, week_cap_ppm: BigInt(p.week_cap_ppm),
   month_cap_ppm: BigInt(p.month_cap_ppm), min_age_s: p.min_age_s, max_age_s: p.max_age_s, max_open: p.max_open, max_claims: p.max_claims, claim_wait_s: p.claim_wait_s,
-  threshold: p.threshold, tap_amount: BigInt(p.tap_amount), publishers: pubs, relief: rel,
+  threshold: p.threshold, calm_ppm: BigInt(p.calm_ppm), tap_amount: BigInt(p.tap_amount), publishers: pubs, relief: rel,
 });
 
 let steps = 0, mismatches = 0;
@@ -19,8 +19,10 @@ for (const sc of all) {
   sc.steps.forEach((st: any, i: number) => {
     const a = st.args, now = st.now; let ok = true;
     try {
-      if (st.op === "transfer") t.ftTransfer(a[0], a[1], BigInt(a[2]));
-      else if (st.op === "tap") t.tap(a[0], "pool");
+      if (st.op === "transfer") t.ftTransfer(a[0], a[1], BigInt(a[2]), now);
+      else if (st.op === "tap") t.tap(a[0], "pool", now);
+      else if (st.op === "claim_div") t.claimDividend(a[0], now);
+      else if (st.op === "give") t.give(a[0], BigInt(a[1]), now);
       else if (st.op === "attest") t.attest(a[0], a[1], a[2], a[3], now);
       else if (st.op === "claim") t.submitClaim(a[0], a[1], a[2], a[3], now);
       else throw new Error("unknown op " + st.op);
@@ -32,11 +34,23 @@ for (const sc of all) {
 // golden vector 1, typed from RULES.md (independent of the Python reference): each event confirmed by 3 bots at its origin time
 const U = 1_000_000n, T0 = 20000 * 86400, H = 3600;
 const gp: Params = { s0: 1_000_000n * U, min_mag_x10: 60, base_ppm: 5000n, max_event_ppm: 15000n, cooldown_s: 86400, week_cap_ppm: 15000n, month_cap_ppm: 50000n, min_age_s: 0, max_age_s: 5_184_000,
-  max_open: 64, max_claims: 32, claim_wait_s: 43200, threshold: 3, tap_amount: 0n, publishers: ["bot1", "bot2", "bot3", "bot4", "bot5"], relief: ["r1", "r2", "r3", "r4", "r5"] };
+  max_open: 64, max_claims: 32, claim_wait_s: 43200, threshold: 3, calm_ppm: 0n, tap_amount: 0n, publishers: ["bot1", "bot2", "bot3", "bot4", "bot5"], relief: ["r1", "r2", "r3", "r4", "r5"] };
 const g = new Tremor(gp, "ada"); const run = (id: string, mag: number, o: number) => { let r: any = null; for (const b of ["bot1", "bot2", "bot3"]) r = g.attest(b, id, mag, o, o); return r as [bigint, bigint, boolean]; };
 let gvOk = true; const chk = (c: boolean) => { if (!c) gvOk = false; };
 let r = run("E1", 60, T0); chk(r[0] === 5_000n * U && g.supply === 1_005_000n * U);
 r = run("E2", 70, T0 + 48 * H); chk(r[0] === 10_050n * U && g.supply === 1_015_050n * U);
 r = run("E3", 60, T0 + 60 * H); chk(r[1] === 2_537_625_000n && r[0] === 175_750_000n && r[2] && g.supply === 1_015_225_750_000n && g.bal("r2") === 3_045_150_000n);
-console.log(`web-conformance: ${all.length} scenarios, ${steps} steps, ${mismatches} mismatches; golden vector 1 ${gvOk ? "ok" : "FAILED"}`);
+// golden vector 5, typed from RULES.md: calm days pay holders, a quake day pays nothing
+const D = 86400; const v = new Tremor({ ...gp, calm_ppm: 100n, relief: ["relief1", "relief2", "relief3", "relief4", "relief5"] }, "ada");
+const refused = (f: () => unknown) => { try { f(); return false; } catch (e) { return e instanceof Reject; } };
+v.ftTransfer("ada", "bob", 100_000n * U, T0);
+chk(v.claimDividend("bob", T0 + 2 * D + 10) === 20_001_000n && v.supply === 1_000_200_010_000n && v.divPot === 180_009_000n);
+chk(v.claimDividend("ada", T0 + 2 * D + 10) === 180_009_000n && v.bal("ada") === 900_180_009_000n && v.divPot === 0n);
+chk(refused(() => v.claimDividend("ada", T0 + 2 * D + 11)) && refused(() => v.claimDividend("relief1", T0 + 2 * D + 12)));
+let q5: any = null; for (const b of ["bot1", "bot2", "bot3"]) q5 = v.attest(b, "E1", 60, T0 + 2 * D + 20, T0 + 2 * D + 20);
+chk(q5[0] === 5_001_000_050n && v.supply === 1_005_201_010_050n && v.bal("relief1") === 1_000_200_010n);
+chk(refused(() => v.claimDividend("bob", T0 + 3 * D + 5)));
+chk(v.claimDividend("bob", T0 + 4 * D + 5) === 10_052_010n && v.supply === 1_005_301_530_151n && v.bal("bob") === 100_030_053_010n && v.calmDays === 3);
+v.checkInvariants();
+console.log(`web-conformance: ${all.length} scenarios, ${steps} steps, ${mismatches} mismatches; golden vectors 1 and 5 ${gvOk ? "ok" : "FAILED"}`);
 process.exit(mismatches === 0 && gvOk ? 0 : 1);

@@ -16,7 +16,7 @@ paths = [pathlib.Path(a) for a in sys.argv[1:]] or sorted((ROOT / "fixtures").gl
 if not paths: sys.exit("no fixtures: run `python3 scripts/verify_onchain.py --save fixtures/testnet-demo.json` first")
 for path in paths:
     fx = json.loads(path.read_text()); print(f"== {path.name} ({len(fx['log'])} log lines)")
-    ref, bad = replay(fx["params"], fx["log"])
+    ref, bad = replay(fx["params"], fx["log"], fx["state"]["now_s"])
     check("every log step replays and agrees (mints, clipped flags, supply, outcomes, claim payouts)", not bad, "; ".join(bad[:3]))
     check("supply", ref.supply == int(fx["supply"]), f"reference {ref.supply} chain {fx['supply']}")
     for acct, bal in fx["relief_balances"].items(): check(f"relief balance {acct.split('.')[0]}", ref.tok.get(acct, 0) == int(bal), f"reference {ref.tok.get(acct, 0)} chain {bal}")

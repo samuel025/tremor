@@ -15,7 +15,7 @@ impl Env {
 fn params(over: Value) -> Value {
     let mut p = json!({"s0": (1_000_000 * U).to_string(), "min_mag_x10": 60, "base_ppm": 5000, "max_event_ppm": 15000, "cooldown_s": 86400,
         "week_cap_ppm": 15000, "month_cap_ppm": 50000, "min_age_s": 0, "max_age_s": 5_184_000, "max_open": 64, "max_claims": 32, "claim_wait_s": 3600,
-        "threshold": 3, "tap_amount": "0", "publisher_accounts": null, "relief_accounts": null});
+        "threshold": 3, "calm_ppm": 0, "tap_amount": "0", "publisher_accounts": null, "relief_accounts": null});
     for (k, v) in over.as_object().unwrap() { p[k] = v.clone(); }
     p
 }
@@ -176,6 +176,53 @@ async fn tap_gives_starter_coins_once_and_mints_nothing() -> anyhow::Result<()> 
     judges[1].call(e.c.id(), "tap").deposit(NearToken::from_millinear(2)).max_gas().transact().await?.into_result()?;
     let empty = judges[2].call(e.c.id(), "tap").deposit(NearToken::from_millinear(2)).max_gas().transact().await?; assert!(empty.is_failure(), "pool is empty");
     assert_eq!(e.supply().await, 1_000_000 * U, "the tap mints nothing");
+    Ok(())
+}
+
+#[tokio::test]
+async fn give_moves_own_coins_to_relief_and_mints_nothing() -> anyhow::Result<()> {
+    // GV-4 on a simulated network
+    let e = setup(json!({})).await?;
+    let no_yocto = e.call("ada", "give", json!({"amount": "12000003"}), NONE).await?; assert!(no_yocto.is_failure(), "give needs one yoctoNEAR, like a transfer");
+    let r = e.call("ada", "give", json!({"amount": "12000003"}), Y1).await?; let gas = r.total_gas_burnt; r.into_result()?;
+    eprintln!("MEASURE give: {} Tgas", gas.as_tgas());
+    e.call("ada", "give", json!({"amount": (1 * U).to_string()}), Y1).await?.into_result()?;
+    assert_eq!(e.tok(e.relief[0].id().as_str()).await, 2_600_003); assert_eq!(e.tok(e.relief[4].id().as_str()).await, 2_600_000);
+    assert_eq!(e.view("given_of", json!({"account_id": e.who("ada").id()})).await?, "13000003");
+    let empty = e.call("judge", "give", json!({"amount": "1"}), Y1).await?; assert!(empty.is_failure(), "an account with no coins cannot give");
+    let zero = e.call("ada", "give", json!({"amount": "0"}), Y1).await?; assert!(zero.is_failure());
+    let rel = e.relief[0].call(e.c.id(), "give").args_json(json!({"amount": "1"})).deposit(Y1).gas(Gas::from_tgas(30)).transact().await?; assert!(rel.is_failure(), "a relief account cannot give");
+    let st = e.view("get_state", json!({})).await?;
+    assert_eq!((st["given_total"].as_str(), st["givers"].as_u64()), (Some("13000003"), Some(1)));
+    assert_eq!(e.view("list_givers", json!({"from": 0, "limit": 10})).await?[0]["given"], "13000003");
+    assert_eq!(e.supply().await, 1_000_000 * U, "giving mints nothing");
+    // a quake after the gifts mints exactly what it would have without them
+    let o = e.now().await - 60; e.attest(&[1, 2, 3], "E1", 60, o).await?;
+    assert_eq!(e.supply().await, 1_005_000 * U);
+    assert_eq!(e.tok(e.relief[1].id().as_str()).await, 1_002_600_000);
+    Ok(())
+}
+
+#[tokio::test]
+async fn dividend_methods_are_wired_and_pay_nothing_before_a_day_has_passed() -> anyhow::Result<()> {
+    // The sandbox cannot jump days (moving its clock two days took over ten minutes), so the day-by-day arithmetic is checked on the
+    // same engine code by the conformance test and GV-5. Here: the methods exist on the deployed contract, settle on every balance
+    // change without disturbing it, and pay nothing while no full day has passed.
+    let e = setup(json!({"calm_ppm": 100})).await?;
+    assert_eq!(e.view("get_params", json!({})).await?["calm_ppm"], 100);
+    e.who("judge").call(e.c.id(), "storage_deposit").args_json(json!({})).deposit(NearToken::from_millinear(2)).max_gas().transact().await?.into_result()?;
+    let r = e.who("ada").call(e.c.id(), "ft_transfer").args_json(json!({"receiver_id": e.who("judge").id(), "amount": (100_000 * U).to_string()})).deposit(Y1).max_gas().transact().await?;
+    eprintln!("MEASURE ft_transfer with dividend settling: {} Tgas", r.total_gas_burnt.as_tgas()); r.into_result()?;
+    assert_eq!(e.tok(e.who("judge").id().as_str()).await, 100_000 * U);
+    assert_eq!(e.view("dividend_of", json!({"account_id": e.who("judge").id()})).await?, "0");
+    assert!(e.call("judge", "claim_dividend", json!({}), NONE).await?.is_failure(), "nothing to claim on the first day");
+    let rel = e.relief[0].call(e.c.id(), "claim_dividend").gas(Gas::from_tgas(30)).transact().await?; assert!(rel.is_failure(), "relief accounts earn no dividend");
+    let st = e.view("get_state", json!({})).await?;
+    assert_eq!((st["calm_days"].as_u64(), st["dividends_total"].as_str(), st["dividend_pot"].as_str()), (Some(0), Some("0"), Some("0")));
+    assert_eq!(e.supply().await, 1_000_000 * U);
+    // a quake still mints exactly as before
+    let o = e.now().await - 60; e.attest(&[1, 2, 3], "E1", 60, o).await?;
+    assert_eq!(e.supply().await, 1_005_000 * U);
     Ok(())
 }
 

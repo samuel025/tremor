@@ -24,10 +24,10 @@ def build(results=None):
         rows.append(f"| {st['event_id']} | M{st['mag_x10'] / 10:.1f} | {f(e['mint'])} | {f(e['supply'])} | {f(e['each'][0])} | {'yes' if e['clipped'] else 'no'} |")
     py, cf, rp, vos, sb, dm = R["python_tests"], R["conformance"], R["replay"], R["verify_onchain"], R.get("sandbox"), R.get("demo")
     res = [
-        f"- `make test`: {py['passed']} Python tests pass ({py['date']}), including the three golden vectors.",
+        f"- `make test`: {py['passed']} Python tests pass ({py['date']}), including the five golden vectors.",
         f"- `make conformance`: the Rust contract logic and the Python reference agree on {cf['scenarios']} seeded random scenarios, {cf['steps']:,} steps, {cf['mismatches']} mismatches ({cf['date']}).",
         (f"- `make sandbox-test`: {sb['passed']} simulated-network tests pass, {sb['failed']} fail ({sb['date']}). One pending event costs about {sb['storage_per_event_bytes']} bytes of storage; `attest` burns about {sb['attest_gas_tgas']} Tgas with 63 events pending." if sb else "- `make sandbox-test`: not recorded yet."),
-        f"- `make conformance-web`: the TypeScript rules engine behind the page's simulation matches the Python reference on {R['web_conformance']['scenarios']} seeded scenarios, {R['web_conformance']['steps']:,} steps, {R['web_conformance']['mismatches']} mismatches, and golden vector 1 ({R['web_conformance']['date']}).",
+        f"- `make conformance-web`: the TypeScript rules engine behind the page's simulation matches the Python reference on {R['web_conformance']['scenarios']} seeded scenarios, {R['web_conformance']['steps']:,} steps, {R['web_conformance']['mismatches']} mismatches, and golden vectors 1 and 5 ({R['web_conformance']['date']}).",
         f"- `make replay` (offline): {rp['pass_']} checks pass, {rp['fail']} fail ({rp['date']}).",
         *[f"- `make verify-onchain` ({net}, `{vo['contract']}`): {vo['pass_']} checks pass, {vo['fail']} fail ({vo['date']}). The contract still has {vo['keys']} access key; every key is deleted only as the very last step, on the human's word, and `python3 scripts/verify_onchain.py --net {net} --final` then demands an empty list." for net, vo in vos.items()],
         (f"- `make demo` (testnet): {dm['pass_']} of {dm['pass_'] + dm['fail']} checks matched the reference's expected values ({dm['date']})." if dm else "- `make demo`: not recorded."),
@@ -35,6 +35,8 @@ def build(results=None):
     ]
     mapping = {
         "web.scenarios": str(R["web_conformance"]["scenarios"]), "web.steps": f"{R['web_conformance']['steps']:,}", "web.mismatches": str(R["web_conformance"]["mismatches"]), "verify.live": vos["live"]["contract"], "verify.demo": vos["demo"]["contract"], "tap": f"{R['tap_amount']:,}", "conformance.scenarios": str(cf["scenarios"]),
+        "calm.pct": f"{S['calm']['ppm'] / 1e4:g}", "calm.days": str(S["calm"]["days"]), "calm.holders": f"{S['calm']['holders']:,}", "calm.relief": f"{S['calm']['relief']:,}", "calm.relief_without": f"{S['calm']['relief_without']:,}",
+        "calm.dilution": f"{S['calm']['dilution'] * 100:.2f}", "calm.dilution_without": f"{S['calm']['dilution_without'] * 100:.2f}",
         "params.base": pct(c["base_ppm"]), "params.week": pct(c["week_ppm"]), "params.month": pct(c["month_ppm"]),
         "sim.bad2": f"{S['bad2_fakes_counted']:g}", "sim.bad3": f"{S['bad3_fakes_counted']:g}", "sim.bad3_extra": f"{S['bad3_extra_supply_pct']:g}",
         "sim.off2": f"{S['offline2_real_counted_pct']:g}", "sim.off3": f"{S['offline3_real_counted_pct']:g}",

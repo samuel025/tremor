@@ -3,12 +3,12 @@ import { DEP } from "./deployment";
 
 export interface Params {
   s0: string; min_mag_x10: number; base_ppm: number; max_event_ppm: number; cooldown_s: number; week_cap_ppm: number; month_cap_ppm: number;
-  min_age_s: number; max_age_s: number; max_open: number; max_claims: number; claim_wait_s: number; threshold: number; tap_amount: string;
+  min_age_s: number; max_age_s: number; max_open: number; max_claims: number; claim_wait_s: number; threshold: number; calm_ppm?: number; tap_amount: string;
   publisher_accounts: string[]; relief_accounts: string[];
 }
 export interface State {
   supply: string; initial_supply: string; minted_7d: string; minted_30d: string; week_left: string; month_left: string; pending_events: number;
-  tap_pool: string; log_len: number; now_s: number;
+  tap_pool: string; given_total?: string; givers?: number; dividends_total?: string; dividend_pot?: string; calm_days?: number; log_len: number; now_s: number; // the optional fields: contracts deployed with give() and the calm-day dividend
 }
 export interface Version { mag_x10: number; origin_s: number; attesters: string[] }
 export interface Ev {
@@ -50,6 +50,20 @@ export async function listEvents(): Promise<Ev[]> {
     out.push(...page);
     if (page.length < 100) return out;
   }
+}
+
+export interface Giver { account_id: string; given: string }
+/** Everyone who has given, largest first. Returns null on a contract deployed before give() existed. */
+export async function listGivers(): Promise<Giver[] | null> {
+  const out: Giver[] = [];
+  try {
+    for (;;) {
+      const page = await view<Giver[]>("list_givers", { from: out.length, limit: 100 });
+      out.push(...page);
+      if (page.length < 100) break;
+    }
+  } catch { return null; }
+  return out.sort((a, b) => (BigInt(b.given) > BigInt(a.given) ? 1 : BigInt(b.given) < BigInt(a.given) ? -1 : 0));
 }
 
 export async function registered(account: string): Promise<boolean> { return (await view<unknown>("storage_balance_of", { account_id: account })) !== null; }

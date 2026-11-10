@@ -33,5 +33,35 @@ gv3 = dict(name="GV-3 disagreement, too few, and a made-up claim never mint", pa
     dict(op="claim", who="liar", event_id="fake-1", mag_x10=74, origin_s=T0, now=T0 + 10, expect_ok=True, expect_supply=1_005_000 * U),
     dict(op="attest", who="bot1", event_id="x1", mag_x10=59, origin_s=T0, now=T0 + 10, expect_ok=False, expect_supply=1_005_000 * U),  # below M6.0
 ])
-for n, g in ((1, gv1), (2, gv2), (3, gv3)):
+# GV-4: 12.000003 TREM = 12,000,003 base units; a fifth is 2,400,000 with 3 left over, which goes to the first relief account.
+gv4 = dict(name="GV-4 giving: a holder's own coins go to the relief list; nothing is created", params=P, steps=[
+    dict(op="give", who="ada", amount=12_000_003, now=T0, expect_ok=True, expect_supply=1_000_000 * U,
+         expect_relief=[2_400_003, 2_400_000, 2_400_000, 2_400_000, 2_400_000], expect_given=12_000_003),
+    dict(op="give", who="ada", amount=1 * U, now=T0 + 1, expect_ok=True, expect_supply=1_000_000 * U,
+         expect_relief=[2_600_003, 2_600_000, 2_600_000, 2_600_000, 2_600_000], expect_given=13_000_003),
+    dict(op="give", who="stranger", amount=1, now=T0 + 2, expect_ok=False, expect_supply=1_000_000 * U),   # holds nothing
+    dict(op="give", who="relief1", amount=1, now=T0 + 3, expect_ok=False, expect_supply=1_000_000 * U),    # a relief account cannot give
+    dict(op="give", who="ada", amount=0, now=T0 + 4, expect_ok=False, expect_supply=1_000_000 * U),
+    # a quake after the gifts mints exactly what it would have without them: 0.5% of an unchanged supply, 1,000 TREM each
+    dict(op="quake", event_id="E1", mag_x10=60, origin_s=T0 + 10, now=T0 + 10, expect_ok=True, expect_supply=1_005_000 * U,
+         expect_relief=[1_002_600_003, 1_002_600_000, 1_002_600_000, 1_002_600_000, 1_002_600_000], expect_given=13_000_003),
+])
+# GV-5: calm_ppm = 100 (0.01% of supply per calm day). D = 86,400 s; T0 is the start of day 20000.
+D = 86400
+gv5 = dict(name="GV-5 calm-day dividend: a day with no counted quake pays holders, a quake day pays nothing", params=dict(P, calm_ppm=100), steps=[
+    # the first transaction starts the clock; nothing is paid for earlier days
+    dict(op="transfer", who="ada", to="bob", amount=100_000 * U, now=T0, expect_ok=True, expect_supply=1_000_000 * U),
+    # two days later: days 20000 and 20001 were calm. 100 TREM, then 0.01% of 1,000,100 = 100.01 TREM. bob holds a tenth: 20.001
+    dict(op="claim_dividend", who="bob", now=T0 + 2 * D + 10, expect_ok=True, expect_supply=1_000_200_010_000, expect_balance=100_020_001_000, expect_pot=180_009_000),
+    dict(op="claim_dividend", who="ada", now=T0 + 2 * D + 10, expect_ok=True, expect_supply=1_000_200_010_000, expect_balance=900_180_009_000, expect_pot=0),
+    dict(op="claim_dividend", who="ada", now=T0 + 2 * D + 11, expect_ok=False, expect_supply=1_000_200_010_000),   # nothing left to claim
+    dict(op="claim_dividend", who="relief1", now=T0 + 2 * D + 12, expect_ok=False, expect_supply=1_000_200_010_000),
+    # a M6.0 quake on day 20002: 0.5% of 1,000,200.01 = 5,001.00005 TREM (the dividends are outside the caps and use none of the weekly allowance)
+    dict(op="quake", event_id="E1", mag_x10=60, origin_s=T0 + 2 * D + 20, now=T0 + 2 * D + 20, expect_ok=True, expect_supply=1_005_201_010_050, expect_relief=[1_000_200_010] * 5),
+    # day 20003: the only finished day since is 20002, a quake day, so nothing is paid
+    dict(op="claim_dividend", who="bob", now=T0 + 3 * D + 5, expect_ok=False, expect_supply=1_005_201_010_050),
+    # day 20004: day 20003 was calm: 0.01% of 1,005,201.01005 = 100.520101 TREM, shared over the 1,000,200.01 TREM not held by relief accounts
+    dict(op="claim_dividend", who="bob", now=T0 + 4 * D + 5, expect_ok=True, expect_supply=1_005_301_530_151, expect_balance=100_030_053_010, expect_relief=[1_000_200_010] * 5),
+])
+for n, g in ((1, gv1), (2, gv2), (3, gv3), (4, gv4), (5, gv5)):
     (out / f"gv-{n}.json").write_text(json.dumps(g, indent=1) + "\n")

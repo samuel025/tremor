@@ -17,7 +17,7 @@ jobs:
         with: { node-version: 20 }
       - run: npm ci
         working-directory: bots
-      - run: node bots.mjs --net live --days 13
+      - run: node bots.mjs --net live --days 3
         working-directory: bots
         env:
           BOT_KEYS: ${{ secrets.BOT_KEYS_LIVE }}

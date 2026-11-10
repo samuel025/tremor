@@ -4,6 +4,8 @@ Quakes are published by five fixed bots (publishers); an event counts when `thre
 from dataclasses import dataclass, field
 DAY = 86400
 UNIT = 10**6
+SCALE = 10**18   # the dividend-per-coin number is kept times this
+MAX_ROLL = 400   # most calm days settled in one call
 
 
 class Reject(Exception):
@@ -25,6 +27,7 @@ class Params:
     max_claims: int = 32           # open visitor claims
     claim_wait_s: int = 12 * 3600  # how long a claim stays open
     threshold: int = 3
+    calm_ppm: int = 0              # share of supply created for holders after each full day with no counted quake; 0 disables it
     tap_amount: int = 0            # starter coins each account may take once from the pool; 0 disables the tap
     publishers: tuple = ("bot1", "bot2", "bot3", "bot4", "bot5")
     relief: tuple = ("relief1", "relief2", "relief3", "relief4", "relief5")
@@ -84,23 +87,93 @@ class Tremor:
         self.recent = []   # counted origin times that can still lie within cooldown_s of a future valid event
         self.buckets = {}  # day -> minted
         self.tapped = set()
+        self.given = {}    # account -> coins it has given to the relief list, ever
+        self.acc = 0            # dividend per coin so far, times SCALE
+        self.paid = {}          # account -> the value of acc when its balance was last settled
+        self.div_pot = 0        # dividend coins created but not yet credited to an account
+        self.div_total = 0      # all dividend coins ever created
+        self.calm_days = 0      # days that paid a dividend
+        self.settled_to = None  # the next day to settle (None until the first transaction)
+        self.quake_day = None   # the last day on which a quake was counted
         self.log = []
 
     # ---- token
     def ft_balance_of(self, a): return self.tok.get(a, 0)
 
-    def ft_transfer(self, f, t, n):
+    def ft_transfer(self, f, t, n, now=None):
+        if now is not None: self.roll(now)
+        self._settle(f); self._settle(t)
         if n <= 0 or self.tok.get(f, 0) < n: raise Reject("insufficient balance")
         self.tok[f] -= n; self.tok[t] = self.tok.get(t, 0) + n
 
-    def tap(self, a, pool):
+    def tap(self, a, pool, now=None):
         """Once per account: move tap_amount from the pool (coins the launcher put there) to a. Mints nothing."""
+        if now is not None: self.roll(now)
+        self._settle(a); self._settle(pool)
         if self.p.tap_amount == 0: raise Reject("tap disabled")
         if a == pool or a in self.tapped: raise Reject("already tapped")
         if self.tok.get(pool, 0) < self.p.tap_amount: raise Reject("tap pool empty")
         self.tok[pool] -= self.p.tap_amount; self.tok[a] = self.tok.get(a, 0) + self.p.tap_amount
         self.tapped.add(a)
         self.log.append(("tapped", a, self.p.tap_amount))
+
+    def give(self, a, n, now):
+        """Any holder: send n of your own coins to the relief list, split like a mint. Mints nothing, changes no cap and
+        gives the giver no say in anything; the contract only remembers the running total per giver."""
+        self.roll(now)
+        if a in self.p.relief: raise Reject("relief accounts cannot give")
+        self._settle(a)
+        if n <= 0 or self.tok.get(a, 0) < n: raise Reject("insufficient balance")
+        self.tok[a] -= n
+        for r, part in zip(self.p.relief, split(n)):
+            self.tok[r] += part
+        self.given[a] = self.given.get(a, 0) + n
+        self.log.append(("gave", a, n, self.given[a], now))
+
+    # ---- calm-day dividend
+    def roll(self, now):
+        """Settle every full day that has passed. A day in which no quake was counted creates calm_ppm of the supply for
+        holders. It is outside the weekly and monthly caps (those bound quake mints) and has its own limit: one per day.
+        Nothing but the days themselves is used, so settling late gives exactly the result of settling on time."""
+        today = now // DAY
+        if self.settled_to is None: self.settled_to = today; self.log.append(("clock_started", today, now)); return
+        if self.p.calm_ppm == 0: self.settled_to = max(self.settled_to, today); return
+        first, n, minted = self.settled_to, 0, 0
+        while self.settled_to < today and n < MAX_ROLL:
+            x = self.settled_to; self.settled_to += 1; n += 1
+            if x == self.quake_day: continue
+            eligible = self.supply - self.div_pot - sum(self.tok[r] for r in self.p.relief)
+            if eligible <= 0: continue
+            d = self.supply * self.p.calm_ppm // 10**6
+            if d == 0: continue
+            self.acc += d * SCALE // eligible
+            self.supply += d; self.div_pot += d; self.div_total += d; self.calm_days += 1; minted += d
+        if minted: self.log.append(("dividend", first, self.settled_to, minted, self.supply, now))
+
+    def _settle(self, a):
+        """Credit account a with the dividend its balance has earned since it was last settled. Relief accounts earn none."""
+        if a in self.p.relief: return 0
+        owed = self.tok.get(a, 0) * (self.acc - self.paid.get(a, 0)) // SCALE
+        self.paid[a] = self.acc
+        if owed: self.tok[a] += owed; self.div_pot -= owed
+        return owed
+
+    def holding(self, a):
+        """Balance plus the dividend already settled by roll() but not yet credited."""
+        return self.tok.get(a, 0) + (0 if a in self.p.relief else self.tok.get(a, 0) * (self.acc - self.paid.get(a, 0)) // SCALE)
+
+    def claim_dividend(self, a, now):
+        self.roll(now)
+        if a in self.p.relief: raise Reject("relief accounts earn no dividend")
+        owed = self._settle(a)
+        if owed == 0: raise Reject("nothing to claim")
+        return owed
+
+    def dividend_of(self, a, now):
+        """What claim_dividend would credit right now (changes nothing)."""
+        import copy
+        c = copy.deepcopy(self); c.log = []; c.roll(now)
+        return 0 if a in c.p.relief else c.tok.get(a, 0) * (c.acc - c.paid.get(a, 0)) // SCALE
 
     # ---- caps
     def minted_last(self, now, days):
@@ -121,6 +194,7 @@ class Tremor:
             self.tok[a] += n
         self.supply += m
         self.buckets[now // DAY] = self.buckets.get(now // DAY, 0) + m
+        self.quake_day = now // DAY
         # Keep every counted origin that can still be within cooldown_s of a valid future event. A future origin is at
         # least now - max_age_s, so an origin older than now - max_age_s - cooldown_s can never affect a later gap.
         # Pruning by time (not by count) keeps out-of-order counts correct: the last 16 counted origins is not enough.
@@ -148,6 +222,7 @@ class Tremor:
 
     def submit_claim(self, a, eid, mag_x10, origin_s, now):
         """Anyone: tell the contract about a quake. It stays pending until publishers confirm it; a made-up claim never mints."""
+        self.roll(now)
         self._check(eid, mag_x10, origin_s, now, fresh_ok=True)
         if eid in self.ev: raise Reject("event id already exists")
         open_claims = self._open_claims(now)
@@ -159,6 +234,7 @@ class Tremor:
 
     def attest(self, pub, eid, mag_x10, origin_s, now):
         """A publisher confirms a quake it found in USGS. Counts (and mints) when `threshold` different publishers attest the same record."""
+        self.roll(now)
         if pub not in self.p.publishers: raise Reject("not a publisher")
         self._check(eid, mag_x10, origin_s, now)
         e = self.ev.get(eid)
@@ -176,9 +252,10 @@ class Tremor:
 
     # ---- invariants (RULES.md)
     def check_invariants(self):
-        assert self.supply == self.p.s0 + sum(e.minted for e in self.ev.values()), "supply = S0 + mints"
-        assert self.supply == sum(self.tok.values()), "balances = supply"
+        assert self.supply == self.p.s0 + sum(e.minted for e in self.ev.values()) + self.div_total, "supply = S0 + mints + dividends"
+        assert self.supply == sum(self.tok.values()) + self.div_pot and self.div_pot >= 0, "balances + unclaimed dividend = supply"
         assert all(v >= 0 for v in self.tok.values())
+        assert all(v > 0 for v in self.given.values()) and not set(self.given) & set(self.p.relief), "givers"
         for e in self.ev.values():
             assert e.minted == 0 or e.status == "counted"
             if e.status == "counted":
@@ -189,6 +266,8 @@ class Tremor:
 
     def snapshot(self):
         nz = lambda d: {k: v for k, v in sorted(d.items()) if v}
-        return dict(supply=self.supply, tok=nz(self.tok), buckets=nz(self.buckets), recent=list(self.recent), tapped=sorted(self.tapped),
+        return dict(supply=self.supply, tok=nz(self.tok), buckets=nz(self.buckets), recent=list(self.recent), tapped=sorted(self.tapped), given=nz(self.given),
+                    div=[str(self.acc), self.div_pot, self.div_total, self.calm_days, -1 if self.settled_to is None else self.settled_to, -1 if self.quake_day is None else self.quake_day],
+                    paid={k: str(v) for k, v in sorted(self.paid.items()) if v},
                     events={k: [e.status, e.minted, e.clipped, e.claimer or "", e.created_at,
                                 [[m, o, sorted(s)] for (m, o), s in sorted(e.versions.items())]] for k, e in sorted(self.ev.items())})

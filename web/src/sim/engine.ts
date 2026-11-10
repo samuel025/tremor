@@ -3,12 +3,14 @@
 // reference by tests/conformance.ts on the same 200 seeded scenarios the Rust contract is checked against.
 export const DAY = 86400;
 const MILLION = 1_000_000n;
+export const SCALE = 10n ** 18n; // the dividend-per-coin number is kept times this
+const MAX_ROLL = 400;            // most calm days settled in one call
 
 export class Reject extends Error {}
 
 export interface Params {
   s0: bigint; min_mag_x10: number; base_ppm: bigint; max_event_ppm: bigint; cooldown_s: number; week_cap_ppm: bigint; month_cap_ppm: bigint;
-  min_age_s: number; max_age_s: number; max_open: number; max_claims: number; claim_wait_s: number; threshold: number; tap_amount: bigint;
+  min_age_s: number; max_age_s: number; max_open: number; max_claims: number; claim_wait_s: number; threshold: number; calm_ppm: bigint; tap_amount: bigint;
   publishers: string[]; relief: string[];
 }
 
@@ -35,7 +37,8 @@ export function mintAmount(p: Params, supply: bigint, mag: number, gap: number, 
 export function split(mint: bigint): bigint[] { const each = mint / 5n; return [each + (mint % 5n), each, each, each, each]; }
 
 export class Tremor {
-  p: Params; tok = new Map<string, bigint>(); supply: bigint; ev = new Map<string, Ev>(); recent: number[] = []; buckets = new Map<number, bigint>(); tapped = new Set<string>();
+  p: Params; tok = new Map<string, bigint>(); supply: bigint; ev = new Map<string, Ev>(); recent: number[] = []; buckets = new Map<number, bigint>(); tapped = new Set<string>(); given = new Map<string, bigint>();
+  acc = 0n; paid = new Map<string, bigint>(); divPot = 0n; divTotal = 0n; calmDays = 0; settledTo: number | null = null; quakeDay: number | null = null;
   log: { kind: string; id: string; who?: string; minted?: bigint; clipped?: boolean; attestations?: number; now: number }[] = [];
   constructor(p: Params, launcher: string) {
     if (p.week_cap_ppm <= 0n || p.month_cap_ppm <= 0n || p.base_ppm <= 0n || p.max_event_ppm <= 0n || p.cooldown_s <= 0) throw new Reject("caps and shares must be nonzero");
@@ -47,15 +50,66 @@ export class Tremor {
   }
   bal = (a: string): bigint => this.tok.get(a) ?? 0n;
 
-  ftTransfer(f: string, t: string, n: bigint): void {
+  /** Settle every full day that has passed: a day with no counted quake creates calm_ppm of the supply for holders (see RULES.md). */
+  roll(now: number): bigint {
+    const today = Math.floor(now / DAY);
+    if (this.settledTo === null) { this.settledTo = today; return 0n; }
+    if (this.p.calm_ppm === 0n) { this.settledTo = Math.max(this.settledTo, today); return 0n; }
+    let n = 0, minted = 0n;
+    while (this.settledTo < today && n < MAX_ROLL) {
+      const x = this.settledTo; this.settledTo += 1; n++;
+      if (x === this.quakeDay) continue;
+      let relief = 0n; for (const r of this.p.relief) relief += this.bal(r);
+      const eligible = this.supply - this.divPot - relief;
+      if (eligible <= 0n) continue;
+      const d = (this.supply * this.p.calm_ppm) / MILLION; // outside the weekly and monthly caps: its own limit is one per day
+      if (d === 0n) continue;
+      this.acc += (d * SCALE) / eligible;
+      this.supply += d; this.divPot += d; this.divTotal += d; this.calmDays += 1; minted += d;
+    }
+    return minted;
+  }
+  /** Credit account a with the dividend its balance has earned since it was last settled. Relief accounts earn none. */
+  private settle(a: string): bigint {
+    if (this.p.relief.includes(a)) return 0n;
+    const owed = (this.bal(a) * (this.acc - (this.paid.get(a) ?? 0n))) / SCALE;
+    this.paid.set(a, this.acc);
+    if (owed > 0n) { this.tok.set(a, this.bal(a) + owed); this.divPot -= owed; }
+    return owed;
+  }
+  claimDividend(a: string, now: number): bigint {
+    this.roll(now);
+    if (this.p.relief.includes(a)) throw new Reject("relief accounts earn no dividend");
+    const owed = this.settle(a);
+    if (owed === 0n) throw new Reject("nothing to claim");
+    return owed;
+  }
+  /** What claimDividend would credit, for days already settled by roll(). */
+  pending(a: string): bigint { return this.p.relief.includes(a) ? 0n : (this.bal(a) * (this.acc - (this.paid.get(a) ?? 0n))) / SCALE; }
+
+  ftTransfer(f: string, t: string, n: bigint, now: number): void {
+    this.roll(now); this.settle(f); this.settle(t);
     if (n <= 0n || this.bal(f) < n) throw new Reject("insufficient balance");
     this.tok.set(f, this.bal(f) - n); this.tok.set(t, this.bal(t) + n);
   }
-  tap(a: string, pool: string): void {
+  tap(a: string, pool: string, now: number): void {
+    this.roll(now); this.settle(a); this.settle(pool);
     if (this.p.tap_amount === 0n) throw new Reject("tap disabled");
     if (a === pool || this.tapped.has(a)) throw new Reject("already tapped");
     if (this.bal(pool) < this.p.tap_amount) throw new Reject("tap pool empty");
     this.tok.set(pool, this.bal(pool) - this.p.tap_amount); this.tok.set(a, this.bal(a) + this.p.tap_amount); this.tapped.add(a);
+  }
+  /** Any holder: send n of your own coins to the relief list, split like a mint. Mints nothing and gives the giver no say. */
+  give(a: string, n: bigint, now: number): bigint {
+    this.roll(now);
+    if (this.p.relief.includes(a)) throw new Reject("relief accounts cannot give");
+    this.settle(a);
+    if (n <= 0n || this.bal(a) < n) throw new Reject("insufficient balance");
+    this.tok.set(a, this.bal(a) - n);
+    split(n).forEach((part, i) => this.tok.set(this.p.relief[i], this.bal(this.p.relief[i]) + part));
+    const total = (this.given.get(a) ?? 0n) + n; this.given.set(a, total);
+    this.log.push({ kind: "gave", id: a, who: a, minted: n, now });
+    return total;
   }
   mintedLast(now: number, days: number): bigint {
     const d = Math.floor(now / DAY); let s = 0n;
@@ -73,7 +127,7 @@ export class Tremor {
     const [m, raw, clipped] = mintAmount(this.p, this.supply, mag, gap, this.mintedLast(now, 7), this.mintedLast(now, 30));
     split(m).forEach((n, i) => this.tok.set(this.p.relief[i], this.bal(this.p.relief[i]) + n));
     this.supply += m;
-    const day = Math.floor(now / DAY); this.buckets.set(day, (this.buckets.get(day) ?? 0n) + m);
+    const day = Math.floor(now / DAY); this.buckets.set(day, (this.buckets.get(day) ?? 0n) + m); this.quakeDay = day;
     // Keep every counted origin that can still be within cooldown_s of a valid future event (not just the last 16):
     // events can be counted out of origin order, so a fixed count can drop an origin that a later event is near.
     this.recent = [...this.recent, origin].filter((o) => o >= now - this.p.max_age_s - this.p.cooldown_s);
@@ -97,6 +151,7 @@ export class Tremor {
   openClaims(now: number): Ev[] { return [...this.ev.values()].filter((e) => e.status === "pending" && e.claimer !== null && now < e.created_at + this.p.claim_wait_s); }
 
   submitClaim(a: string, eid: string, mag: number, origin: number, now: number): void {
+    this.roll(now);
     this.check(eid, mag, origin, now, true);
     if (this.ev.has(eid)) throw new Reject("event id already exists");
     const open = this.openClaims(now);
@@ -107,6 +162,7 @@ export class Tremor {
     this.log.push({ kind: "claim_submitted", id: eid, who: a, now });
   }
   attest(pub: string, eid: string, mag: number, origin: number, now: number): [bigint, bigint, boolean] | null {
+    this.roll(now);
     if (!this.p.publishers.includes(pub)) throw new Reject("not a publisher");
     this.check(eid, mag, origin, now);
     let e = this.ev.get(eid);
@@ -125,8 +181,9 @@ export class Tremor {
 
   checkInvariants(): void {
     let minted = 0n; for (const e of this.ev.values()) minted += e.minted;
-    if (this.supply !== this.p.s0 + minted) throw new Error("supply = S0 + mints");
-    let all = 0n; for (const v of this.tok.values()) all += v; if (all !== this.supply) throw new Error("balances = supply");
+    if (this.supply !== this.p.s0 + minted + this.divTotal) throw new Error("supply = S0 + mints + dividends");
+    let all = 0n; for (const v of this.tok.values()) all += v; if (all + this.divPot !== this.supply || this.divPot < 0n) throw new Error("balances + unclaimed dividend = supply");
+    for (const [a, v] of this.given) if (v <= 0n || this.p.relief.includes(a)) throw new Error("givers");
     for (const e of this.ev.values()) {
       if (e.minted !== 0n && e.status !== "counted") throw new Error("minted but not counted");
       if (e.status === "counted" && (e.versions.get(vkey(e.mag_x10, e.origin_s))?.who.size ?? 0) < this.p.threshold) throw new Error("counted without enough attestations");
@@ -145,6 +202,8 @@ export class Tremor {
       const versions = [...e.versions.values()].sort((a, b) => a.mag - b.mag || a.origin - b.origin).map((v) => [v.mag, v.origin, [...v.who].sort()]);
       events[id] = [e.status, Number(e.minted), e.clipped, e.claimer ?? "", e.created_at, versions];
     }
-    return { supply: Number(this.supply), tok: nz(this.tok), buckets: nz(this.buckets as Map<string | number, bigint>), recent: [...this.recent], tapped: [...this.tapped].sort(), events };
+    return { supply: Number(this.supply), tok: nz(this.tok), buckets: nz(this.buckets as Map<string | number, bigint>), recent: [...this.recent], tapped: [...this.tapped].sort(), given: nz(this.given),
+      div: [String(this.acc), Number(this.divPot), Number(this.divTotal), this.calmDays, this.settledTo ?? -1, this.quakeDay ?? -1],
+      paid: Object.fromEntries([...this.paid.entries()].filter(([, v]) => v !== 0n).map(([k, v]) => [k, String(v)])), events };
   }
 }

@@ -1,0 +1,83 @@
+{
+ "name": "GV-4 giving: a holder's own coins go to the relief list; nothing is created",
+ "params": {
+  "s0": 1000000000000,
+  "base_ppm": 5000,
+  "min_age_s": 0
+ },
+ "steps": [
+  {
+   "op": "give",
+   "who": "ada",
+   "amount": 12000003,
+   "now": 1728000000,
+   "expect_ok": true,
+   "expect_supply": 1000000000000,
+   "expect_relief": [
+    2400003,
+    2400000,
+    2400000,
+    2400000,
+    2400000
+   ],
+   "expect_given": 12000003
+  },
+  {
+   "op": "give",
+   "who": "ada",
+   "amount": 1000000,
+   "now": 1728000001,
+   "expect_ok": true,
+   "expect_supply": 1000000000000,
+   "expect_relief": [
+    2600003,
+    2600000,
+    2600000,
+    2600000,
+    2600000
+   ],
+   "expect_given": 13000003
+  },
+  {
+   "op": "give",
+   "who": "stranger",
+   "amount": 1,
+   "now": 1728000002,
+   "expect_ok": false,
+   "expect_supply": 1000000000000
+  },
+  {
+   "op": "give",
+   "who": "relief1",
+   "amount": 1,
+   "now": 1728000003,
+   "expect_ok": false,
+   "expect_supply": 1000000000000
+  },
+  {
+   "op": "give",
+   "who": "ada",
+   "amount": 0,
+   "now": 1728000004,
+   "expect_ok": false,
+   "expect_supply": 1000000000000
+  },
+  {
+   "op": "quake",
+   "event_id": "E1",
+   "mag_x10": 60,
+   "origin_s": 1728000010,
+   "now": 1728000010,
+   "expect_ok": true,
+   "expect_supply": 1005000000000,
+   "expect_relief": [
+    1002600003,
+    1002600000,
+    1002600000,
+    1002600000,
+    1002600000
+   ],
+   "expect_given": 13000003
+  }
+ ]
+}

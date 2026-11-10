@@ -13,7 +13,7 @@
 <header class="top">
   <div class="gnav"><canvas id="navtrace" aria-hidden="true"></canvas><div class="gnav-in">
     <a class="glyph" href="#top" aria-label="Tremor home"><svg viewBox="0 0 32 32" width="18" height="18" aria-hidden="true"><path d="M2 17h6l4-10 6 18 4-11 2 3h6" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
-    <nav aria-label="Sections"><a href="#try">Try it</a><a href="#bots">The bots</a><a href="#events">Events</a><a href="#map">Map</a><a href="#params">Rules</a><a href="#sim">Simulation</a></nav>
+    <nav aria-label="Sections"><a href="#try">Try it</a><a href="#bots">The bots</a><a href="#events">Events</a><a href="#givers" id="nav-givers" hidden>Givers</a><a href="#map">Map</a><a href="#params">Rules</a><a href="#sim">Simulation</a></nav>
     <span class="launch">Testnet · no value</span>
   </div></div>
   <div class="lnav"><div class="lnav-in"><b>Tremor</b><span class="sp"></span><a class="out" href="#bots">How the bots decide</a><a class="blue" href="#try">Try it</a></div></div>
@@ -23,7 +23,7 @@
   <div class="hero-text shake-a">
     <p class="kicker">Tremor</p>
     <h1>When the earth shakes, this coin does something.</h1>
-    <p class="lead">Five fixed bots read the official earthquake record. When three of them agree that a magnitude 6 or larger quake happened, Tremor creates a small amount of new supply for a fixed relief list. Every mint is capped, nobody votes, and the rules are written into the contract.</p>
+    <p class="lead">Five fixed bots read the official earthquake record. When three of them agree that a magnitude 6 or larger quake happened, Tremor creates a small amount of new supply for a fixed relief list. Calm days pay holders a small dividend. Every mint is limited, nobody votes, and the rules are written into the contract.</p>
   </div>
   <div class="stage" aria-label="Animated seismogram replaying real earthquakes from the committed USGS catalog">
     <canvas id="seismo"></canvas>
@@ -66,7 +66,8 @@
     <div class="card meter"><div class="mh"><b>This week</b><span id="wk-t">–</span></div><div class="bar"><i id="wk-bar"></i></div><p class="note" id="wk-n"></p></div>
     <div class="card meter"><div class="mh"><b>This month</b><span id="mo-t">–</span></div><div class="bar"><i id="mo-bar"></i></div><p class="note" id="mo-n"></p></div>
   </div>
-  <div class="card meter wide"><div class="mh"><b>Supply against the start</b><span id="sp-t">–</span></div><div class="bar"><i id="sp-bar"></i></div><p class="note">Supply only ever grows, and only when a confirmed event mints.</p></div>
+  <div class="card meter wide" id="calm-card" hidden><div class="mh"><b>Calm days</b><span id="calm-t">–</span></div><p class="note" id="calm-n"></p></div>
+  <div class="card meter wide"><div class="mh"><b>Supply against the start</b><span id="sp-t">–</span></div><div class="bar"><i id="sp-bar"></i></div><p class="note">Supply only ever grows: when a confirmed quake mints for the relief list, and by a much smaller amount for holders after a day with no counted quake.</p></div>
 </div></section>
 
 <section id="events" class="band"><div class="wrap reveal">
@@ -87,7 +88,13 @@
   <div id="relief-list" class="relief"></div>
 </div></section>
 
-<section id="map" class="band mist"><div class="wrap reveal">
+<section id="givers" class="band mist" hidden><div class="wrap reveal">
+  <h2>Givers board</h2>
+  <p class="sub">Any holder can send their own coins to the relief list. It creates no new coins and gives no say in what counts; the contract only keeps the total each account has given.</p>
+  <div class="card" id="givers-card"></div>
+</div></section>
+
+<section id="map" class="band"><div class="wrap reveal">
   <h2>Sixty days of real earthquakes</h2>
   <p class="sub">Every dot is a USGS event of magnitude 5 or more in the committed window. Press replay: each M6+ sends out waves, shakes the map, and the supply responds, using the chosen parameters from the simulation.</p>
   <div class="card" id="mapcard"><div class="skeleton tall"></div></div>
@@ -116,7 +123,7 @@
   <div class="card code"><pre><code>git clone &lt;repo&gt; &amp;&amp; cd tremor
 make test              # Python reference and golden vectors
 make conformance       # Rust contract vs Python on 200 random scenarios
-make sim               # the five simulation scenarios on real data
+make sim               # the six simulation scenarios on real data
 make replay            # recompute the chain log offline
 make verify-onchain    # read the live contract and compare</code></pre></div>
 </div></section>

@@ -1,10 +1,11 @@
 # Tremor
 
-**Tremor is a NEAR testnet memecoin whose supply grows a little, and only to a fixed relief list, whenever an earthquake of magnitude 6 or more is confirmed. Five fixed bots read the official USGS earthquake record and three of them must agree; nobody votes, coins give no say, and every limit is written into the contract.**
+**Tremor is a NEAR testnet memecoin whose supply grows a little, and only to a fixed relief list, whenever an earthquake of magnitude 6 or more is confirmed. Five fixed bots read the official USGS earthquake record and three of them must agree; nobody votes, coins give no say, and every limit is written into the contract. Holders get a small dividend for each day with no counted quake, and can give their own coins to the same relief list, which is recorded on a public givers board.**
 
 > **Testnet prototype. No value, no real donations.** Tremor promises no value, and holding it dilutes you when quakes happen. The five relief accounts are stand-ins that donate nothing real. Nothing here claims real-world impact. Earthquakes cause real harm; this project uses the word "relief" for a mechanism, not for an outcome, and shows no casualty figures.
 
-- Live page: TODO(human): add the hosted URL. Until then run it yourself: `make web-dev`.
+- Live page: https://samuel025.github.io/tremor/ (or run it yourself: `make web-dev`).
+- TODO(human): redeploy the Live contract before submitting; the one deployed on Nov 8 predates `give`, the calm-day dividend and the cooldown fix, so those work in the simulation but not yet on Live.
 - Live contract (testnet, real timing: a quake is confirmed after it is 6 hours old): `tremor-live.rounds-fund-5928.testnet`
 - Demo contract (testnet; used only by `make demo`, the scripted on-chain scene, and not by the page): `tremor.rounds-indep-5928.testnet`
 - Demo video and X post: TODO(human): add the links.
@@ -14,37 +15,38 @@
 
 Every number below is read from `results/results.json`, which `make results` fills by running the commands. `make check-readme` fails if this README is out of date.
 
-- `make test`: 9 Python tests pass (2026-11-09), including the three golden vectors.
-- `make conformance`: the Rust contract logic and the Python reference agree on 200 seeded random scenarios, 28,021 steps, 0 mismatches (2026-11-08).
-- `make sandbox-test`: 8 simulated-network tests pass, 0 fail (2026-11-07). One pending event costs about 308 bytes of storage; `attest` burns about 3 Tgas with 63 events pending.
-- `make conformance-web`: the TypeScript rules engine behind the page's simulation matches the Python reference on 200 seeded scenarios, 28,021 steps, 0 mismatches, and golden vector 1 (2026-11-08).
-- `make replay` (offline): 14 checks pass, 0 fail (2026-11-08).
-- `make verify-onchain` (demo, `tremor.rounds-indep-5928.testnet`): 19 checks pass, 0 fail (2026-11-08). The contract still has 1 access key; every key is deleted only as the very last step, on the human's word, and `python3 scripts/verify_onchain.py --net demo --final` then demands an empty list.
-- `make verify-onchain` (live, `tremor-live.rounds-fund-5928.testnet`): 20 checks pass, 0 fail (2026-11-08). The contract still has 1 access key; every key is deleted only as the very last step, on the human's word, and `python3 scripts/verify_onchain.py --net live --final` then demands an empty list.
+- `make test`: 12 Python tests pass (2026-11-10), including the five golden vectors.
+- `make conformance`: the Rust contract logic and the Python reference agree on 202 seeded random scenarios, 27,891 steps, 0 mismatches (2026-11-10).
+- `make sandbox-test`: 10 simulated-network tests pass, 0 fail (2026-11-10). One pending event costs about 309 bytes of storage; `attest` burns about 3 Tgas with 63 events pending.
+- `make conformance-web`: the TypeScript rules engine behind the page's simulation matches the Python reference on 202 seeded scenarios, 27,891 steps, 0 mismatches, and golden vectors 1 and 5 (2026-11-10).
+- `make replay` (offline): 14 checks pass, 0 fail (2026-11-10).
+- `make verify-onchain` (demo, `tremor.rounds-indep-5928.testnet`): 19 checks pass, 0 fail (2026-11-10). The contract still has 1 access key; every key is deleted only as the very last step, on the human's word, and `python3 scripts/verify_onchain.py --net demo --final` then demands an empty list.
+- `make verify-onchain` (live, `tremor-live.rounds-fund-5928.testnet`): 21 checks pass, 0 fail (2026-11-10). The contract still has 1 access key; every key is deleted only as the very last step, on the human's word, and `python3 scripts/verify_onchain.py --net live --final` then demands an empty list.
 - `make demo` (testnet): 27 of 27 checks matched the reference's expected values (2026-11-08).
-- `make sim`: 27 parameter combinations were tried on 352 real events (28 of M6.0 or more); 5 passed every threshold that was written down before the run (`docs/DECISIONS.md`). Chosen: 0.25% base share, 1.5% weekly cap, 5% monthly cap. A passive holder is diluted by 6.43% over the 60 real days. See `results/sim/SUMMARY.md`.
+- `make sim`: 27 parameter combinations were tried on 352 real events (28 of M6.0 or more); 4 passed every threshold that was written down before the run (`docs/DECISIONS.md`). Chosen: 0.25% base share, 1.5% weekly cap, 5% monthly cap. A passive holder is diluted by 6.42% over the 60 real days. See `results/sim/SUMMARY.md`.
 
 ## Try it in five minutes (do X, see Y)
 
 | Do | See |
 |---|---|
 | `make web-dev`, then open the printed address | A guided four-step walkthrough, an event board showing which of the five bots attested each quake, the weekly and monthly cap meters, the relief list, a 60-day earthquake map with a replay, and the contract's rules and access-key count, all read live from testnet. No wallet needed to look. |
-| `make test` | The Python reference reproduces the three golden vectors (`vectors/gv-1.json`, `vectors/gv-2.json`, `vectors/gv-3.json`) exactly. |
-| `make conformance` | The Rust contract logic and the Python reference agree on 200 seeded random scenarios, with 0 mismatches. |
-| `make sim` | The five simulation scenarios on the real catalog; `results/sim/SUMMARY.md` and `results/sim/supply.svg`. |
+| `make test` | The Python reference reproduces the five golden vectors (`vectors/gv-1.json` to `vectors/gv-5.json`) exactly. |
+| `make conformance` | The Rust contract logic and the Python reference agree on 202 seeded random scenarios, with 0 mismatches. |
+| `make sim` | The seven simulation scenarios on the real catalog (honest bots, a swarm, bad bots, offline bots, claim spam, holders giving, the calm-day dividend); `results/sim/SUMMARY.md` and `results/sim/supply.svg`. |
 | `make replay` | An offline recomputation of a saved testnet log (`fixtures/testnet-demo.json`): every check PASS. |
 | `make verify-onchain` | Both live contracts are read and compared with the reference: every check PASS, plus an INFO line about the access key. |
-| `make conformance-web` | The TypeScript copy of the rules, used by the page's simulation, matches the Python reference: 200 scenarios, 28,021 steps, 0 mismatches. |
+| `make conformance-web` | The TypeScript copy of the rules, used by the page's simulation, matches the Python reference: 202 scenarios, 27,891 steps, 0 mismatches. |
 | `make demo` | The scripted scene on testnet with the reference's expected value next to the real one at each step. Needs your own funded testnet accounts in `.state/` and no bots running; takes a couple of minutes. |
 
 ## Take part as a judge
 
-**The interactive part of the page is a simulation that runs in your browser.** No wallet, no testnet, nothing to install, and nothing that can be offline. It uses the same rules code as the contract (`web/src/sim/engine.ts`), and `make conformance-web` proves that copy identical to the Python reference on the same 200 random scenarios the Rust contract is checked against. Nothing in the simulation is on the blockchain, and the page says so.
+**The interactive part of the page is a simulation that runs in your browser.** No wallet, no testnet, nothing to install, and nothing that can be offline. It uses the same rules code as the contract (`web/src/sim/engine.ts`), and `make conformance-web` proves that copy identical to the Python reference on the same 202 random scenarios the Rust contract is checked against. Nothing in the simulation is on the blockchain, and the page says so.
 
 1. Pick a quake: one of the real ones from the committed USGS catalog, or make one up.
 2. Set each of the five bots to **Honest** (attests only quakes the USGS has), **Bad** (attests anything) or **Offline**.
 3. Press the button and watch the bots decide one by one. A quake counts when three attest the same record. Then see the coins created, the split between the five relief accounts, the weekly and monthly caps, and what the cooldown does to a quake near another one.
 4. Or press a scenario: a real quake, a made-up quake, two bad bots, three bad bots, three bots offline. Two bad bots mint nothing; three can push a made-up quake through (to the caps); three offline bots mint nothing. "Skip ahead a week" shows the weekly cap resetting.
+5. You hold 5,000 simulated TREM. Watch your share of the supply shrink a little with each counted quake. Press **Let a calm day pass** to see the dividend arrive (and see that the day after a quake pays nothing), and press **Give** to send some of your own coins to the relief accounts: the supply and the caps do not move.
 
 **The real thing is the Live contract**, shown on the same page: its event board, caps, relief balances and rules are read from testnet, kept up to date by the real bots. Live is slow on purpose: a quake is only confirmed once it is 6 hours old, and the bots run every 20 minutes. A judge with a free Meteor wallet can still claim a quake on Live: the "Want to see it on the real blockchain?" bar under the simulation opens that walkthrough; a claim creates nothing by itself, and made-up claims are never confirmed. **Watch the bots decide** replays a recorded real run on testnet, including the honest worst case. The tap gives 5,000 free starter TREM once per account if you want to hold coins; it creates no new coins.
 
@@ -58,6 +60,8 @@ A confirmed big earthquake creates new coins equal to a small share of the suppl
 - **Attest.** A bot posts a quake it found in USGS: its event ID, magnitude to one decimal, and origin time. The contract refuses it if the magnitude is below 6.0, the time is in the future or too old, or the quake is not yet old enough (USGS revises fresh events; this delay is the finality delay).
 - **Agree.** When **3 different bots** attest exactly the same record, the quake counts. A bot can attest an event once, so two different versions can never both reach 3 of 5.
 - **Mint.** A counted event mints 0.25% of supply at M6.0 (twice that at M7, three times at M8, never above 1.5%), less if it follows another event within 24 hours, clipped to a weekly cap of 1.5% and a monthly cap of 5%, split equally between the five relief accounts.
+- **Calm days.** For each full UTC day in which no quake was counted, the contract creates 0.01% of the supply for holders: every account except the five relief accounts, in proportion to its balance. It is outside the weekly and monthly caps, which bound quake mints only, so relief's allowance is never spent on holders; its own limit is one dividend per day. Nobody triggers it: every transaction first settles the days that have passed, and settling late gives exactly the same result as settling on time. A holder's share is credited when their balance next changes, or when they call `claim_dividend`.
+- **Give.** Any holder may call `give(amount)`: their own coins are split between the five relief accounts exactly like a mint. No coins are created, no cap moves, and a later quake mints exactly what it would have. The contract keeps each giver's running total, shown on the page as a givers board. Giving buys no say in anything.
 - **Claims.** Anyone may tell the contract about a quake. A claim mints nothing; it only waits for the bots. Claims are limited (one open per account, at most 32 at once) and have their own limit, so spam cannot stop the bots.
 
 Chosen parameters (picked by the simulation, then confirmed by the human; see `docs/DECISIONS.md`): base share 0.25%, weekly cap 1.5%, monthly cap 5%.
@@ -78,7 +82,7 @@ The contract cannot look at the internet, so someone has to carry the earthquake
 |---|---|---|
 | Someone claims a made-up quake | A claim creates nothing; the bots attest only what USGS has | It stays pending and expires. In the simulation 0 of 8,640 spam claims counted, and every real quake still counted (100%). |
 | One or two bad bots | Three must attest the same record | In the simulation, with 2 bad bots 0 of 10 made-up quakes counted. |
-| Three or more bad bots | None beyond the caps and the fixed relief list | Made-up quakes can count: with 3 bad bots 10 of 10 did, adding 1.24% to supply (the real quakes had already used much of the allowance, so a quiet month would allow more), never past the caps. **This is the weak spot:** trust sits in the five fixed bots. In the demo all five are run by us, so their independence is only demonstrated. |
+| Three or more bad bots | None beyond the caps and the fixed relief list | Made-up quakes can count: with 3 bad bots 10 of 10 did, adding 1.19% to supply (the real quakes had already used much of the allowance, so a quiet month would allow more), never past the caps. **This is the weak spot:** trust sits in the five fixed bots. In the demo all five are run by us, so their independence is only demonstrated. |
 | Bots offline | The system fails safe | With 2 bots offline 100% of real quakes still counted; with 3 offline 0% did, and nothing was created. |
 | Bots disagree (USGS revises a quake) | Different records never combine; the minimum age waits out early revisions | A quake some bots record differently needs three matching bots, or it waits. |
 | Duplicate or aftershock spam | An event ID mints once, ever; a cooldown scales aftershock mints down | The cooldown is a time rule, not geography. |
@@ -90,9 +94,13 @@ The contract cannot look at the internet, so someone has to carry the earthquake
 - The five bots are chosen at launch by whoever launches, and three of them decide. If three are bad, fakes count up to the caps and real quakes can be blocked. The caps and the fixed relief list bound the damage; they do not remove it.
 - On Live all five bots run in one process from one place. That demonstrates the mechanism, not independence. A real launch would need five independent operators.
 - The bots trust one source, USGS, and USGS revises events. The relief list is chosen by whoever launches; here its five accounts are stand-ins on testnet.
+- The relief list holds account names, not keys, so an organisation can rotate its keys without any change here. But the list can never change: if a relief account is fully taken over, whoever holds it keeps its balance and its fifth of every later mint, and nothing can stop that. A real launch would need each relief account to be a multisig account created and controlled by the organisation itself, and no organisation may be named without its agreement.
 - Removing votes also removed the incentive structure: nobody is rewarded for reporting or punished for lying, and bots are not paid. A bad bot loses nothing on chain.
 - The simulation uses one real 60-day window (352 events of M5+, 28 of M6+): a small sample. The bad-bot and offline scenarios hold by the rules (three of five), so they confirm the contract rather than discover anything.
 - The chosen parameters pass the cap-binding threshold (25% of weeks against a 25% limit) with no margin. The spec's own default 0.5% base share fails it (62.5% of weeks).
+- The calm-day dividend grows a holder's coin count but hardly changes their share of the supply: on the 60 real days a passive holder loses 6.42% of their share with it and 6.43% without it. Almost every coin is paid the same percentage; only the five relief accounts are left out, and they hold a few percent of the supply. It was first built inside the caps, where it did more for holders but took about 2% from relief; it was moved outside so relief loses nothing (68,900 TREM for relief with it, 68,672 without, 4,422 for holders over 43 paid days). So total creation can exceed the quake caps by up to 0.01% of supply a day. It is paid by balance, so the launcher and the starter-coin pool, which hold most coins in this demo, receive most of it.
+- The simulated network cannot jump days, so the day-by-day dividend arithmetic is checked on the engine (conformance and `vectors/gv-5.json`), and only the wiring is checked on a deployed contract. Replay checks how much dividend was created and when, not which holder was credited.
+- Giving is a gift: nothing is earned by it. The givers board ranks by amount, so a large holder can top it. The giving scenarios in the simulation use assumed behaviour (written down before the run); they show that gifts never change supply or mints, not how real people would act.
 - The contract keeps all state in one Borsh blob, which is fine for a demo and would not scale to a real launch.
 - `make replay` and `make verify-onchain` check supply, mints, caps, which events counted, who attested what, and relief balances. The on-chain log does not record plain transfers, so they do not check every holder's balance.
 - The page's wallet buttons (Meteor wallet, testnet) call only contract functions that the tests above exercise, but the author has not completed a full wallet round trip in a real browser session. The command-line path (`make demo`) does the same calls.

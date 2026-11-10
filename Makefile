@@ -41,4 +41,4 @@ check-readme:
 demo-bots:
 	cd bots && node bots.mjs --net demo --claims-only --loop 4
 live-bots:
-	cd bots && node bots.mjs --net live --days 13 --loop 300
+	cd bots && node bots.mjs --net live --days 3 --loop 300

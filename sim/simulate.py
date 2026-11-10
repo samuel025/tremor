@@ -20,8 +20,8 @@ def load_catalog(min_mag=60):
 CAT = load_catalog()
 
 
-def params(base=5000, week=15000, month=50000):
-    return Params(base_ppm=base, week_cap_ppm=week, month_cap_ppm=month, min_age_s=H, max_age_s=90 * DAY, publishers=tuple(BOTS), threshold=3)
+def params(base=5000, week=15000, month=50000, calm=0):
+    return Params(base_ppm=base, week_cap_ppm=week, month_cap_ppm=month, calm_ppm=calm, min_age_s=H, max_age_s=90 * DAY, publishers=tuple(BOTS), threshold=3)
 
 
 class Sim:
@@ -30,6 +30,7 @@ class Sim:
         self.t = Tremor(p, "launcher"); self.t.ft_transfer("launcher", "passive", p.s0 // 100)
         self.act = {}; self.series = []; self.prev_minted = 0
         self.refused = {}  # reason -> count, for attempts the contract refused
+        self.on_count = None  # called as on_count(hour, event_id, mag_x10) when an event counts (scenario 6: holders react)
 
     def at(self, hour, fn): self.act.setdefault(hour, []).append(fn)
     now = lambda self, h: T0 + h * H
@@ -42,7 +43,10 @@ class Sim:
         """each listed bot attests this record at its own lag (1 h to 3 h after the origin, never before the event is old enough)"""
         for b in bots:
             h = first_hour + self.rng.randrange(0, 3)
-            self.at(h, lambda hh, b=b: self.try_(lambda: self.t.attest(b, eid, mag, origin, self.now(hh)), "attest"))
+            def go(hh, b=b):
+                r = self.try_(lambda: self.t.attest(b, eid, mag, origin, self.now(hh)), "attest")
+                if r and self.on_count: self.on_count(hh, eid, mag)
+            self.at(h, go)
 
     def real_events(self, events, bots):
         for eid, mag, origin in events:
@@ -53,22 +57,30 @@ class Sim:
         for h in range(HOURS + 72):
             for fn in self.act.get(h, []): fn(h)
             if h % 24 == 23 and h < HOURS:
-                d = h // 24; st = self.t.state(self.now(h)); minted_total = self.t.supply - S0
-                self.series.append(dict(day=d, supply=self.t.supply, minted_today=minted_total - self.prev_minted, passive_share_ppm=(S0 // 100) * 10**6 // self.t.supply,
+                self.t.roll(self.now(h))  # settle the calm days that have passed, as any transaction would
+                d = h // 24; st = self.t.state(self.now(h)); minted_total = self.t.supply - S0 - self.t.div_total
+                self.series.append(dict(day=d, supply=self.t.supply, minted_today=minted_total - self.prev_minted,  # quake mints only: the caps apply to these
+                     passive_share_ppm=self.t.holding("passive") * 10**6 // self.t.supply, given_total=sum(self.t.given.values()),
+                    dividends_total=self.t.div_total,
                     week_use_pct=round(100 * st["m7"] / max(1, self.t.supply * self.p.week_cap_ppm // 10**6), 2), month_use_pct=round(100 * st["m30"] / max(1, self.t.supply * self.p.month_cap_ppm // 10**6), 2)))
                 self.prev_minted = minted_total
-        self.t.check_invariants(); return self
+        self.t.roll(self.now(HOURS + 72)); self.t.check_invariants(); return self
 
     # ---- metrics
-    def passive_dilution(self): return 1 - (self.p.s0 // 100) * 100 / self.t.supply
+    def passive_dilution(self):  # the passive holder's loss of share: balance plus unclaimed dividend, against the 1% it started with
+        return 1 - self.t.holding("passive") * 100 / self.t.supply
 
     def worst_30d_loss(self):
-        sh = [10**6 * 0.01] + [10**6 * (self.p.s0 // 100) / s["supply"] for s in self.series]
+        sh = [10**6 * 0.01] + [s["passive_share_ppm"] for s in self.series]
         return max(1 - sh[i] / sh[max(0, i - 30)] for i in range(1, len(sh)))
 
     def worst_week_mint_share(self):  # trailing-7-day minting / supply at the end of that day (the cap is relative to supply at mint time, which is <= this)
         mint = [s["minted_today"] for s in self.series]; sup = [s["supply"] for s in self.series]
         return max(sum(mint[max(0, i - 6):i + 1]) / sup[i] for i in range(len(mint)))
+
+    def worst_week_dividend_share(self):  # C1: dividends created in any 7 days / supply at the end of those days
+        dv = [0] + [s["dividends_total"] for s in self.series]; sup = [s["supply"] for s in self.series]
+        return max((dv[i + 1] - dv[max(0, i - 6)]) / sup[i] for i in range(len(sup)))
 
     def clipped_weeks(self):
         wk = {}
@@ -118,6 +130,30 @@ def run_s5(p, seed=5, spammers=80):
                 s.try_(lambda: s.t.submit_claim(who, eid, 70, s.now(h) - 100, s.now(h)), "claim")
                 s.max_open_claims = max(s.max_open_claims, len(s.t._open_claims(s.now(h))))
             s.at(k, claim)
+    return s.run()
+
+
+SMALL = [f"holder{i:03d}" for i in range(100)]; WHALE = "bigholder"
+GIVE_MODES = {"none": "6a nobody gives", "few_after_big": "6b a few give after big quakes", "many_small": "6c many give a little after every quake", "whale": "6d one large holder gives after M7+"}
+
+
+def run_s6(p, mode, seed):
+    """Community giving on the real catalog (DECISIONS.md, scenario 6): 100 holders with 0.1% each and one with 5% react to counted quakes."""
+    s = Sim(p, seed); s.real_events(CAT, BOTS); s.real_ids = [e for e, _, _ in CAT]; r = s.rng
+    for a in SMALL: s.t.ft_transfer("launcher", a, p.s0 // 1000)
+    s.t.ft_transfer("launcher", WHALE, p.s0 // 20)
+    def gift(who, ppm):
+        def go(h): s.try_(lambda: s.t.give(who, s.t.ft_balance_of(who) * ppm // 10**6, s.now(h)), "give")
+        return go
+    def on_count(h, eid, mag):
+        if mode == "few_after_big" and mag >= 65:
+            for a in SMALL:
+                if r.random() < 0.10: s.at(h + 1 + r.randrange(24), gift(a, 10000))
+        elif mode == "many_small":
+            for a in SMALL:
+                if r.random() < 0.50: s.at(h + 1 + r.randrange(24), gift(a, 5000))
+        elif mode == "whale" and mag >= 70: s.at(h + 1 + r.randrange(24), gift(WHALE, 100000))
+    s.on_count = on_count
     return s.run()
 
 
