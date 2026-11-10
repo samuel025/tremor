@@ -49,6 +49,41 @@ class GV(unittest.TestCase):
         self.assertEqual(t.ev["d1"].status, "counted"); self.assertEqual((t.ev["d1"].mag_x10), 60)
         self.assertEqual(t.ev["fake-1"].status, "pending"); self.assertEqual(t.ev["fake-1"].minted, 0)
 
+    def run_div(self, n):
+        g = load(n); t = Tremor(Params(**g["params"]), "ada")
+        for st in g["steps"]:
+            try:
+                if st["op"] == "transfer": t.ft_transfer(st["who"], st["to"], st["amount"], st["now"])
+                elif st["op"] == "give": t.give(st["who"], st["amount"], st["now"])
+                else: t.claim_dividend(st["who"], st["now"])
+                ok = True
+            except Reject: ok = False
+            self.assertEqual(ok, st["expect_ok"], st); self.assertEqual(t.supply, st["expect_supply"], st)
+            if "expect_balance" in st: self.assertEqual(t.tok[st["who"]], st["expect_balance"], st)
+            if "expect_pot" in st: self.assertEqual(t.div_pot, st["expect_pot"], st)
+            t.check_invariants()
+        return t
+
+    def test_gv7(self):
+        t = self.run_div(7)
+        self.assertEqual((t.bonus_total, t.calm_days), (20_000_000 + 20_002_000, 2))
+
+    def test_gv8(self):
+        t = self.run_div(8)
+        self.assertEqual(t.bonus_total, 500_000)   # the cap: 0.5% of 100 TREM, not the 20 TREM pool
+
+    def test_bonus_cannot_be_farmed_by_splitting_or_tiny_gifts(self):
+        def run(givers, each, days=60):
+            t = Tremor(Params(s0=1_000_000 * UNIT, calm_ppm=100, giver_share_ppm=200000, giver_cap_ppm=5000), "ada"); now = 20000 * DAY
+            for i in range(givers): t.ft_transfer("ada", f"g{i}", each, now)
+            for i in range(givers): t.give(f"g{i}", each, now + 1)
+            t.roll(now + days * DAY + 5)
+            return t, sum(t.holding(f"g{i}") for i in range(givers))
+        one, h1 = run(1, 10_000 * UNIT); many, h50 = run(50, 200 * UNIT)
+        self.assertLessEqual(abs(one.bonus_total - many.bonus_total), 50); self.assertLessEqual(abs(h1 - h50), 50)
+        tiny, _ = run(1, 1 * UNIT)
+        self.assertLessEqual(tiny.bonus_total, 300_000)   # a lone giver of 1 TREM earns under 0.3 TREM in 60 calm days
+
     def test_gv6(self):
         t = self.run_steps(6)
         self.assertEqual((t.ev["a2"].status, t.ev["a2"].alert), ("counted", 3))

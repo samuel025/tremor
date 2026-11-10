@@ -16,7 +16,7 @@ def make(seed, long=False):
     p = Params(s0=r.choice([10**9, 10**12]), min_alert=r.choice([1, 2, 2, 3]), base_ppm=r.choice([2500, 5000, 10000]), max_event_ppm=15000, cooldown_s=r.choice([300, 1000]),
                week_cap_ppm=r.choice([10000, 15000, 30000]), month_cap_ppm=r.choice([30000, 50000]), min_age_s=r.choice([0, 0, 40]), max_age_s=5000,
                max_open=r.choice([3, 8, 64]), max_claims=r.choice([2, 5, 32]), claim_wait_s=r.choice([100, 1000]), threshold=r.choice([2, 3, 3, 4]),
-               tap_amount=r.choice([0, 10**5, 10**6]), calm_ppm=r.choice([100, 1000] if long else [0, 100, 1000, 5000]), publishers=tuple(PUBS), relief=("r1", "r2", "r3", "r4", "r5"))
+               tap_amount=r.choice([0, 10**5, 10**6]), calm_ppm=r.choice([100, 1000] if long else [0, 100, 1000, 5000]), giver_share_ppm=r.choice([0, 200000, 200000, 1000000]), giver_cap_ppm=r.choice([0, 5000, 50000, 1000000]), publishers=tuple(PUBS), relief=("r1", "r2", "r3", "r4", "r5"))
     t = Tremor(p, "a0"); now = 20000 * DAY + r.randrange(0, 3 * DAY)
     steps = []
     t.ft_transfer("a0", POOL, p.s0 // r.choice([200, 2000]), now); steps.append(dict(op="transfer", args=["a0", POOL, t.tok[POOL]], now=now, ok=True, snap=t.snapshot()))
@@ -48,7 +48,7 @@ def make(seed, long=False):
         steps.append(dict(op=op, args=args, now=now, ok=ok, snap=t.snapshot()))
     params = dict(s0=p.s0, min_mag_x10=p.min_mag_x10, min_alert=p.min_alert, base_ppm=p.base_ppm, max_event_ppm=p.max_event_ppm, cooldown_s=p.cooldown_s, week_cap_ppm=p.week_cap_ppm,
                   month_cap_ppm=p.month_cap_ppm, min_age_s=p.min_age_s, max_age_s=p.max_age_s, max_open=p.max_open, max_claims=p.max_claims,
-                  claim_wait_s=p.claim_wait_s, threshold=p.threshold, tap_amount=p.tap_amount, calm_ppm=p.calm_ppm)
+                  claim_wait_s=p.claim_wait_s, threshold=p.threshold, tap_amount=p.tap_amount, calm_ppm=p.calm_ppm, giver_share_ppm=p.giver_share_ppm, giver_cap_ppm=p.giver_cap_ppm)
     return dict(seed=seed, params=params, launcher="a0", publishers=list(p.publishers), relief=list(p.relief), steps=steps)
 
 

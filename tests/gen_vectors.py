@@ -75,5 +75,21 @@ gv6 = dict(name="GV-6 impact bar: a green quake is refused, and three bots must 
     dict(op="attest", who="bot4", event_id="a2", mag_x10=60, origin_s=T0, alert=3, now=T0 + 8, expect_ok=True, expect_supply=1_005_000 * U),    # a third orange: counts, M6.0 mints 0.5% as always
     dict(op="attest", who="bot5", event_id="a2", mag_x10=60, origin_s=T0, alert=3, now=T0 + 9, expect_ok=False, expect_supply=1_005_000 * U),   # already counted
 ])
-for n, g in ((1, gv1), (2, gv2), (3, gv3), (4, gv4), (5, gv5), (6, gv6)):
+# GV-7: the giver bonus. calm_ppm 100, 20% of each dividend reserved for givers, each coin given may earn at most 0.5% a day.
+# The launcher gives 10,000 TREM on day 0 (relief then holds 10,000), bob holds 100,000. Days 0 and 1 are settled on day 2.
+# Day 0: dividend 100 TREM, giver pool 20 TREM = 0.002 per coin given (below the 0.005 cap), so givers take all 20 and holders get 80 over the
+# 990,000 TREM not held by relief. Day 1: dividend 100.01, pool 20.002. The launcher's bonus is 40.002 TREM; bob's share is on his balance only.
+gv7 = dict(name="GV-7 giver bonus: givers share a reserved part of the calm-day dividend; relief earns nothing", params=dict(P, calm_ppm=100, giver_share_ppm=200000, giver_cap_ppm=5000), steps=[
+    dict(op="transfer", who="ada", to="bob", amount=100_000 * U, now=T0, expect_ok=True, expect_supply=1_000_000 * U),
+    dict(op="give", who="ada", amount=10_000 * U, now=T0 + 1, expect_ok=True, expect_supply=1_000_000 * U),
+    dict(op="claim_dividend", who="bob", now=T0 + 2 * D + 10, expect_ok=True, expect_supply=1_000_200_010_000, expect_balance=100_016_162_424, expect_pot=183_847_576),
+    dict(op="claim_dividend", who="ada", now=T0 + 2 * D + 11, expect_ok=True, expect_supply=1_000_200_010_000, expect_balance=890_183_847_575, expect_pot=1),
+])
+# GV-8: the cap binds. A lone giver of 100 TREM could take the whole 20 TREM pool, but a coin may earn only 0.5% a day: 0.5 TREM. The rest of
+# the dividend goes to holders. Day 0 is settled on day 1.
+gv8 = dict(name="GV-8 giver bonus cap: a lone small giver earns only 0.5% of the gift a day", params=dict(P, calm_ppm=100, giver_share_ppm=200000, giver_cap_ppm=5000), steps=[
+    dict(op="give", who="ada", amount=100 * U, now=T0, expect_ok=True, expect_supply=1_000_000 * U),
+    dict(op="claim_dividend", who="ada", now=T0 + D + 5, expect_ok=True, expect_supply=1_000_100_000_000, expect_balance=999_999_999_999, expect_pot=1),
+])
+for n, g in ((1, gv1), (2, gv2), (3, gv3), (4, gv4), (5, gv5), (6, gv6), (7, gv7), (8, gv8)):
     (out / f"gv-{n}.json").write_text(json.dumps(g, indent=1) + "\n")

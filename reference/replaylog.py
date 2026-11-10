@@ -8,7 +8,7 @@ from tremor_ref import Params, Tremor, Reject, DAY
 def params_from_chain(prm):
     return Params(s0=int(prm["s0"]), min_mag_x10=prm["min_mag_x10"], min_alert=prm.get("min_alert", 1), base_ppm=prm["base_ppm"], max_event_ppm=prm["max_event_ppm"], cooldown_s=prm["cooldown_s"],
                   week_cap_ppm=prm["week_cap_ppm"], month_cap_ppm=prm["month_cap_ppm"], min_age_s=prm["min_age_s"], max_age_s=prm["max_age_s"], max_open=prm["max_open"],
-                  max_claims=prm["max_claims"], claim_wait_s=prm["claim_wait_s"], threshold=prm["threshold"], calm_ppm=prm.get("calm_ppm", 0), tap_amount=int(prm.get("tap_amount", 0)),
+                  max_claims=prm["max_claims"], claim_wait_s=prm["claim_wait_s"], threshold=prm["threshold"], calm_ppm=prm.get("calm_ppm", 0), giver_share_ppm=prm.get("giver_share_ppm", 0), giver_cap_ppm=prm.get("giver_cap_ppm", 0), tap_amount=int(prm.get("tap_amount", 0)),
                   publishers=tuple(prm["publisher_accounts"]), relief=tuple(prm["relief_accounts"]))
 
 

@@ -9,7 +9,7 @@ const stable = (x: unknown): string => JSON.stringify(x, (_, v) => (v && typeof 
 const P = (p: any, pubs: string[], rel: string[]): Params => ({
   s0: BigInt(p.s0), min_mag_x10: p.min_mag_x10, min_alert: p.min_alert, base_ppm: BigInt(p.base_ppm), max_event_ppm: BigInt(p.max_event_ppm), cooldown_s: p.cooldown_s, week_cap_ppm: BigInt(p.week_cap_ppm),
   month_cap_ppm: BigInt(p.month_cap_ppm), min_age_s: p.min_age_s, max_age_s: p.max_age_s, max_open: p.max_open, max_claims: p.max_claims, claim_wait_s: p.claim_wait_s,
-  threshold: p.threshold, calm_ppm: BigInt(p.calm_ppm), tap_amount: BigInt(p.tap_amount), publishers: pubs, relief: rel,
+  threshold: p.threshold, calm_ppm: BigInt(p.calm_ppm), giver_share_ppm: BigInt(p.giver_share_ppm), giver_cap_ppm: BigInt(p.giver_cap_ppm), tap_amount: BigInt(p.tap_amount), publishers: pubs, relief: rel,
 });
 
 let steps = 0, mismatches = 0;
@@ -34,7 +34,7 @@ for (const sc of all) {
 // golden vector 1, typed from RULES.md (independent of the Python reference): each event confirmed by 3 bots at its origin time
 const U = 1_000_000n, T0 = 20000 * 86400, H = 3600;
 const gp: Params = { s0: 1_000_000n * U, min_mag_x10: 60, min_alert: 2, base_ppm: 5000n, max_event_ppm: 15000n, cooldown_s: 86400, week_cap_ppm: 15000n, month_cap_ppm: 50000n, min_age_s: 0, max_age_s: 5_184_000,
-  max_open: 64, max_claims: 32, claim_wait_s: 43200, threshold: 3, calm_ppm: 0n, tap_amount: 0n, publishers: ["bot1", "bot2", "bot3", "bot4", "bot5"], relief: ["r1", "r2", "r3", "r4", "r5"] };
+  max_open: 64, max_claims: 32, claim_wait_s: 43200, threshold: 3, calm_ppm: 0n, giver_share_ppm: 0n, giver_cap_ppm: 0n, tap_amount: 0n, publishers: ["bot1", "bot2", "bot3", "bot4", "bot5"], relief: ["r1", "r2", "r3", "r4", "r5"] };
 const g = new Tremor(gp, "ada"); const run = (id: string, mag: number, o: number) => { let r: any = null; for (const b of ["bot1", "bot2", "bot3"]) r = g.attest(b, id, mag, o, o); return r as [bigint, bigint, boolean]; };
 let gvOk = true; const chk = (c: boolean) => { if (!c) gvOk = false; };
 let r = run("E1", 60, T0); chk(r[0] === 5_000n * U && g.supply === 1_005_000n * U);
@@ -60,5 +60,15 @@ v.checkInvariants();
   chk(w.supply === 1_000_000n * U);
   const r6 = w.attest("bot4", "a2", 60, T0, T0 + 8, 3); chk(!!r6 && r6[0] === 5_000n * U && w.supply === 1_005_000n * U && e6(() => w.attest("bot5", "a2", 60, T0, T0 + 9, 3)));
 }
-console.log(`web-conformance: ${all.length} scenarios, ${steps} steps, ${mismatches} mismatches; golden vectors 1, 5 and 6 ${gvOk ? "ok" : "FAILED"}`);
+// golden vectors 7 and 8, typed from RULES.md: the giver bonus (20% of the dividend, each coin given may earn at most 0.5% a day)
+{
+  const bp = { ...gp, calm_ppm: 100n, giver_share_ppm: 200000n, giver_cap_ppm: 5000n };
+  const x = new Tremor(bp, "ada"); x.ftTransfer("ada", "bob", 100_000n * U, T0); x.give("ada", 10_000n * U, T0 + 1);
+  chk(x.claimDividend("bob", T0 + 2 * D + 10) === 16_162_424n && x.supply === 1_000_200_010_000n && x.bal("bob") === 100_016_162_424n && x.divPot === 183_847_576n);
+  chk(x.claimDividend("ada", T0 + 2 * D + 11) === 143_845_575n + 40_002_000n && x.bal("ada") === 890_183_847_575n && x.divPot === 1n && x.bonusTotal === 40_002_000n);
+  const y = new Tremor(bp, "ada"); y.give("ada", 100n * U, T0);
+  chk(y.claimDividend("ada", T0 + D + 5) > 0n && y.supply === 1_000_100_000_000n && y.bal("ada") === 999_999_999_999n && y.divPot === 1n && y.bonusTotal === 500_000n);
+  x.checkInvariants(); y.checkInvariants();
+}
+console.log(`web-conformance: ${all.length} scenarios, ${steps} steps, ${mismatches} mismatches; golden vectors 1, 5, 6, 7 and 8 ${gvOk ? "ok" : "FAILED"}`);
 process.exit(mismatches === 0 && gvOk ? 0 : 1);

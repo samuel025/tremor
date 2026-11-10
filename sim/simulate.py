@@ -27,7 +27,7 @@ CAT = load_catalog(min_alert=2)       # the ones that count: USGS expects at lea
 
 
 def params(base=5000, week=15000, month=50000, calm=0):
-    return Params(base_ppm=base, week_cap_ppm=week, month_cap_ppm=month, calm_ppm=calm, min_age_s=H, max_age_s=90 * DAY, publishers=tuple(BOTS), threshold=3)
+    return Params(base_ppm=base, week_cap_ppm=week, month_cap_ppm=month, calm_ppm=calm, giver_share_ppm=200000 if calm else 0, giver_cap_ppm=5000 if calm else 0, min_age_s=H, max_age_s=90 * DAY, publishers=tuple(BOTS), threshold=3)
 
 
 class Sim:

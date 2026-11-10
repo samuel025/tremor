@@ -76,7 +76,7 @@ def main():
     for r in reliefs: create(r, parent, "0.05")
     for b in bots: create(b, parent, "0.25")
     args = {"params": {"s0": str(1_000_000 * U), "min_mag_x10": 60, "base_ppm": 2500, "max_event_ppm": 15000, "cooldown_s": 86400, "week_cap_ppm": 15000, "month_cap_ppm": 50000,
-                       "min_age_s": P["min_age_s"], "max_age_s": P["max_age_s"], "max_open": 64, "max_claims": 32, "claim_wait_s": P["claim_wait_s"], "threshold": 3, "calm_ppm": CALM_PPM, "min_alert": 2,
+                       "min_age_s": P["min_age_s"], "max_age_s": P["max_age_s"], "max_open": 64, "max_claims": 32, "claim_wait_s": P["claim_wait_s"], "threshold": 3, "calm_ppm": CALM_PPM, "giver_share_ppm": 200000, "giver_cap_ppm": 5000, "min_alert": 2,
                        "tap_amount": str(P["tap"] * U), "publisher_accounts": None, "relief_accounts": None}, "publisher_accounts": bots, "relief_accounts": reliefs, "launcher": L}
     (ROOT / ".state" / f"init_args_{prof}.json").write_text(json.dumps(args))
     create(C, parent, P["contract_near"])

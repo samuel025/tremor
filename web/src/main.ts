@@ -4,7 +4,7 @@ import { DEP, NET, loadDeployments } from "./deployment";
 // the wallet library is large, so it loads on demand
 const wallet = () => import("./wallet");
 const send = async (m: string, a: object, d = "0") => (await wallet()).send(m, a, d);
-import { accessKeyCount, listEvents, listGivers, registered, unconfirmed, view, type Ev, type Params, type State } from "./chain";
+import { accessKeyCount, giverRounds, listEvents, listGivers, registered, unconfirmed, view, type Ev, type Params, type State } from "./chain";
 import { alertName, checkEvent, loadCatalog, recentM6, usgsPage, type Flag, type Quake } from "./usgs";
 import { $, ago, countUp, duration, esc, mag, md, pct, reveal, short, trem } from "./util";
 import { renderCharts } from "./charts";
@@ -113,6 +113,7 @@ function renderParams(p: Params) {
     ["Bots that decide (fixed at launch)", `${p.publisher_accounts.length}`], ["Bots that must agree", `${p.threshold} of ${p.publisher_accounts.length}`],
     ["A quake must be this old before bots confirm it", duration(p.min_age_s)],
     ["Mint at M6.0 (×2 at M7, ×3 at M8)", `${(p.base_ppm / 1e4).toFixed(2)}% of supply`], ["Most one event can mint", `${(p.max_event_ppm / 1e4).toFixed(1)}% of supply`],
+    ...(p.giver_share_ppm && p.giver_cap_ppm ? [["Giver bonus (out of the calm-day dividend)", `${(p.giver_share_ppm / 1e4).toFixed(0)}% reserved, each coin given earns up to ${(p.giver_cap_ppm / 1e4).toFixed(1)}% a day`] as [string, string]] : []),
     ["Cooldown (aftershocks mint less)", duration(p.cooldown_s)], ["Weekly cap", `${(p.week_cap_ppm / 1e4).toFixed(1)}% of supply`], ["Monthly cap", `${(p.month_cap_ppm / 1e4).toFixed(1)}% of supply`],
     ...(p.calm_ppm ? [["Calm-day dividend for holders (outside the caps, one a day)", `${(p.calm_ppm / 1e4).toFixed(2)}% of supply per day with no counted quake`] as [string, string]] : []),
     ["Oldest quake that can count", duration(p.max_age_s)], ["Open visitor claims at once", `${p.max_claims}`],
@@ -130,20 +131,25 @@ async function refresh() {
     if (s.dividends_total !== undefined && params.calm_ppm) {
       $("#calm-card").hidden = false;
       $("#calm-t").textContent = `${s.calm_days} paid · ${trem(s.dividends_total)} TREM for holders`;
-      $("#calm-n").innerHTML = `Each full day (UTC) with no counted quake creates ${(params.calm_ppm / 1e4).toFixed(2)}% of the supply for everyone who holds coins, in proportion to what they hold. The five relief accounts get none of it. It is separate from the weekly and monthly caps above, which limit quake mints for relief; its own limit is one dividend a day. ${trem(s.dividend_pot ?? "0")} TREM is waiting to be credited; a holder's share is added whenever their balance next changes, or when they claim it.`;
+      $("#calm-n").innerHTML = `Each full day (UTC) with no counted quake creates ${(params.calm_ppm / 1e4).toFixed(2)}% of the supply for everyone who holds coins, in proportion to what they hold${params.giver_share_ppm ? `, with ${(params.giver_share_ppm / 1e4).toFixed(0)}% of it reserved as a bonus for people who have given to relief` : ""}. The five relief accounts get none of it. It is separate from the weekly and monthly caps above, which limit quake mints for relief; its own limit is one dividend a day. ${trem(s.dividend_pot ?? "0")} TREM is waiting to be credited; a holder's share is added whenever their balance next changes, or when they claim it.`;
     }
     accessKeyCount().then((n) => { $("#keys-line").innerHTML = `<b>${n}</b> access key${n === 1 ? "" : "s"}`; }).catch(() => ($("#keys-line").textContent = "unavailable"));
   } catch (e) { banner("Could not read the testnet contract right now. This page is read-only and will retry. " + (e instanceof Error ? e.message.slice(0, 120) : "")); }
 }
 
 // The givers board: only on a contract deployed with give(); the section stays hidden otherwise.
+// Recognition tiers by total given. They are labels, not powers: the starter coins are 5,000, so Gold needs more than the free coins.
+const tier = (given: string): { key: string; name: string } | null => { const t = BigInt(given) / 1_000_000n; return t >= 5000n ? { key: "gold", name: "Gold" } : t >= 1000n ? { key: "silver", name: "Silver" } : t >= 100n ? { key: "bronze", name: "Bronze" } : null; };
 async function renderGivers(s: State) {
   const gs = await listGivers(); if (!gs) return;
+  const rounds = await giverRounds().catch(() => new Map<string, number>());
   $("#givers").hidden = false;
   const total = BigInt(s.given_total ?? "0"), minted = BigInt(s.supply) - BigInt(s.initial_supply);
   const head = `<p class="big-n"><b>${trem(total)}</b> TREM given by ${gs.length} account${gs.length === 1 ? "" : "s"}</p><p class="note">Quakes have created ${trem(minted)} TREM for the relief list. Gifts are on top of that, and come out of the givers' own coins. The board ranks by amount, so a large holder can top it; it is a record, not a power.</p>`;
-  const rows = gs.slice(0, 20).map((g, i) => `<tr><td>${i + 1}</td><td>${esc(g.account_id)}${g.account_id === me ? " <b>(you)</b>" : ""}</td><td>${trem(g.given)} TREM</td></tr>`).join("");
-  $("#givers-card").innerHTML = head + (gs.length ? `<div class="tbl"><table><thead><tr><th>#</th><th>Account</th><th>Given</th></tr></thead><tbody>${rows}</tbody></table></div>${gs.length > 20 ? `<p class="note">Showing the first 20 of ${gs.length}.</p>` : ""}` : `<p class="note">Nobody has given yet. Connect a wallet in the Live walkthrough, take the free starter coins, and be the first.</p>`);
+  const bonus = params?.giver_share_ppm && params?.giver_cap_ppm ? `<p class="note"><b>Givers also earn a bonus.</b> ${(params.giver_share_ppm / 1e4).toFixed(0)}% of each calm-day dividend is set aside for givers, shared by how much each has given, and each coin given can earn at most ${(params.giver_cap_ppm / 1e4).toFixed(1)}% of a coin a day. So a gift takes at least about ${Math.round(1e6 / params.giver_cap_ppm)} calm days to earn back, and giving through many accounts gains nothing. ${trem(s.giver_bonus_total ?? "0")} TREM of bonus has been set aside so far.</p>` : "";
+  const key = `<p class="note">Tiers by total given: Bronze 100 TREM, Silver 1,000, Gold 5,000. <b>Quake rounds</b> counts how many times the account gave after at least one new quake had counted since its previous gift.</p>`;
+  const rows = gs.slice(0, 20).map((g, i) => `<tr><td>${i + 1}</td><td>${esc(g.account_id)}${g.account_id === me ? " <b>(you)</b>" : ""}</td><td>${(() => { const t = tier(g.given); return t ? `<span class="tier ${t.key}">${t.name}</span>` : ""; })()}</td><td>${trem(g.given)} TREM</td><td>${rounds.get(g.account_id) ?? 0}</td></tr>`).join("");
+  $("#givers-card").innerHTML = head + bonus + key + (gs.length ? `<div class="tbl"><table><thead><tr><th>#</th><th>Account</th><th>Tier</th><th>Given</th><th>Quake rounds</th></tr></thead><tbody>${rows}</tbody></table></div>${gs.length > 20 ? `<p class="note">Showing the first 20 of ${gs.length}.</p>` : ""}` : `<p class="note">Nobody has given yet. Connect a wallet in the Live walkthrough, take the free starter coins, and be the first.</p>`);
 }
 
 async function initSim() {

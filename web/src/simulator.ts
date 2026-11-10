@@ -1,6 +1,6 @@
 // The in-browser simulation: the same rules code as the contract (src/sim/engine.ts, proven identical to the Python reference by
 // tests/conformance.ts), driven by five simulated bots. Nothing here is on-chain.
-import { Tremor, DAY, Reject, type Params } from "./sim/engine.ts";
+import { Tremor, DAY, Reject, SCALE, type Params } from "./sim/engine.ts";
 import { alertName, type Quake } from "./usgs.ts";
 import { esc, mag, trem } from "./util.ts";
 
@@ -17,7 +17,7 @@ export async function initSimulator(host: HTMLElement, catalog: Quake[], chosen:
   const quakes = catalog.filter((q) => q.mag_x10 >= 60).sort((a, b) => b.origin_s - a.origin_s);
   const byId = new Map(quakes.map((q) => [q.id, q]));
   const params: Params = { s0: 1_000_000_000_000n, min_mag_x10: 60, min_alert: 2, base_ppm: BigInt(chosen.base_ppm), max_event_ppm: 15000n, cooldown_s: DAY, week_cap_ppm: BigInt(chosen.week_ppm), month_cap_ppm: BigInt(chosen.month_ppm),
-    min_age_s: 0, max_age_s: 90 * DAY, max_open: 64, max_claims: 32, claim_wait_s: 3600, threshold: 3, calm_ppm: 100n, tap_amount: 0n, publishers: BOTS, relief: RELIEF };
+    min_age_s: 0, max_age_s: 90 * DAY, max_open: 64, max_claims: 32, claim_wait_s: 3600, threshold: 3, calm_ppm: 100n, giver_share_ppm: 200000n, giver_cap_ppm: 5000n, tap_amount: 0n, publishers: BOTS, relief: RELIEF };
   let sim: Tremor, now: number, modes: Mode[], claimNo = 0, last: { id: string; fake: boolean; chips: string[]; msg: string; tone: "ok" | "warn" | "info" } | null = null, busy = false;
   const reset = () => { sim = new Tremor(params, "launcher"); now = (quakes[0]?.origin_s ?? Math.floor(Date.now() / 1000)) + 3600; sim.ftTransfer("launcher", YOU, START, now); modes = [...PLAN.real]; claimNo = 0; last = null; };
   reset();
@@ -47,7 +47,7 @@ export async function initSimulator(host: HTMLElement, catalog: Quake[], chosen:
           <h3>3. Hold coins: quakes cost you a little, calm days pay you a little</h3>
           <p class="note">You hold <b>${trem(sim.bal(YOU), 4)}</b> simulated TREM, which is <b>${(Number((sim.bal(YOU) * 100_000_000n) / sim.supply) / 1e6).toFixed(4)}%</b> of the supply. Each counted quake makes that share a little smaller. Each full day with no counted quake creates ${(Number(params.calm_ppm) / 1e4).toFixed(2)}% of the supply for holders (not for the relief accounts). It is separate from the weekly and monthly caps, which limit quake mints. Your coin count grows; your share barely moves, because nearly every coin is paid the same.</p>
           <div class="acts"><button class="out" id="sim-day">Let a calm day pass</button><span class="note">Calm days paid so far: <b>${sim.calmDays}</b>, ${trem(sim.divTotal)} TREM for holders.</span></div>
-          <p class="note">You can also give: it sends your own coins to the five relief accounts, creates nothing, and gives you no say in what counts.</p>
+          <p class="note">You can also give: it sends your own coins to the five relief accounts, creates nothing, and gives you no say in what counts. Givers earn a bonus: ${(Number(params.giver_share_ppm) / 1e4).toFixed(0)}% of each calm day's dividend is set aside for them, and each coin given can earn up to ${(Number(params.giver_cap_ppm) / 1e4).toFixed(1)}% a day, so give, then let a few calm days pass.</p>
           <div class="acts"><button class="out" data-give="100">Give 100 TREM</button><button class="out" data-give="1000">Give 1,000 TREM</button>${sim.given.get(YOU) ? `<span class="note">You have given <b>${trem(sim.given.get(YOU)!)}</b> TREM.</span>` : ""}</div>
           <div class="acts"><button class="out" id="sim-skip">Skip ahead a week</button><button class="out" id="sim-reset">Start over</button></div>
         </div>
@@ -113,9 +113,10 @@ export async function initSimulator(host: HTMLElement, catalog: Quake[], chosen:
     if (t.id === "sim-reset") { reset(); return render(); }
     if (t.id === "sim-skip" || t.id === "sim-day") {
       const week = t.id === "sim-skip", before = sim.calmDays; now += (week ? 7 : 1) * DAY;
-      const made = sim.roll(now); let got = 0n; try { got = sim.claimDividend(YOU, now); } catch { /* nothing to claim */ }
+      const made = sim.roll(now), mine = sim.given.get(YOU) ?? 0n, bonus = (mine * (sim.gacc - (sim.gpaid.get(YOU) ?? 0n))) / SCALE; // the giver bonus part of what you are owed
+      let got = 0n; try { got = sim.claimDividend(YOU, now); } catch { /* nothing to claim */ }
       const days = sim.calmDays - before;
-      const paid = days ? ` ${days} calm day${days > 1 ? "s" : ""} paid a dividend: ${trem(made)} TREM created for holders, and <b>${trem(got, 4)} TREM</b> of it is yours.` : " No dividend was paid: a quake was counted that day.";
+      const paid = days ? ` ${days} calm day${days > 1 ? "s" : ""} paid a dividend: ${trem(made)} TREM created for holders, and <b>${trem(got, 4)} TREM</b> of it is yours${bonus > 0n ? `, of which <b>${trem(bonus, 4)} TREM</b> is your giver bonus` : ""}.` : " No dividend was paid: a quake was counted that day.";
       last = { id: week ? "A week passes" : "A day passes", fake: false, chips: [], tone: days ? "ok" : "info", msg: (week ? "The weekly allowance resets, so new quakes can mint again. The monthly allowance stays." : "No quake was claimed, so the day is settled when the next one starts.") + paid };
       return render();
     }

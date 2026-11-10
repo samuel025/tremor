@@ -10,7 +10,7 @@ export class Reject extends Error {}
 
 export interface Params {
   s0: bigint; min_mag_x10: number; min_alert: number; base_ppm: bigint; max_event_ppm: bigint; cooldown_s: number; week_cap_ppm: bigint; month_cap_ppm: bigint;
-  min_age_s: number; max_age_s: number; max_open: number; max_claims: number; claim_wait_s: number; threshold: number; calm_ppm: bigint; tap_amount: bigint;
+  min_age_s: number; max_age_s: number; max_open: number; max_claims: number; claim_wait_s: number; threshold: number; calm_ppm: bigint; giver_share_ppm: bigint; giver_cap_ppm: bigint; tap_amount: bigint;
   publishers: string[]; relief: string[];
 }
 
@@ -40,7 +40,7 @@ export function split(mint: bigint): bigint[] { const each = mint / 5n; return [
 
 export class Tremor {
   p: Params; tok = new Map<string, bigint>(); supply: bigint; ev = new Map<string, Ev>(); recent: number[] = []; buckets = new Map<number, bigint>(); tapped = new Set<string>(); given = new Map<string, bigint>();
-  acc = 0n; paid = new Map<string, bigint>(); divPot = 0n; divTotal = 0n; calmDays = 0; settledTo: number | null = null; quakeDay: number | null = null;
+  acc = 0n; paid = new Map<string, bigint>(); gacc = 0n; gpaid = new Map<string, bigint>(); givenSum = 0n; bonusTotal = 0n; divPot = 0n; divTotal = 0n; calmDays = 0; settledTo: number | null = null; quakeDay: number | null = null;
   log: { kind: string; id: string; who?: string; minted?: bigint; clipped?: boolean; attestations?: number; now: number }[] = [];
   constructor(p: Params, launcher: string) {
     if (p.week_cap_ppm <= 0n || p.month_cap_ppm <= 0n || p.base_ppm <= 0n || p.max_event_ppm <= 0n || p.cooldown_s <= 0) throw new Reject("caps and shares must be nonzero");
@@ -66,7 +66,14 @@ export class Tremor {
       if (eligible <= 0n) continue;
       const d = (this.supply * this.p.calm_ppm) / MILLION; // outside the weekly and monthly caps: its own limit is one per day
       if (d === 0n) continue;
-      this.acc += (d * SCALE) / eligible;
+      // the giver bonus: a per-coin-given rate, the same for every giver, limited by the pool and by the cap; spent is rounded up so that
+      // what givers can be credited never exceeds what was set aside. What they do not take goes to holders.
+      const pool = (d * this.p.giver_share_ppm) / MILLION; let rate = 0n, spent = 0n;
+      if (this.givenSum > 0n && pool > 0n && this.p.giver_cap_ppm > 0n) {
+        const byPool = (pool * SCALE) / this.givenSum, byCap = (this.p.giver_cap_ppm * SCALE) / MILLION;
+        rate = byPool < byCap ? byPool : byCap; spent = (this.givenSum * rate + SCALE - 1n) / SCALE;
+      }
+      this.acc += ((d - spent) * SCALE) / eligible; this.gacc += rate; this.bonusTotal += spent;
       this.supply += d; this.divPot += d; this.divTotal += d; this.calmDays += 1; minted += d;
     }
     return minted;
@@ -74,8 +81,8 @@ export class Tremor {
   /** Credit account a with the dividend its balance has earned since it was last settled. Relief accounts earn none. */
   private settle(a: string): bigint {
     if (this.p.relief.includes(a)) return 0n;
-    const owed = (this.bal(a) * (this.acc - (this.paid.get(a) ?? 0n))) / SCALE;
-    this.paid.set(a, this.acc);
+    const owed = (this.bal(a) * (this.acc - (this.paid.get(a) ?? 0n))) / SCALE + ((this.given.get(a) ?? 0n) * (this.gacc - (this.gpaid.get(a) ?? 0n))) / SCALE;
+    this.paid.set(a, this.acc); this.gpaid.set(a, this.gacc);
     if (owed > 0n) { this.tok.set(a, this.bal(a) + owed); this.divPot -= owed; }
     return owed;
   }
@@ -87,7 +94,7 @@ export class Tremor {
     return owed;
   }
   /** What claimDividend would credit, for days already settled by roll(). */
-  pending(a: string): bigint { return this.p.relief.includes(a) ? 0n : (this.bal(a) * (this.acc - (this.paid.get(a) ?? 0n))) / SCALE; }
+  pending(a: string): bigint { return this.p.relief.includes(a) ? 0n : (this.bal(a) * (this.acc - (this.paid.get(a) ?? 0n))) / SCALE + ((this.given.get(a) ?? 0n) * (this.gacc - (this.gpaid.get(a) ?? 0n))) / SCALE; }
 
   ftTransfer(f: string, t: string, n: bigint, now: number): void {
     this.roll(now); this.settle(f); this.settle(t);
@@ -109,7 +116,7 @@ export class Tremor {
     if (n <= 0n || this.bal(a) < n) throw new Reject("insufficient balance");
     this.tok.set(a, this.bal(a) - n);
     split(n).forEach((part, i) => this.tok.set(this.p.relief[i], this.bal(this.p.relief[i]) + part));
-    const total = (this.given.get(a) ?? 0n) + n; this.given.set(a, total);
+    const total = (this.given.get(a) ?? 0n) + n; this.given.set(a, total); this.givenSum += n;
     this.log.push({ kind: "gave", id: a, who: a, minted: n, now });
     return total;
   }
@@ -188,6 +195,7 @@ export class Tremor {
     if (this.supply !== this.p.s0 + minted + this.divTotal) throw new Error("supply = S0 + mints + dividends");
     let all = 0n; for (const v of this.tok.values()) all += v; if (all + this.divPot !== this.supply || this.divPot < 0n) throw new Error("balances + unclaimed dividend = supply");
     for (const [a, v] of this.given) if (v <= 0n || this.p.relief.includes(a)) throw new Error("givers");
+    let gs = 0n; for (const v of this.given.values()) gs += v; if (gs !== this.givenSum || this.bonusTotal > this.divTotal) throw new Error("giver totals");
     for (const e of this.ev.values()) {
       if (e.minted !== 0n && e.status !== "counted") throw new Error("minted but not counted");
       if (e.status === "counted" && ((e.versions.get(vkey(e.mag_x10, e.origin_s, e.alert))?.who.size ?? 0) < this.p.threshold || e.alert < this.p.min_alert)) throw new Error("counted without enough attestations or impact");
@@ -208,6 +216,7 @@ export class Tremor {
     }
     return { supply: Number(this.supply), tok: nz(this.tok), buckets: nz(this.buckets as Map<string | number, bigint>), recent: [...this.recent], tapped: [...this.tapped].sort(), given: nz(this.given),
       div: [String(this.acc), Number(this.divPot), Number(this.divTotal), this.calmDays, this.settledTo ?? -1, this.quakeDay ?? -1],
-      paid: Object.fromEntries([...this.paid.entries()].filter(([, v]) => v !== 0n).map(([k, v]) => [k, String(v)])), events };
+      paid: Object.fromEntries([...this.paid.entries()].filter(([, v]) => v !== 0n).map(([k, v]) => [k, String(v)])),
+      gdiv: [String(this.gacc), Number(this.bonusTotal), Number(this.givenSum)], gpaid: Object.fromEntries([...this.gpaid.entries()].filter(([, v]) => v !== 0n).map(([k, v]) => [k, String(v)])), events };
   }
 }

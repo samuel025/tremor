@@ -106,6 +106,14 @@ except Reject: minted = 0
 check("a third bad bot makes it count (capped)", ref.supply, supply()); print(f"  the fake minted {minted / U:,.2f} TREM; the weekly and monthly caps still apply")
 st = view("get_state"); print(f"  caps meter: weekly allowance left {int(st['week_left']) / U:,.2f} TREM, monthly left {int(st['month_left']) / U:,.2f} TREM")
 
+print("\nStep 7b: a holder gives 1,000 of their own TREM to the relief list: coins move, nothing is created, no cap moves")
+before = ref.supply
+out = call("ada", "give", {"amount": str(1_000 * U)}, "1 yoctoNEAR"); ref.give(acct("ada"), 1_000 * U, now())
+check("the give was accepted", False, refused(out)); check("supply unchanged", before, supply())
+check("total given by ada", str(ref.given[acct("ada")]), view("given_of", {"account_id": acct("ada")}))
+check("relief1 balance (reference)", ref.tok[prm["relief_accounts"][0]], int(view("ft_balance_of", {"account_id": prm["relief_accounts"][0]})))
+check("a give without the 1 yoctoNEAR a transfer needs is refused", True, refused(call("ada", "give", {"amount": str(U)})))
+
 print("\nStep 8: the rules and the access-key list")
 check("parameters unchanged", prm, view("get_params"))
 keys = json.loads(sh("curl", "-s", "https://test.rpc.fastnear.com", "-H", "Content-Type: application/json", "-d", json.dumps(

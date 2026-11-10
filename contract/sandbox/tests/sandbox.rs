@@ -15,7 +15,7 @@ impl Env {
 fn params(over: Value) -> Value {
     let mut p = json!({"s0": (1_000_000 * U).to_string(), "min_mag_x10": 60, "min_alert": 2, "base_ppm": 5000, "max_event_ppm": 15000, "cooldown_s": 86400,
         "week_cap_ppm": 15000, "month_cap_ppm": 50000, "min_age_s": 0, "max_age_s": 5_184_000, "max_open": 64, "max_claims": 32, "claim_wait_s": 3600,
-        "threshold": 3, "calm_ppm": 0, "tap_amount": "0", "publisher_accounts": null, "relief_accounts": null});
+        "threshold": 3, "calm_ppm": 0, "giver_share_ppm": 0, "giver_cap_ppm": 0, "tap_amount": "0", "publisher_accounts": null, "relief_accounts": null});
     for (k, v) in over.as_object().unwrap() { p[k] = v.clone(); }
     p
 }
@@ -228,17 +228,20 @@ async fn dividend_methods_are_wired_and_pay_nothing_before_a_day_has_passed() ->
     // The sandbox cannot jump days (moving its clock two days took over ten minutes), so the day-by-day arithmetic is checked on the
     // same engine code by the conformance test and GV-5. Here: the methods exist on the deployed contract, settle on every balance
     // change without disturbing it, and pay nothing while no full day has passed.
-    let e = setup(json!({"calm_ppm": 100})).await?;
-    assert_eq!(e.view("get_params", json!({})).await?["calm_ppm"], 100);
+    let e = setup(json!({"calm_ppm": 100, "giver_share_ppm": 200000, "giver_cap_ppm": 5000})).await?;
+    let prm = e.view("get_params", json!({})).await?;
+    assert_eq!((&prm["calm_ppm"], &prm["giver_share_ppm"], &prm["giver_cap_ppm"]), (&json!(100), &json!(200000), &json!(5000)));
     e.who("judge").call(e.c.id(), "storage_deposit").args_json(json!({})).deposit(NearToken::from_millinear(2)).max_gas().transact().await?.into_result()?;
     let r = e.who("ada").call(e.c.id(), "ft_transfer").args_json(json!({"receiver_id": e.who("judge").id(), "amount": (100_000 * U).to_string()})).deposit(Y1).max_gas().transact().await?;
     eprintln!("MEASURE ft_transfer with dividend settling: {} Tgas", r.total_gas_burnt.as_tgas()); r.into_result()?;
     assert_eq!(e.tok(e.who("judge").id().as_str()).await, 100_000 * U);
     assert_eq!(e.view("dividend_of", json!({"account_id": e.who("judge").id()})).await?, "0");
+    e.call("judge", "give", json!({"amount": (1_000 * U).to_string()}), Y1).await?.into_result()?; // a giver: the bonus starts from the next calm day
+    assert_eq!(e.view("given_of", json!({"account_id": e.who("judge").id()})).await?, (1_000 * U).to_string());
     assert!(e.call("judge", "claim_dividend", json!({}), NONE).await?.is_failure(), "nothing to claim on the first day");
     let rel = e.relief[0].call(e.c.id(), "claim_dividend").gas(Gas::from_tgas(30)).transact().await?; assert!(rel.is_failure(), "relief accounts earn no dividend");
     let st = e.view("get_state", json!({})).await?;
-    assert_eq!((st["calm_days"].as_u64(), st["dividends_total"].as_str(), st["dividend_pot"].as_str()), (Some(0), Some("0"), Some("0")));
+    assert_eq!((st["calm_days"].as_u64(), st["dividends_total"].as_str(), st["dividend_pot"].as_str(), st["giver_bonus_total"].as_str()), (Some(0), Some("0"), Some("0"), Some("0")));
     assert_eq!(e.supply().await, 1_000_000 * U);
     // a quake still mints exactly as before
     let o = e.now().await - 60; e.attest(&[1, 2, 3], "E1", 60, o).await?;

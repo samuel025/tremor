@@ -10,13 +10,14 @@ fn params(p: &Value, publishers: &Value, relief: &Value) -> Params {
     Params { s0: g("s0") as u128, min_mag_x10: g("min_mag_x10") as u32, min_alert: g("min_alert") as u32, base_ppm: g("base_ppm") as u128, max_event_ppm: g("max_event_ppm") as u128,
         cooldown_s: g("cooldown_s"), week_cap_ppm: g("week_cap_ppm") as u128, month_cap_ppm: g("month_cap_ppm") as u128, min_age_s: g("min_age_s"),
         max_age_s: g("max_age_s"), max_open: g("max_open") as u32, max_claims: g("max_claims") as u32, claim_wait_s: g("claim_wait_s"),
-        threshold: g("threshold") as u32, calm_ppm: g("calm_ppm") as u128, tap_amount: g("tap_amount") as u128, publishers: strs(publishers), relief: strs(relief) }
+        threshold: g("threshold") as u32, calm_ppm: g("calm_ppm") as u128, giver_share_ppm: g("giver_share_ppm") as u128, giver_cap_ppm: g("giver_cap_ppm") as u128, tap_amount: g("tap_amount") as u128, publishers: strs(publishers), relief: strs(relief) }
 }
 
 fn snapshot(c: &Core) -> Value {
     let tok: serde_json::Map<String, Value> = c.tok.iter().filter(|(_, v)| **v != 0).map(|(k, v)| (k.clone(), json!(*v as u64))).collect();
     let buckets: serde_json::Map<String, Value> = c.buckets.iter().filter(|(_, v)| **v != 0).map(|(k, v)| (k.to_string(), json!(*v as u64))).collect();
     let paid: serde_json::Map<String, Value> = c.paid.iter().filter(|(_, v)| **v != 0).map(|(k, v)| (k.clone(), json!(v.to_string()))).collect();
+    let gpaid: serde_json::Map<String, Value> = c.gpaid.iter().filter(|(_, v)| **v != 0).map(|(k, v)| (k.clone(), json!(v.to_string()))).collect();
     let given: serde_json::Map<String, Value> = c.given.iter().map(|(k, v)| (k.clone(), json!(*v as u64))).collect();
     let events: serde_json::Map<String, Value> = c.ev.iter().map(|(k, e)| {
         let versions: Vec<Value> = e.versions.iter().map(|((m, o, a), s)| json!([*m, *o, *a, s.iter().collect::<Vec<_>>()])).collect();
@@ -24,7 +25,7 @@ fn snapshot(c: &Core) -> Value {
     }).collect();
     json!({"supply": c.supply as u64, "tok": tok, "buckets": buckets, "recent": c.recent, "tapped": c.tapped.iter().collect::<Vec<_>>(), "given": given,
         "div": [json!(c.acc.to_string()), json!(c.div_pot as u64), json!(c.div_total as u64), json!(c.calm_days), json!(c.settled_to.map(|v| v as i64).unwrap_or(-1)), json!(c.quake_day.map(|v| v as i64).unwrap_or(-1))],
-        "paid": paid, "events": events})
+        "paid": paid, "gdiv": [json!(c.gacc.to_string()), json!(c.bonus_total as u64), json!(c.given_sum as u64)], "gpaid": gpaid, "events": events})
 }
 
 #[test]
@@ -67,7 +68,7 @@ fn golden_vector_one_from_rules_md() {
     // GV-1 straight from RULES.md, independent of the Python reference: each event is confirmed by 3 bots at its own origin time.
     let pubs: Vec<String> = (1..=5).map(|i| format!("bot{i}")).collect();
     let p = Params { s0: 1_000_000_000_000, min_mag_x10: 60, min_alert: 2, base_ppm: 5000, max_event_ppm: 15000, cooldown_s: 86400, week_cap_ppm: 15000, month_cap_ppm: 50000,
-        min_age_s: 0, max_age_s: 5_184_000, max_open: 64, max_claims: 32, claim_wait_s: 43200, threshold: 3, calm_ppm: 0, tap_amount: 0, publishers: pubs.clone(),
+        min_age_s: 0, max_age_s: 5_184_000, max_open: 64, max_claims: 32, claim_wait_s: 43200, threshold: 3, calm_ppm: 0, giver_share_ppm: 0, giver_cap_ppm: 0, tap_amount: 0, publishers: pubs.clone(),
         relief: (1..=5).map(|i| format!("r{i}")).collect() };
     let t0 = 20000 * DAY;
     let mut c = Core::new(p, "ada").unwrap();
@@ -88,7 +89,7 @@ fn golden_vector_one_from_rules_md() {
 fn golden_vector_four_from_rules_md() {
     // GV-4 straight from RULES.md: giving moves a holder's own coins to the relief list and creates nothing.
     let p = Params { s0: 1_000_000_000_000, min_mag_x10: 60, min_alert: 2, base_ppm: 5000, max_event_ppm: 15000, cooldown_s: 86400, week_cap_ppm: 15000, month_cap_ppm: 50000,
-        min_age_s: 0, max_age_s: 5_184_000, max_open: 64, max_claims: 32, claim_wait_s: 43200, threshold: 3, calm_ppm: 0, tap_amount: 0,
+        min_age_s: 0, max_age_s: 5_184_000, max_open: 64, max_claims: 32, claim_wait_s: 43200, threshold: 3, calm_ppm: 0, giver_share_ppm: 0, giver_cap_ppm: 0, tap_amount: 0,
         publishers: (1..=5).map(|i| format!("bot{i}")).collect(), relief: (1..=5).map(|i| format!("relief{i}")).collect() };
     let t0 = 20000 * DAY;
     let mut c = Core::new(p, "ada").unwrap();
@@ -110,7 +111,7 @@ fn golden_vector_four_from_rules_md() {
 fn golden_vector_five_from_rules_md() {
     // GV-5 straight from RULES.md: calm days pay holders, a quake day pays nothing, relief accounts earn nothing.
     let p = Params { s0: 1_000_000_000_000, min_mag_x10: 60, min_alert: 2, base_ppm: 5000, max_event_ppm: 15000, cooldown_s: 86400, week_cap_ppm: 15000, month_cap_ppm: 50000,
-        min_age_s: 0, max_age_s: 5_184_000, max_open: 64, max_claims: 32, claim_wait_s: 43200, threshold: 3, calm_ppm: 100, tap_amount: 0,
+        min_age_s: 0, max_age_s: 5_184_000, max_open: 64, max_claims: 32, claim_wait_s: 43200, threshold: 3, calm_ppm: 100, giver_share_ppm: 0, giver_cap_ppm: 0, tap_amount: 0,
         publishers: (1..=5).map(|i| format!("bot{i}")).collect(), relief: (1..=5).map(|i| format!("relief{i}")).collect() };
     let t0 = 20000 * DAY;
     let mut c = Core::new(p, "ada").unwrap();
@@ -136,7 +137,7 @@ fn golden_vector_five_from_rules_md() {
 fn golden_vector_six_from_rules_md() {
     // GV-6 straight from RULES.md: only quakes with expected human impact count; three bots must agree on the alert level too.
     let p = Params { s0: 1_000_000_000_000, min_mag_x10: 60, min_alert: 2, base_ppm: 5000, max_event_ppm: 15000, cooldown_s: 86400, week_cap_ppm: 15000, month_cap_ppm: 50000,
-        min_age_s: 0, max_age_s: 5_184_000, max_open: 64, max_claims: 32, claim_wait_s: 43200, threshold: 3, calm_ppm: 0, tap_amount: 0,
+        min_age_s: 0, max_age_s: 5_184_000, max_open: 64, max_claims: 32, claim_wait_s: 43200, threshold: 3, calm_ppm: 0, giver_share_ppm: 0, giver_cap_ppm: 0, tap_amount: 0,
         publishers: (1..=5).map(|i| format!("bot{i}")).collect(), relief: (1..=5).map(|i| format!("relief{i}")).collect() };
     let t0 = 20000 * DAY;
     let mut c = Core::new(p, "ada").unwrap();
@@ -150,5 +151,36 @@ fn golden_vector_six_from_rules_md() {
     assert_eq!(c.attest("bot4", "a2", 60, t0, 3, t0 + 8).unwrap().unwrap().0, 5_000_000_000);
     assert_eq!(c.supply, 1_005_000_000_000);
     assert!(c.attest("bot5", "a2", 60, t0, 3, t0 + 9).is_err());            // already counted
+    c.check_invariants();
+}
+
+fn bonus_params(calm: u128) -> Params {
+    Params { s0: 1_000_000_000_000, min_mag_x10: 60, min_alert: 2, base_ppm: 5000, max_event_ppm: 15000, cooldown_s: 86400, week_cap_ppm: 15000, month_cap_ppm: 50000,
+        min_age_s: 0, max_age_s: 5_184_000, max_open: 64, max_claims: 32, claim_wait_s: 43200, threshold: 3, calm_ppm: calm, giver_share_ppm: 200000, giver_cap_ppm: 5000, tap_amount: 0,
+        publishers: (1..=5).map(|i| format!("bot{i}")).collect(), relief: (1..=5).map(|i| format!("relief{i}")).collect() }
+}
+
+#[test]
+fn golden_vector_seven_from_rules_md() {
+    // GV-7 straight from RULES.md: givers share a reserved part of the calm-day dividend.
+    let t0 = 20000 * DAY;
+    let mut c = Core::new(bonus_params(100), "ada").unwrap();
+    c.ft_transfer("ada", "bob", 100_000_000_000, t0).unwrap();
+    c.give("ada", 10_000_000_000, t0 + 1).unwrap();
+    assert_eq!(c.claim_dividend("bob", t0 + 2 * DAY + 10), Ok(16_162_424));
+    assert_eq!((c.supply, c.tok["bob"], c.div_pot), (1_000_200_010_000, 100_016_162_424, 183_847_576));
+    assert_eq!(c.claim_dividend("ada", t0 + 2 * DAY + 11), Ok(143_845_575 + 40_002_000));
+    assert_eq!((c.tok["ada"], c.div_pot, c.bonus_total), (890_183_847_575, 1, 40_002_000));
+    c.check_invariants();
+}
+
+#[test]
+fn golden_vector_eight_from_rules_md() {
+    // GV-8: a lone giver of 100 TREM earns only the cap, 0.5 TREM, from the 20 TREM pool; the rest goes to holders.
+    let t0 = 20000 * DAY;
+    let mut c = Core::new(bonus_params(100), "ada").unwrap();
+    c.give("ada", 100_000_000, t0).unwrap();
+    assert!(c.claim_dividend("ada", t0 + DAY + 5).is_ok());
+    assert_eq!((c.supply, c.tok["ada"], c.div_pot, c.bonus_total), (1_000_100_000_000, 999_999_999_999, 1, 500_000));
     c.check_invariants();
 }

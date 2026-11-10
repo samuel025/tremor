@@ -1,14 +1,14 @@
 {
  "python_tests": {
-  "passed": 13,
+  "passed": 16,
   "ok": true,
   "date": "2026-11-10"
  },
  "conformance": {
   "scenarios": 202,
-  "steps": 27989,
+  "steps": 27797,
   "mismatches": 0,
-  "tests_passed": 5,
+  "tests_passed": 7,
   "ok": true,
   "date": "2026-11-10"
  },
@@ -67,6 +67,12 @@
    "dilution": 0.015528801993869856,
    "dilution_without": 0.015566818207395361
   },
+  "gbonus": {
+   "share": 20.0,
+   "cap": 0.5,
+   "single": "1,203.55",
+   "tiny": "0.3000"
+  },
   "bar": {
    "counted": 5,
    "green": 23,
@@ -101,7 +107,7 @@
   "date": "2026-11-10"
  },
  "demo": {
-  "pass_": 30,
+  "pass_": 35,
   "fail": 0,
   "ok": true,
   "date": "2026-11-10"
@@ -109,7 +115,7 @@
  "tap_amount": 5000,
  "web_conformance": {
   "scenarios": 202,
-  "steps": 27989,
+  "steps": 27797,
   "mismatches": 0,
   "golden": true,
   "ok": true,

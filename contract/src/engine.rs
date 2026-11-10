@@ -27,6 +27,8 @@ pub struct Params {
     pub claim_wait_s: u64,  // how long a claim stays open
     pub threshold: u32,
     pub calm_ppm: u128,     // share of supply created for holders after each full day with no counted quake; 0 disables it
+    pub giver_share_ppm: u128, // part of each calm-day dividend reserved for givers (200000 = 20%); 0 disables the giver bonus
+    pub giver_cap_ppm: u128,   // most a coin ever given can earn per calm day, in ppm of that coin (5000 = 0.5%)
     pub tap_amount: u128,   // starter coins each account may take once from the pool; 0 disables the tap
     pub publishers: Vec<String>,
     pub relief: Vec<String>,
@@ -42,6 +44,7 @@ impl Params {
         let pubs: BTreeSet<&String> = self.publishers.iter().collect();
         if self.publishers.len() != 5 || pubs.len() != 5 { return Err("need 5 distinct publishers".into()); }
         if self.threshold < 1 || self.threshold > 5 { return Err("threshold must be 1..5".into()); }
+        if self.giver_share_ppm > MILLION { return Err("giver share must be 0..1,000,000 ppm".into()); }
         Ok(())
     }
 }
@@ -106,6 +109,10 @@ pub struct Core {
     pub paid: BTreeMap<String, u128>,  // account -> the value of acc when its balance was last settled
     pub div_pot: u128,                 // dividend coins created but not yet credited to an account
     pub div_total: u128,               // all dividend coins ever created
+    pub gacc: u128,                    // giver bonus per coin ever given so far, times SCALE
+    pub gpaid: BTreeMap<String, u128>, // account -> the value of gacc when it was last settled
+    pub given_sum: u128,               // all coins ever given
+    pub bonus_total: u128,             // part of div_total set aside for givers
     pub calm_days: u64,                // days that paid a dividend
     pub settled_to: Option<u64>,       // the next day to settle (None until the first transaction)
     pub quake_day: Option<u64>,        // the last day on which a quake was counted
@@ -127,7 +134,7 @@ impl Core {
         let mut tok = BTreeMap::new();
         tok.insert(launcher.to_string(), p.s0);
         for a in &p.relief { tok.entry(a.clone()).or_insert(0); }
-        Ok(Core { supply: p.s0, p, tok, ev: BTreeMap::new(), recent: vec![], buckets: BTreeMap::new(), tapped: BTreeSet::new(), given: BTreeMap::new(), acc: 0, paid: BTreeMap::new(), div_pot: 0, div_total: 0, calm_days: 0,
+        Ok(Core { supply: p.s0, p, tok, ev: BTreeMap::new(), recent: vec![], buckets: BTreeMap::new(), tapped: BTreeSet::new(), given: BTreeMap::new(), acc: 0, paid: BTreeMap::new(), div_pot: 0, div_total: 0, gacc: 0, gpaid: BTreeMap::new(), given_sum: 0, bonus_total: 0, calm_days: 0,
                   settled_to: None, quake_day: None, pending_log: vec![] })
     }
 
@@ -165,12 +172,12 @@ impl Core {
     pub fn give(&mut self, a: &str, n: u128, now: u64) -> Result<u128, String> {
         self.roll(now);
         if self.p.relief.iter().any(|x| x == a) { return Err("relief accounts cannot give".into()); }
-        self.settle(a);
+        self.settle(a); // settle first, so a new giver cannot claim bonus from before they gave
         if n == 0 || get(&self.tok, a) < n { return Err("insufficient balance".into()); }
         sub(&mut self.tok, a, n);
         let relief = self.p.relief.clone();
         for (r, part) in relief.iter().zip(split(n)) { add(&mut self.tok, r, part); }
-        add(&mut self.given, a, n);
+        add(&mut self.given, a, n); self.given_sum += n;
         let total = get(&self.given, a);
         self.emit("gave", format!("{{\"account\":{},\"amount\":\"{}\",\"total\":\"{}\",\"time\":{}}}", q(a), n, total, now));
         Ok(total)
@@ -197,7 +204,14 @@ impl Core {
             if eligible == 0 { continue; }
             let d = self.supply * self.p.calm_ppm / MILLION;
             if d == 0 { continue; }
-            self.acc += d * SCALE / eligible;
+            // the giver bonus: a per-coin-given rate, the same for every giver, limited by the pool and by the cap; spent is rounded up so
+            // that what givers can be credited never exceeds what was set aside. What they do not take goes to holders.
+            let pool = d * self.p.giver_share_ppm / MILLION;
+            let (rate, spent) = if self.given_sum > 0 && pool > 0 && self.p.giver_cap_ppm > 0 {
+                let rate = (pool * SCALE / self.given_sum).min(self.p.giver_cap_ppm * SCALE / MILLION);
+                (rate, (self.given_sum * rate + SCALE - 1) / SCALE)
+            } else { (0, 0) };
+            self.acc += (d - spent) * SCALE / eligible; self.gacc += rate; self.bonus_total += spent;
             self.supply += d; self.div_pot += d; self.div_total += d; self.calm_days += 1; minted += d;
         }
         self.settled_to = Some(x);
@@ -207,8 +221,8 @@ impl Core {
     /// Credit account `a` with the dividend its balance has earned since it was last settled. Relief accounts earn none.
     fn settle(&mut self, a: &str) -> u128 {
         if self.p.relief.iter().any(|x| x == a) { return 0; }
-        let owed = get(&self.tok, a) * (self.acc - get(&self.paid, a)) / SCALE;
-        self.paid.insert(a.to_string(), self.acc);
+        let owed = get(&self.tok, a) * (self.acc - get(&self.paid, a)) / SCALE + get(&self.given, a) * (self.gacc - get(&self.gpaid, a)) / SCALE;
+        self.paid.insert(a.to_string(), self.acc); self.gpaid.insert(a.to_string(), self.gacc);
         if owed > 0 {
             add(&mut self.tok, a, owed);
             self.div_pot -= owed;
@@ -229,7 +243,7 @@ impl Core {
     pub fn dividend_of(&self, a: &str, now: u64) -> u128 {
         let mut c = self.clone(); c.roll(now);
         if c.p.relief.iter().any(|x| x == a) { return 0; }
-        get(&c.tok, a) * (c.acc - get(&c.paid, a)) / SCALE
+        get(&c.tok, a) * (c.acc - get(&c.paid, a)) / SCALE + get(&c.given, a) * (c.gacc - get(&c.gpaid, a)) / SCALE
     }
 
     // ---- caps
@@ -329,6 +343,7 @@ impl Core {
         assert_eq!(self.supply, self.p.s0 + self.ev.values().map(|e| e.minted).sum::<u128>() + self.div_total, "supply = S0 + mints + dividends");
         assert_eq!(self.supply, self.tok.values().sum::<u128>() + self.div_pot, "balances + unclaimed dividend = supply");
         assert!(self.given.iter().all(|(a, v)| *v > 0 && !self.p.relief.contains(a)), "givers");
+        assert!(self.given_sum == self.given.values().sum::<u128>() && self.bonus_total <= self.div_total, "giver totals");
         for e in self.ev.values() {
             assert!(e.minted == 0 || e.status == Status::Counted);
             if e.status == Status::Counted { assert!(e.versions[&(e.mag_x10, e.origin_s, e.alert)].len() as u32 >= self.p.threshold && e.alert >= self.p.min_alert); }

@@ -1,0 +1,30 @@
+{
+ "name": "GV-8 giver bonus cap: a lone small giver earns only 0.5% of the gift a day",
+ "params": {
+  "s0": 1000000000000,
+  "base_ppm": 5000,
+  "min_age_s": 0,
+  "calm_ppm": 100,
+  "giver_share_ppm": 200000,
+  "giver_cap_ppm": 5000
+ },
+ "steps": [
+  {
+   "op": "give",
+   "who": "ada",
+   "amount": 100000000,
+   "now": 1728000000,
+   "expect_ok": true,
+   "expect_supply": 1000000000000
+  },
+  {
+   "op": "claim_dividend",
+   "who": "ada",
+   "now": 1728086405,
+   "expect_ok": true,
+   "expect_supply": 1000100000000,
+   "expect_balance": 999999999999,
+   "expect_pot": 1
+  }
+ ]
+}

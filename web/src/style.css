@@ -199,4 +199,5 @@ h2 .tag{display:inline-block;vertical-align:middle;font:600 14px/1 var(--text);l
 .howmore{margin-top:22px;max-width:46em}
 @media(max-width:760px){.gnav nav{display:flex;gap:16px;margin-left:auto}.gnav nav a{font-size:14px}.wm{display:none}.gnav-in{gap:14px}.launch{margin-left:0}}
 @media(max-width:520px){.launch{display:none}}
+.tier{display:inline-block;font-size:12px;font-weight:600;padding:3px 10px;border-radius:9999px;background:var(--ctl);color:var(--slate)}.tier.silver{background:var(--white);box-shadow:0 0 0 1px var(--ink);color:var(--ink)}.tier.gold{background:var(--ink);color:#fff}
 .tabbar{scrollbar-width:none}.tabbar::-webkit-scrollbar{display:none}

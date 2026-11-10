@@ -41,6 +41,8 @@ pub struct ParamsArg {
     pub claim_wait_s: u64,
     pub threshold: u32,
     pub calm_ppm: u32,    // share of supply created for holders after each full day with no counted quake (outside the caps); 0 disables it
+    pub giver_share_ppm: u32, // part of each calm-day dividend reserved for givers (200000 = 20%); 0 disables the giver bonus
+    pub giver_cap_ppm: u32,   // most a coin ever given can earn per calm day, in ppm of that coin (5000 = 0.5%)
     pub tap_amount: U128, // starter coins per account from the tap pool; "0" disables the tap
     pub publisher_accounts: Option<Vec<AccountId>>, // only filled by get_params
     pub relief_accounts: Option<Vec<AccountId>>,    // only filled by get_params
@@ -61,6 +63,7 @@ pub struct StateView {
     pub dividends_total: U128, // coins created for holders on calm days, ever
     pub dividend_pot: U128,    // of those, not yet credited to an account
     pub calm_days: u64,        // days that paid a dividend
+    pub giver_bonus_total: U128, // of the dividends, the part set aside for givers
     pub log_len: u64,
     pub now_s: u64,
 }
@@ -119,7 +122,7 @@ impl Contract {
             s0: params.s0.0, min_mag_x10: params.min_mag_x10, min_alert: params.min_alert, base_ppm: params.base_ppm as u128, max_event_ppm: params.max_event_ppm as u128,
             cooldown_s: params.cooldown_s, week_cap_ppm: params.week_cap_ppm as u128, month_cap_ppm: params.month_cap_ppm as u128,
             min_age_s: params.min_age_s, max_age_s: params.max_age_s, max_open: params.max_open, max_claims: params.max_claims,
-            claim_wait_s: params.claim_wait_s, threshold: params.threshold, calm_ppm: params.calm_ppm as u128, tap_amount: params.tap_amount.0,
+            claim_wait_s: params.claim_wait_s, threshold: params.threshold, calm_ppm: params.calm_ppm as u128, giver_share_ppm: params.giver_share_ppm as u128, giver_cap_ppm: params.giver_cap_ppm as u128, tap_amount: params.tap_amount.0,
             publishers: publisher_accounts.iter().map(|a| a.to_string()).collect(), relief: relief_accounts.iter().map(|a| a.to_string()).collect(),
         };
         let core = unwrap_or_panic(Core::new(p, launcher.as_str()));
@@ -269,7 +272,7 @@ impl Contract {
         let p = &self.core.p;
         ParamsArg { s0: U128(p.s0), min_mag_x10: p.min_mag_x10, min_alert: p.min_alert, base_ppm: p.base_ppm as u32, max_event_ppm: p.max_event_ppm as u32, cooldown_s: p.cooldown_s,
             week_cap_ppm: p.week_cap_ppm as u32, month_cap_ppm: p.month_cap_ppm as u32, min_age_s: p.min_age_s, max_age_s: p.max_age_s, max_open: p.max_open,
-            max_claims: p.max_claims, claim_wait_s: p.claim_wait_s, threshold: p.threshold, calm_ppm: p.calm_ppm as u32, tap_amount: U128(p.tap_amount),
+            max_claims: p.max_claims, claim_wait_s: p.claim_wait_s, threshold: p.threshold, calm_ppm: p.calm_ppm as u32, giver_share_ppm: p.giver_share_ppm as u32, giver_cap_ppm: p.giver_cap_ppm as u32, tap_amount: U128(p.tap_amount),
             publisher_accounts: Some(p.publishers.iter().map(|a| a.parse().unwrap()).collect()),
             relief_accounts: Some(p.relief.iter().map(|a| a.parse().unwrap()).collect()) }
     }
@@ -281,7 +284,7 @@ impl Contract {
             week_left: U128(wl), month_left: U128(ml), pending_events: self.core.ev.values().filter(|e| e.status == Status::Pending).count() as u32,
             tap_pool: U128(self.core.ft_balance_of(env::current_account_id().as_str())),
             given_total: U128(self.core.given.values().sum()), givers: self.core.given.len() as u32,
-            dividends_total: U128(core.div_total), dividend_pot: U128(core.div_pot), calm_days: core.calm_days, log_len: self.log.len() as u64, now_s: now }
+            dividends_total: U128(core.div_total), dividend_pot: U128(core.div_pot), calm_days: core.calm_days, giver_bonus_total: U128(core.bonus_total), log_len: self.log.len() as u64, now_s: now }
     }
     pub fn get_event(&self, event_id: String) -> Option<EventView> { self.core.ev.get(&event_id).map(|e| self.view(&event_id, e)) }
     pub fn list_events(&self, from: u32, limit: u32) -> Vec<EventView> {

@@ -30,6 +30,8 @@ class Params:
     claim_wait_s: int = 12 * 3600  # how long a claim stays open
     threshold: int = 3
     calm_ppm: int = 0              # share of supply created for holders after each full day with no counted quake; 0 disables it
+    giver_share_ppm: int = 0       # part of each calm-day dividend reserved for givers (200000 = 20%); 0 disables the giver bonus
+    giver_cap_ppm: int = 0         # most a coin ever given can earn per calm day, in ppm of that coin (5000 = 0.5%)
     tap_amount: int = 0            # starter coins each account may take once from the pool; 0 disables the tap
     publishers: tuple = ("bot1", "bot2", "bot3", "bot4", "bot5")
     relief: tuple = ("relief1", "relief2", "relief3", "relief4", "relief5")
@@ -40,6 +42,7 @@ class Params:
         if len(self.relief) != 5 or len(set(self.relief)) != 5: raise Reject("need 5 distinct relief accounts")
         if len(self.publishers) != 5 or len(set(self.publishers)) != 5: raise Reject("need 5 distinct publishers")
         if not 1 <= self.threshold <= 5: raise Reject("threshold must be 1..5")
+        if not 0 <= self.giver_share_ppm <= 10**6: raise Reject("giver share must be 0..1,000,000 ppm")
 
 
 def share_ppm(p: Params, mag_x10: int) -> int:
@@ -95,6 +98,10 @@ class Tremor:
         self.paid = {}          # account -> the value of acc when its balance was last settled
         self.div_pot = 0        # dividend coins created but not yet credited to an account
         self.div_total = 0      # all dividend coins ever created
+        self.gacc = 0           # giver bonus per coin ever given so far, times SCALE
+        self.gpaid = {}         # account -> the value of gacc when it was last settled
+        self.given_sum = 0      # all coins ever given
+        self.bonus_total = 0    # part of div_total set aside for givers
         self.calm_days = 0      # days that paid a dividend
         self.settled_to = None  # the next day to settle (None until the first transaction)
         self.quake_day = None   # the last day on which a quake was counted
@@ -125,12 +132,12 @@ class Tremor:
         gives the giver no say in anything; the contract only remembers the running total per giver."""
         self.roll(now)
         if a in self.p.relief: raise Reject("relief accounts cannot give")
-        self._settle(a)
+        self._settle(a)   # settle first, so a new giver cannot claim bonus from before they gave
         if n <= 0 or self.tok.get(a, 0) < n: raise Reject("insufficient balance")
         self.tok[a] -= n
         for r, part in zip(self.p.relief, split(n)):
             self.tok[r] += part
-        self.given[a] = self.given.get(a, 0) + n
+        self.given[a] = self.given.get(a, 0) + n; self.given_sum += n
         self.log.append(("gave", a, n, self.given[a], now))
 
     # ---- calm-day dividend
@@ -149,21 +156,29 @@ class Tremor:
             if eligible <= 0: continue
             d = self.supply * self.p.calm_ppm // 10**6
             if d == 0: continue
-            self.acc += d * SCALE // eligible
+            # the giver bonus: a per-coin-given rate, the same for every giver, limited by the pool and by the cap; spent is rounded up so
+            # that what givers can be credited never exceeds what was set aside. What they do not take goes to holders.
+            pool = d * self.p.giver_share_ppm // 10**6
+            if self.given_sum > 0 and pool > 0 and self.p.giver_cap_ppm > 0:
+                rate = min(pool * SCALE // self.given_sum, self.p.giver_cap_ppm * SCALE // 10**6)
+                spent = (self.given_sum * rate + SCALE - 1) // SCALE
+            else: rate, spent = 0, 0
+            self.acc += (d - spent) * SCALE // eligible; self.gacc += rate; self.bonus_total += spent
             self.supply += d; self.div_pot += d; self.div_total += d; self.calm_days += 1; minted += d
         if minted: self.log.append(("dividend", first, self.settled_to, minted, self.supply, now))
 
     def _settle(self, a):
         """Credit account a with the dividend its balance has earned since it was last settled. Relief accounts earn none."""
         if a in self.p.relief: return 0
-        owed = self.tok.get(a, 0) * (self.acc - self.paid.get(a, 0)) // SCALE
-        self.paid[a] = self.acc
+        owed = self.tok.get(a, 0) * (self.acc - self.paid.get(a, 0)) // SCALE + self.given.get(a, 0) * (self.gacc - self.gpaid.get(a, 0)) // SCALE
+        self.paid[a] = self.acc; self.gpaid[a] = self.gacc
         if owed: self.tok[a] += owed; self.div_pot -= owed
         return owed
 
     def holding(self, a):
         """Balance plus the dividend already settled by roll() but not yet credited."""
-        return self.tok.get(a, 0) + (0 if a in self.p.relief else self.tok.get(a, 0) * (self.acc - self.paid.get(a, 0)) // SCALE)
+        return self.tok.get(a, 0) + (0 if a in self.p.relief else self.tok.get(a, 0) * (self.acc - self.paid.get(a, 0)) // SCALE
+                                     + self.given.get(a, 0) * (self.gacc - self.gpaid.get(a, 0)) // SCALE)
 
     def claim_dividend(self, a, now):
         self.roll(now)
@@ -176,7 +191,7 @@ class Tremor:
         """What claim_dividend would credit right now (changes nothing)."""
         import copy
         c = copy.deepcopy(self); c.log = []; c.roll(now)
-        return 0 if a in c.p.relief else c.tok.get(a, 0) * (c.acc - c.paid.get(a, 0)) // SCALE
+        return 0 if a in c.p.relief else c.tok.get(a, 0) * (c.acc - c.paid.get(a, 0)) // SCALE + c.given.get(a, 0) * (c.gacc - c.gpaid.get(a, 0)) // SCALE
 
     # ---- caps
     def minted_last(self, now, days):
@@ -261,6 +276,7 @@ class Tremor:
         assert self.supply == sum(self.tok.values()) + self.div_pot and self.div_pot >= 0, "balances + unclaimed dividend = supply"
         assert all(v >= 0 for v in self.tok.values())
         assert all(v > 0 for v in self.given.values()) and not set(self.given) & set(self.p.relief), "givers"
+        assert self.given_sum == sum(self.given.values()) and self.bonus_total <= self.div_total, "giver totals"
         for e in self.ev.values():
             assert e.minted == 0 or e.status == "counted"
             if e.status == "counted":
@@ -274,5 +290,6 @@ class Tremor:
         return dict(supply=self.supply, tok=nz(self.tok), buckets=nz(self.buckets), recent=list(self.recent), tapped=sorted(self.tapped), given=nz(self.given),
                     div=[str(self.acc), self.div_pot, self.div_total, self.calm_days, -1 if self.settled_to is None else self.settled_to, -1 if self.quake_day is None else self.quake_day],
                     paid={k: str(v) for k, v in sorted(self.paid.items()) if v},
+                    gdiv=[str(self.gacc), self.bonus_total, self.given_sum], gpaid={k: str(v) for k, v in sorted(self.gpaid.items()) if v},
                     events={k: [e.status, e.minted, e.clipped, e.claimer or "", e.created_at,
                                 [[m, o, a, sorted(s)] for (m, o, a), s in sorted(e.versions.items())]] for k, e in sorted(self.ev.items())})

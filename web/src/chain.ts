@@ -3,12 +3,12 @@ import { DEP } from "./deployment";
 
 export interface Params {
   s0: string; min_mag_x10: number; min_alert?: number; base_ppm: number; max_event_ppm: number; cooldown_s: number; week_cap_ppm: number; month_cap_ppm: number;
-  min_age_s: number; max_age_s: number; max_open: number; max_claims: number; claim_wait_s: number; threshold: number; calm_ppm?: number; tap_amount: string;
+  min_age_s: number; max_age_s: number; max_open: number; max_claims: number; claim_wait_s: number; threshold: number; calm_ppm?: number; giver_share_ppm?: number; giver_cap_ppm?: number; tap_amount: string;
   publisher_accounts: string[]; relief_accounts: string[];
 }
 export interface State {
   supply: string; initial_supply: string; minted_7d: string; minted_30d: string; week_left: string; month_left: string; pending_events: number;
-  tap_pool: string; given_total?: string; givers?: number; dividends_total?: string; dividend_pot?: string; calm_days?: number; log_len: number; now_s: number; // the optional fields: contracts deployed with give() and the calm-day dividend
+  tap_pool: string; given_total?: string; givers?: number; dividends_total?: string; dividend_pot?: string; calm_days?: number; giver_bonus_total?: string; log_len: number; now_s: number; // the optional fields: contracts deployed with give() and the calm-day dividend
 }
 export interface Version { mag_x10: number; origin_s: number; alert?: number; attesters: string[] }
 export interface Ev {
@@ -64,6 +64,24 @@ export async function listGivers(): Promise<Giver[] | null> {
     }
   } catch { return null; }
   return out.sort((a, b) => (BigInt(b.given) > BigInt(a.given) ? 1 : BigInt(b.given) < BigInt(a.given) ? -1 : 0));
+}
+
+/** For each giver: in how many "quake rounds" they gave, counted from the public log: a round is a gift made after at least one new quake had
+ *  counted since that account's previous gift (so giving ten times between two quakes is one round). Computed in the browser; a label, not a power. */
+export async function giverRounds(): Promise<Map<string, number>> {
+  const lines: string[] = [];
+  for (let guard = 0; guard < 200; guard++) { // at most 20,000 log lines
+    const page = await view<string[]>("get_log", { from: lines.length, limit: 100 });
+    lines.push(...page); if (page.length < 100) break;
+  }
+  const rounds = new Map<string, number>(), seen = new Map<string, number>(); let quakes = 0;
+  for (const l of lines) {
+    let e: { event: string; data: { account?: string } };
+    try { e = JSON.parse(l); } catch { continue; }
+    if (e.event === "event_counted") quakes++;
+    else if (e.event === "gave" && e.data.account) { const a = e.data.account; if (quakes > (seen.get(a) ?? 0)) rounds.set(a, (rounds.get(a) ?? 0) + 1); seen.set(a, quakes); }
+  }
+  return rounds;
 }
 
 export async function registered(account: string): Promise<boolean> { return (await view<unknown>("storage_balance_of", { account_id: account })) !== null; }

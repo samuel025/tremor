@@ -71,7 +71,7 @@ L += [f"- Real events that count: {pct(s5.counted(s5.real_ids),1)}. Made-up clai
       "- Claims have their own limit, separate from the limit on events the bots start, so claim spam cannot take the slots the bots need.", "",
       "## Scenario 6: community giving (holders send their own coins to the relief list)", "",
       "Assumed behaviour, not measured: 100 holders with 0.1% of the initial supply each and one with 5%, reacting to counted quakes (the variants are written down in docs/DECISIONS.md before the run).", "",
-      "| variant | givers | gifts | coins given (TREM) | given as a share of coins minted | largest giver's share of gifts | supply and mints same as scenario 1 |", "|---|---|---|---|---|---|---|"]
+      "| variant | givers | gifts | coins given (TREM) | given as a share of coins minted | largest giver's share of gifts | giver bonus paid (TREM) | bonus as a share of gifts | supply and mints same as scenario 1 |", "|---|---|---|---|---|---|---|---|---|"]
 base_runs = {sd: run_s1(P, sd) for sd in SEEDS}; minted1 = base_runs[SEEDS[0]].t.supply - P.s0 - base_runs[SEEDS[0]].t.div_total
 for m, label in GIVE_MODES.items():
     rs = [give_runs[m]] + [run_s6(P, m, sd) for sd in SEEDS[1:]]
@@ -79,12 +79,25 @@ for m, label in GIVE_MODES.items():
         g = sum(x.t.given.values()); b = base_runs[sd]
         assert [d["supply"] for d in x.series] == [d["supply"] for d in b.series] and [l for l in x.t.log if l[0] == "event_counted"] == [l for l in b.t.log if l[0] == "event_counted"], f"G1 failed in {m} seed {sd}"
         assert sum(x.t.tok[a] for a in P.relief) == sum(b.t.tok[a] for a in P.relief) + g, f"G2 failed in {m} seed {sd}"
+        days = x.t.calm_days  # B1: the bonus never exceeds its share of the dividends, nor the cap summed over the calm days (an aggregate bound)
+        assert x.t.bonus_total <= P.giver_share_ppm * x.t.div_total // 10**6 + 1 and x.t.bonus_total <= P.giver_cap_ppm * g * days // 10**6 + days, f"B1 failed in {m} seed {sd}"
     tot = mean([sum(x.t.given.values()) for x in rs]); top = mean([max(x.t.given.values()) / sum(x.t.given.values()) if x.t.given else 0 for x in rs])
-    L.append(f"| {label} | {mean([len(x.t.given) for x in rs]):.1f} | {mean([sum(1 for l in x.t.log if l[0] == 'gave') for x in rs]):.1f} | {tot/U:,.0f} | {pct(tot / minted1, 1)} | {pct(top, 1) if tot else 'n/a'} | yes |")
+    L.append(f"| {label} | {mean([len(x.t.given) for x in rs]):.1f} | {mean([sum(1 for l in x.t.log if l[0] == 'gave') for x in rs]):.1f} | {tot/U:,.0f} | {pct(tot / minted1, 1)} | {pct(top, 1) if tot else 'n/a'} | {mean([x.t.bonus_total for x in rs])/U:,.0f} | {pct(mean([x.t.bonus_total for x in rs]) / tot, 1) if tot else 'n/a'} | yes |")
 ms = give_runs["many_small"]; h0 = SMALL[0]; wh = give_runs["whale"]
+def farm(givers, each, days=60):  # B2 and B3: 60 calm days, gifts made on day 0
+    t = Tremor(Params(s0=P.s0, calm_ppm=P.calm_ppm, giver_share_ppm=P.giver_share_ppm, giver_cap_ppm=P.giver_cap_ppm), "ada"); now = 20000 * DAY
+    for i in range(givers): t.ft_transfer("ada", f"g{i}", each, now)
+    for i in range(givers): t.give(f"g{i}", each, now + 1)
+    t.roll(now + days * DAY + 5); t.check_invariants()
+    return t, sum(t.holding(f"g{i}") for i in range(givers))
+one, h1 = farm(1, 10_000 * U); many, h50 = farm(50, 200 * U); tiny, _ = farm(1, 1 * U)
+assert abs(one.bonus_total - many.bonus_total) <= 50 and abs(h1 - h50) <= 50, "B2 failed"
+assert tiny.bonus_total <= 300_000, "B3 failed"
+bonus_lines = [f"- Giver bonus (20% of each calm-day dividend, each coin given earns at most 0.5% a day): a single account giving 10,000 TREM earned {one.bonus_total / U:,.2f} TREM in 60 calm days; fifty accounts giving 200 TREM each earned {many.bonus_total / U:,.2f} TREM in total, so splitting gifts gains nothing (the giver accounts' holdings differ by {abs(h1 - h50)} base units). A lone giver of 1 TREM earned {tiny.bonus_total / U:.4f} TREM, so tiny gifts cannot farm the pool. A gift takes at least about 200 calm days to earn back; with many givers the shared pool, not the cap, limits it (the 10,000 TREM gift above earned about 12% in 60 days)."]
 L += ["", f"Mean of {len(SEEDS)} seeds. In every variant and every seed the daily supply and every mint are identical to scenario 1, and the relief accounts end with scenario 1's balances plus exactly the gifts: giving creates nothing and moves no cap. "
       f"Quakes created {minted1/U:,.0f} TREM for the relief list in these 60 days; the gifts above are on top of that, paid by the givers alone. "
-      f"A large holder giving 10% after each M7+ ends with {wh.t.tok[WHALE]/U:,.0f} TREM of {P.s0//20//U:,} and all of the gifts. These numbers follow from the assumed behaviour: they show how the mechanic responds, not how people would act.", "",
+      f"A large holder giving 10% after each M7+ ends with {wh.t.tok[WHALE]/U:,.0f} TREM of {P.s0//20//U:,} and all of the gifts. These numbers follow from the assumed behaviour: they show how the mechanic responds, not how people would act.", ""] + bonus_lines + [""]
+L += ["",
       "## Scenario 7: the calm-day dividend (real quakes, five honest bots, the chosen quake parameters)", "",
       "| dividend per calm day | calm days that paid (60 days plus the 3 closing days) | created for holders (TREM) | created for relief (TREM) | passive holder's loss of share (60d) | weeks with a clipped quake mint | passes every check |", "|---|---|---|---|---|---|---|"]
 for cd in CJ["candidates"]:

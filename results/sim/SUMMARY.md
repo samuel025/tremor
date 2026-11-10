@@ -57,14 +57,17 @@ With two or fewer bots offline every real event still counts. With three or more
 
 Assumed behaviour, not measured: 100 holders with 0.1% of the initial supply each and one with 5%, reacting to counted quakes (the variants are written down in docs/DECISIONS.md before the run).
 
-| variant | givers | gifts | coins given (TREM) | given as a share of coins minted | largest giver's share of gifts | supply and mints same as scenario 1 |
-|---|---|---|---|---|---|---|
-| 6a nobody gives | 0.0 | 0.0 | 0 | 0.0% | n/a | yes |
-| 6b a few give after big quakes | 27.0 | 29.9 | 299 | 1.9% | 7.5% | yes |
-| 6c many give a little after every quake | 96.8 | 247.5 | 1,234 | 7.8% | 2.0% | yes |
-| 6d one large holder gives after M7+ | 1.0 | 2.0 | 9,516 | 60.0% | 100.0% | yes |
+| variant | givers | gifts | coins given (TREM) | given as a share of coins minted | largest giver's share of gifts | giver bonus paid (TREM) | bonus as a share of gifts | supply and mints same as scenario 1 |
+|---|---|---|---|---|---|---|---|---|
+| 6a nobody gives | 0.0 | 0.0 | 0 | 0.0% | n/a | 0 | n/a | yes |
+| 6b a few give after big quakes | 27.0 | 29.9 | 299 | 1.9% | 7.5% | 37 | 12.3% | yes |
+| 6c many give a little after every quake | 96.8 | 247.5 | 1,234 | 7.8% | 2.0% | 158 | 12.8% | yes |
+| 6d one large holder gives after M7+ | 1.0 | 2.0 | 9,516 | 60.0% | 100.0% | 570 | 6.0% | yes |
 
-Mean of 20 seeds. In every variant and every seed the daily supply and every mint are identical to scenario 1, and the relief accounts end with scenario 1's balances plus exactly the gifts: giving creates nothing and moves no cap. Quakes created 15,868 TREM for the relief list in these 60 days; the gifts above are on top of that, paid by the givers alone. A large holder giving 10% after each M7+ ends with 40,686 TREM of 50,000 and all of the gifts. These numbers follow from the assumed behaviour: they show how the mechanic responds, not how people would act.
+Mean of 20 seeds. In every variant and every seed the daily supply and every mint are identical to scenario 1, and the relief accounts end with scenario 1's balances plus exactly the gifts: giving creates nothing and moves no cap. Quakes created 15,868 TREM for the relief list in these 60 days; the gifts above are on top of that, paid by the givers alone. A large holder giving 10% after each M7+ ends with 40,879 TREM of 50,000 and all of the gifts. These numbers follow from the assumed behaviour: they show how the mechanic responds, not how people would act.
+
+- Giver bonus (20% of each calm-day dividend, each coin given earns at most 0.5% a day): a single account giving 10,000 TREM earned 1,203.55 TREM in 60 calm days; fifty accounts giving 200 TREM each earned 1,203.55 TREM in total, so splitting gifts gains nothing (the giver accounts' holdings differ by 34 base units). A lone giver of 1 TREM earned 0.3000 TREM, so tiny gifts cannot farm the pool. A gift takes at least about 200 calm days to earn back; with many givers the shared pool, not the cap, limits it (the 10,000 TREM gift above earned about 12% in 60 days).
+
 
 ## Scenario 7: the calm-day dividend (real quakes, five honest bots, the chosen quake parameters)
 
