@@ -20,7 +20,7 @@
  },
  "verify_onchain": {
   "demo": {
-   "pass_": 19,
+   "pass_": 16,
    "fail": 0,
    "ok": true,
    "date": "2026-11-10",
@@ -82,7 +82,7 @@
   "pass_": 27,
   "fail": 0,
   "ok": true,
-  "date": "2026-11-08"
+  "date": "2026-11-10"
  },
  "tap_amount": 5000,
  "web_conformance": {

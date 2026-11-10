@@ -10,7 +10,7 @@ Two copies of the same contract code run on NEAR testnet. Both have fixed parame
 | A quake must be this old before bots confirm it | 10 s (so a catalog quake can be confirmed at once) | 6 h (USGS revises fresh events) |
 | Oldest quake that can count | 60 days (the committed catalog) | 14 days |
 | Who confirms | The five bots, **only visitors' claims** (`--claims-only`): the demo starts empty | The five bots, every recent M6+ quake plus claims |
-| How the bots run | `make demo-bots` (= `bots/bots.mjs --net demo --claims-only --loop 4`) on a computer that stays on, or by hand in GitHub (`.github/workflows/bots-demo.yml`) | `.github/workflows/bots-live.yml`, every 20 minutes |
+| How the bots run | `make demo-bots` (= `bots/bots.mjs --net demo --claims-only --loop 4`) on a computer that stays on (no GitHub job: the page no longer uses the Demo) | `.github/workflows/bots-live.yml`, every 20 minutes |
 | Starter coins (`tap`) | 5,000 TREM once per account, from a 300,000 TREM pool | same |
 
 ## How the deciding works
@@ -28,6 +28,6 @@ Five publisher accounts (`bot1` to `bot5`, set in `new`, never changed) are the 
 - On Live, a visitor's claim of a real but not-yet-confirmed quake is confirmed within the 20 minute bot schedule once it is 6 hours old, so a result there can take hours. Use Demo for a result in seconds.
 - If the demo bots are not running, nothing is confirmed on the demo: a claim just stays pending, then shows as not confirmed. The recorded run on the page still shows the whole story.
 - `make demo` redeploys the demo contract and attests with the bot accounts' full keys itself: stop any running `bots.mjs --net demo` first, or the bots will confirm its quakes before it does.
-- GitHub may delay or skip scheduled runs, disables scheduled jobs in a public repo after 60 days without activity, and its terms are meant for project automation. The Live job fits that. The Demo loop is manual-start only; or run the same command on any machine that stays on.
+- GitHub may delay or skip scheduled runs, disables scheduled jobs in a public repo after 60 days without activity, and its terms are meant for project automation. The Live job fits that. There is no Demo job in GitHub; run the Demo bots with `make demo-bots` on any machine that stays on.
 
 - If the Demo bots are not running when a judge claims a real quake, the page tells the judge "The bots have not answered yet" and to ask the project owner. Start them before judging with `make demo-bots`, and watch that the process stays alive (it stops if the computer sleeps).

@@ -19,9 +19,9 @@ Every number below is read from `results/results.json`, which `make results` fil
 - `make sandbox-test`: 10 simulated-network tests pass, 0 fail (2026-11-10). One pending event costs about 309 bytes of storage; `attest` burns about 3 Tgas with 63 events pending.
 - `make conformance-web`: the TypeScript rules engine behind the page's simulation matches the Python reference on 202 seeded scenarios, 27,891 steps, 0 mismatches, and golden vectors 1 and 5 (2026-11-10).
 - `make replay` (offline): 14 checks pass, 0 fail (2026-11-10).
-- `make verify-onchain` (demo, `tremor.rounds-indep-5928.testnet`): 19 checks pass, 0 fail (2026-11-10). The contract still has 1 access key; every key is deleted only as the very last step, on the human's word, and `python3 scripts/verify_onchain.py --net demo --final` then demands an empty list.
+- `make verify-onchain` (demo, `tremor.rounds-indep-5928.testnet`): 16 checks pass, 0 fail (2026-11-10). The contract still has 1 access key; every key is deleted only as the very last step, on the human's word, and `python3 scripts/verify_onchain.py --net demo --final` then demands an empty list.
 - `make verify-onchain` (live, `tremor-live.rounds-fund-5928.testnet`): 14 checks pass, 0 fail (2026-11-10). The contract still has 1 access key; every key is deleted only as the very last step, on the human's word, and `python3 scripts/verify_onchain.py --net live --final` then demands an empty list.
-- `make demo` (testnet): 27 of 27 checks matched the reference's expected values (2026-11-08).
+- `make demo` (testnet): 27 of 27 checks matched the reference's expected values (2026-11-10).
 - `make sim`: 27 parameter combinations were tried on 352 real events (28 of M6.0 or more); 4 passed every threshold that was written down before the run (`docs/DECISIONS.md`). Chosen: 0.25% base share, 1.5% weekly cap, 5% monthly cap. A passive holder is diluted by 6.42% over the 60 real days. See `results/sim/SUMMARY.md`.
 
 ## Try it in five minutes (do X, see Y)

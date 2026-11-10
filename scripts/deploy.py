@@ -16,10 +16,31 @@ PROFILES = {
 }
 
 
-def sh(*a, check=True):
-    r = subprocess.run(a, capture_output=True, text=True, env=ENV); out = r.stdout + r.stderr
+def sh(*a, check=True, cwd=None):
+    r = subprocess.run(a, capture_output=True, text=True, env=ENV, cwd=cwd); out = r.stdout + r.stderr
     if check and ("Error:" in out or r.returncode): raise SystemExit("FAILED: " + " ".join(a[:7]) + "\n" + out[-700:])
     return out
+
+
+def rpc(method, params):
+    body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}).encode()
+    for url in ("https://test.rpc.fastnear.com", "https://rpc.testnet.near.org"):
+        try: return json.load(urllib.request.urlopen(urllib.request.Request(url, body, {"Content-Type": "application/json"}), timeout=60))
+        except Exception: continue
+    raise SystemExit("no RPC answered")
+
+
+def clear_state(acct):
+    """Deploy scripts/reset_state (a 50 KB testnet-only tool, callable only by the account itself) and have it remove every stored key."""
+    tool = ROOT / "scripts/reset_state"
+    r = subprocess.run(["cargo", "near", "build", "non-reproducible-wasm", "--no-abi"], cwd=tool, capture_output=True, text=True)  # inside the crate, with your normal HOME (the toolchain lives there; ENV points HOME at .state)
+    if r.returncode: raise SystemExit("building scripts/reset_state failed:\n" + (r.stdout + r.stderr)[-600:])
+    wasm = next((tool / "target/near").glob("*.wasm"))
+    keys = [v["key"] for v in rpc("query", {"request_type": "view_state", "finality": "final", "account_id": acct, "prefix_base64": ""})["result"]["values"]]
+    sh("near", "contract", "deploy", acct, "use-file", str(wasm), "with-init-call", "clean", "json-args", json.dumps(keys), "prepaid-gas", "100 Tgas", "attached-deposit", "0 NEAR", "network-config", "testnet", "sign-with-legacy-keychain", "send")
+    left = rpc("query", {"request_type": "view_state", "finality": "final", "account_id": acct, "prefix_base64": ""})["result"]["values"]
+    if left: raise SystemExit(f"state not cleared: {len(left)} keys left")
+    print(f"  cleared {len(keys)} stored keys")
 
 
 def exists(acct):
@@ -46,7 +67,11 @@ def main():
     P = PROFILES[prof]; parent = (ROOT / ".state" / P["parent_file"]).read_text().strip(); C = f"{P['contract']}.{parent}"; L = f"{P['launcher']}.{parent}"
     reliefs = [f"relief{i}.{parent}" for i in range(1, 6)]; bots = [f"bot{i}.{parent}" for i in range(1, 6)]
     if "--reset" in sys.argv and exists(C):
-        print("reset: deleting", C); sh("near", "account", "delete-account", C, "beneficiary", parent, "network-config", "testnet", "sign-with-legacy-keychain", "send")
+        print("reset: deleting", C)
+        out = sh("near", "account", "delete-account", C, "beneficiary", parent, "network-config", "testnet", "sign-with-legacy-keychain", "send", check=False)
+        if "state is large" in out:  # testnet bans deleting an account with a lot of stored data: clear the old state instead, then deploy over the account
+            print("  testnet refuses to delete an account with large state; clearing the old state instead"); clear_state(C)
+        elif "Error:" in out: raise SystemExit("FAILED to delete " + C + "\n" + out[-600:])
     print("accounts:"); create(L, parent, "0.3")
     for r in reliefs: create(r, parent, "0.05")
     for b in bots: create(b, parent, "0.25")
