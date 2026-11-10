@@ -191,3 +191,12 @@ h2 .tag{display:inline-block;vertical-align:middle;font:600 14px/1 var(--text);l
 
 .realbar{display:flex;gap:24px;align-items:center;justify-content:space-between;margin:20px 0 14px;background:var(--white)}.realbar b{font:600 19px/1.3 var(--display)}.realbar p{margin:6px 0 0;color:var(--slate);font-size:15px;max-width:46em}.realbar .blue{flex:none;font-size:15px;padding:10px 20px;white-space:nowrap}
 @media(max-width:760px){.realbar{flex-direction:column;align-items:flex-start}}
+/* ---- one navigation bar, and tabbed Live and Evidence sections (same look as the rest of the page) ---- */
+.wm{font:600 20px/1 var(--display);letter-spacing:.2px;margin-left:-18px}
+.gnav nav a{padding:4px 0}.gnav nav a.on{box-shadow:inset 0 -2px 0 var(--ink)}
+.tabbar{margin:0 0 28px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}.tabbar .seg{margin:0}
+.tabpanel[hidden]{display:none}.tabpanel .gap{margin-top:44px}.tabpanel>h3:first-child{font-size:26px;margin-bottom:6px}
+.howmore{margin-top:22px;max-width:46em}
+@media(max-width:760px){.gnav nav{display:flex;gap:16px;margin-left:auto}.gnav nav a{font-size:14px}.wm{display:none}.gnav-in{gap:14px}.launch{margin-left:0}}
+@media(max-width:520px){.launch{display:none}}
+.tabbar{scrollbar-width:none}.tabbar::-webkit-scrollbar{display:none}

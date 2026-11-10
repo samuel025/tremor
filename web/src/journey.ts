@@ -59,7 +59,7 @@ function stuck(ev: Ev, c: Ctx): boolean {
 }
 
 function result(ev: Ev | undefined, dead: boolean): string {
-  const again = `<div class="acts"><button class="out" data-j="again">Try another quake</button><a class="out" href="#bots">Watch the bots decide</a></div>`;
+  const again = `<div class="acts"><button class="out" data-j="again">Try another quake</button><a class="out" href="#evidence-run">Watch the bots decide</a></div>`;
   if (!ev) return `<p>Appears once your claim is decided.</p>`;
   if (ev.status === "counted") {
     const m = BigInt(ev.minted), each = m / 5n;

@@ -9,21 +9,20 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%231d1d1f'/%3E%3Cpath d='M4 17h5l3-8 5 15 3-9 2 2h6' fill='none' stroke='white' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 </head>
 <body>
-<a class="skip" href="#live">Skip to the live state</a>
+<a class="skip" href="#live">Skip to the live contract</a>
 <header class="top">
   <div class="gnav"><canvas id="navtrace" aria-hidden="true"></canvas><div class="gnav-in">
-    <a class="glyph" href="#top" aria-label="Tremor home"><svg viewBox="0 0 32 32" width="18" height="18" aria-hidden="true"><path d="M2 17h6l4-10 6 18 4-11 2 3h6" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
-    <nav aria-label="Sections"><a href="#try">Try it</a><a href="#bots">The bots</a><a href="#events">Events</a><a href="#givers" id="nav-givers" hidden>Givers</a><a href="#map">Map</a><a href="#params">Rules</a><a href="#sim">Simulation</a></nav>
+    <a class="glyph" href="#top" aria-label="Tremor home"><svg viewBox="0 0 32 32" width="18" height="18" aria-hidden="true"><path d="M2 17h6l4-10 6 18 4-11 2 3h6" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a><b class="wm">Tremor</b>
+    <nav aria-label="Sections"><a href="#how">How it works</a><a href="#try">Try it</a><a href="#live">Live</a><a href="#evidence">Evidence</a></nav>
     <span class="launch">Testnet · no value</span>
   </div></div>
-  <div class="lnav"><div class="lnav-in"><b>Tremor</b><span class="sp"></span><a class="out" href="#bots">How the bots decide</a><a class="blue" href="#try">Try it</a></div></div>
 </header>
 <main id="top">
 <section class="hero" id="hero">
   <div class="hero-text shake-a">
     <p class="kicker">Tremor</p>
-    <h1>When the earth shakes, this coin does something.</h1>
-    <p class="lead">Five fixed bots read the official earthquake record. When three of them agree that a magnitude 6 or larger quake happened and the USGS expects it to affect people, Tremor creates a small amount of new supply for a fixed relief list. Calm days pay holders a small dividend. Every mint is limited, nobody votes, and the rules are written into the contract.</p>
+    <h1>A coin that grows only when a quake affects people.</h1>
+    <p class="lead">When the USGS reports a magnitude 6 or larger earthquake that it expects to affect people, and three of five fixed bots agree, Tremor creates a small, capped amount of new supply for a fixed relief list. Nobody votes, there is no admin, and every rule is written into the contract.</p>
   </div>
   <div class="stage" aria-label="Animated seismogram replaying real earthquakes from the committed USGS catalog">
     <canvas id="seismo"></canvas>
@@ -40,92 +39,113 @@
 
 <div class="wrap"><div id="banner" class="banner" hidden></div></div>
 
-<section id="try" class="band mist"><div class="wrap">
+<section id="how" class="band mist"><div class="wrap reveal">
+  <h2>How it works</h2>
+  <p class="sub">Three steps, all enforced by the contract. Nothing on this page is needed for any of them to happen.</p>
+  <div class="grid3">
+    <div class="card stat"><small>Step 1</small><b>USGS reports a quake that affects people</b><p class="note">Magnitude 6 or more, and the USGS's own estimate of impact (its PAGER alert level) at yellow or higher. Remote or low-impact quakes never count.</p></div>
+    <div class="card stat"><small>Step 2</small><b>Three of five fixed bots agree</b><p class="note">Five bots read the official record on their own. A quake counts only when three attest exactly the same thing. Coins give no say.</p></div>
+    <div class="card stat"><small>Step 3</small><b>Relief gets new coins</b><p class="note">A small amount of new TREM is split between five fixed relief accounts, inside weekly and monthly caps. Calm days pay holders a little, and holders can give their own coins too.</p></div>
+  </div>
+  <p class="note howmore">Honest limits: this is a testnet prototype with no value. Trust sits in the five bots, here all run by one entrant on one server. <a href="#evidence-check">See how to check every claim yourself</a>.</p>
+</div></section>
+
+<section id="try" class="band"><div class="wrap">
   <h2>Try it yourself <span class="tag">simulation</span></h2>
   <p class="sub">Play with the whole mechanism in your browser: tell the contract about a quake, watch five bots decide, and see the coins appear. No wallet, nothing to install, and nothing that can be offline.</p>
   <div id="sim-host"><div class="skeleton tall"></div></div>
-  <div class="card realbar"><div><b>Want to see it on the real blockchain?</b><p>The simulation above is instant. The Live contract is the real thing on NEAR testnet: connect a free wallet, tell it about a quake, and the real bots confirm it. It is slow on purpose (a quake must be 6 hours old, and the bots run every 20 minutes), so a result takes hours.</p></div><a class="blue" href="#real" data-open="real">Open the Live walkthrough</a></div>
-  <details class="card more" id="real"><summary>The real thing: the Live contract (free wallet, results take hours)</summary>
+  <div class="card realbar"><div><b>Want to see it on the real blockchain?</b><p>The simulation is instant. The Live contract below is the real thing on NEAR testnet: connect a free wallet, tell it about a quake, and the real bots confirm it. It is slow on purpose (a quake must be 6 hours old, and the bots run every 20 minutes).</p></div><a class="blue" href="#live-wallet">Open the Live walkthrough</a></div>
+</div></section>
+
+<section id="live" class="band mist"><div class="wrap reveal">
+  <h2>Live on NEAR testnet</h2>
+  <p class="sub">This is the real contract, read straight from the chain. <a id="contract-link2" href="#" rel="noopener">–</a></p>
+  <div class="tabbar"><div class="seg" role="tablist" aria-label="Live contract views" data-tabs="live">
+    <button role="tab" data-tab="overview">Overview</button><button role="tab" data-tab="quakes">Quakes</button><button role="tab" data-tab="relief">Relief &amp; givers</button><button role="tab" data-tab="rules">Rules</button><button role="tab" data-tab="wallet">Try it with a wallet</button>
+  </div></div>
+
+  <div class="tabpanel" data-panel="live:overview">
+    <p class="sub">New quake coins are capped for any 7 days and any 30 days, so nobody can be diluted past a fixed amount. These meters show how much of each allowance is used.</p>
+    <div class="grid2">
+      <div class="card meter"><div class="mh"><b>This week</b><span id="wk-t">–</span></div><div class="bar"><i id="wk-bar"></i></div><p class="note" id="wk-n"></p></div>
+      <div class="card meter"><div class="mh"><b>This month</b><span id="mo-t">–</span></div><div class="bar"><i id="mo-bar"></i></div><p class="note" id="mo-n"></p></div>
+    </div>
+    <div class="card meter wide" id="calm-card" hidden><div class="mh"><b>Calm days</b><span id="calm-t">–</span></div><p class="note" id="calm-n"></p></div>
+    <div class="card meter wide"><div class="mh"><b>Supply against the start</b><span id="sp-t">–</span></div><div class="bar"><i id="sp-bar"></i></div><p class="note">Supply only ever grows: when a confirmed quake mints for the relief list, and by a much smaller amount for holders after a day with no counted quake.</p></div>
+  </div>
+
+  <div class="tabpanel" data-panel="live:quakes" hidden>
+    <h3>Every quake the contract knows about</h3>
+    <p class="sub">Which of the five bots have attested it, whether it counted, and a check against the USGS record made by this page in your browser.</p>
+    <div id="board" class="board"><div class="skeleton"></div><div class="skeleton"></div></div>
+    <h3 class="gap">Real quakes the bots have not reported yet</h3>
+    <p class="sub">USGS events of magnitude 6 or more, with expected impact of yellow or higher, that the contract has not seen yet. The bots pick these up by themselves once they are old enough.</p>
+    <div id="unrep" class="list"></div>
+  </div>
+
+  <div class="tabpanel" data-panel="live:relief" hidden>
+    <h3>The relief list</h3>
+    <p class="sub">Five fixed accounts, set at launch and never changed. Each mint is split equally. On testnet they are stand-ins: nothing real is donated.</p>
+    <div id="relief-list" class="relief"></div>
+    <div id="givers" hidden>
+      <h3 class="gap">Givers board</h3>
+      <p class="sub">Any holder can send their own coins to the relief list. It creates no new coins and gives no say in what counts; the contract only keeps the total each account has given.</p>
+      <div class="card" id="givers-card"></div>
+    </div>
+  </div>
+
+  <div class="tabpanel" data-panel="live:rules" hidden>
+    <h3>The rules, fixed at launch</h3>
+    <p class="sub">Read straight from the contract. There is no owner and no method that changes any of these.</p>
+    <div class="grid2"><div class="card"><table class="kv" id="params-t"></table></div>
+    <div class="card proof"><h3>Proof there is no admin</h3><p id="keys-line" class="big-n">–</p><p class="note">Access keys on the contract account, read live. The demo keeps one key until the build is final; at the very end every key is deleted and this reads 0. Run <code>make verify-onchain</code> to also check the deployed code has no owner, admin or upgrade method.</p></div></div>
+  </div>
+
+  <div class="tabpanel" data-panel="live:wallet" hidden>
     <div id="modebar" class="modebar"></div>
     <div id="journey-host"><div class="skeleton tall"></div></div>
     <div id="wallet-card"></div>
     <form id="lookup" class="lookup"><label for="acct">Look up any testnet account (no wallet needed)</label><div class="row"><input id="acct" placeholder="ada.example.testnet" autocomplete="off" spellcheck="false"><button class="btn" type="submit">Look up</button></div><p id="lookup-out" class="note" aria-live="polite"></p></form>
-  </details>
-</div></section>
-
-<section id="bots" class="band"><div class="wrap reveal">
-  <h2>Watch the bots decide</h2>
-  <p class="sub">Nobody votes and coins give no say. Five fixed bots check the official record on their own, and a quake counts only when three of them attest exactly the same thing. Here is a recording of a real run on testnet, including what would happen if bots disagreed or turned bad.</p>
-  <div class="card" id="decide-host"><div class="skeleton"></div></div>
-</div></section>
-
-<section id="live" class="band mist"><div class="wrap reveal">
-  <div class="head"><h2>What is on the chain right now</h2><a class="more" href="#params">The rules ›</a></div>
-  <p class="sub">New coins are capped for any 7 days and any 30 days, so nobody can be diluted past a fixed amount. These meters show how much of each allowance is used.</p>
-  <div class="grid2">
-    <div class="card meter"><div class="mh"><b>This week</b><span id="wk-t">–</span></div><div class="bar"><i id="wk-bar"></i></div><p class="note" id="wk-n"></p></div>
-    <div class="card meter"><div class="mh"><b>This month</b><span id="mo-t">–</span></div><div class="bar"><i id="mo-bar"></i></div><p class="note" id="mo-n"></p></div>
   </div>
-  <div class="card meter wide" id="calm-card" hidden><div class="mh"><b>Calm days</b><span id="calm-t">–</span></div><p class="note" id="calm-n"></p></div>
-  <div class="card meter wide"><div class="mh"><b>Supply against the start</b><span id="sp-t">–</span></div><div class="bar"><i id="sp-bar"></i></div><p class="note">Supply only ever grows: when a confirmed quake mints for the relief list, and by a much smaller amount for holders after a day with no counted quake.</p></div>
 </div></section>
 
-<section id="events" class="band"><div class="wrap reveal">
-  <h2>Event board</h2>
-  <p class="sub">Every quake the contract knows about: which of the five bots have attested it, whether it counted, and a check against the USGS record made by this page in your browser.</p>
-  <div id="board" class="board"><div class="skeleton"></div><div class="skeleton"></div></div>
-</div></section>
+<section id="evidence" class="band"><div class="wrap reveal">
+  <h2>The evidence</h2>
+  <p class="sub">Do not trust this page. Everything here comes from committed data and code you can run yourself.</p>
+  <div class="tabbar"><div class="seg" role="tablist" aria-label="Evidence views" data-tabs="evidence">
+    <button role="tab" data-tab="map">60 real days</button><button role="tab" data-tab="sim">Simulation results</button><button role="tab" data-tab="run">A recorded bot run</button><button role="tab" data-tab="check">Check it yourself</button>
+  </div></div>
 
-<section id="unreported" class="band mist"><div class="wrap reveal">
-  <h2>Real quakes nobody has reported</h2>
-  <p class="sub">USGS events of magnitude 6 or more, with expected impact of yellow or higher, that the contract has not seen yet. The bots pick these up by themselves once they are old enough.</p>
-  <div id="unrep" class="list"></div>
-</div></section>
+  <div class="tabpanel" data-panel="evidence:map">
+    <h3>Sixty days of real earthquakes</h3>
+    <p class="sub">Every dot is a USGS event of magnitude 5 or more in the committed window. Press replay: each M6+ sends out waves and shakes the map; orange dots are the ones that count (USGS expects at least yellow impact), and the supply responds to those, using the chosen parameters from the simulation.</p>
+    <div class="card" id="mapcard"><div class="skeleton tall"></div></div>
+  </div>
 
-<section id="relief" class="band"><div class="wrap reveal">
-  <h2>The relief list</h2>
-  <p class="sub">Five fixed accounts, set at launch and never changed. Each mint is split equally. On testnet they are stand-ins: nothing real is donated.</p>
-  <div id="relief-list" class="relief"></div>
-</div></section>
+  <div class="tabpanel" data-panel="evidence:sim" hidden>
+    <h3>We simulated it before choosing the numbers</h3>
+    <p class="sub" id="sim-sub">Loading…</p>
+    <div id="sim-cards" class="grid3"></div>
+    <div id="charts" class="charts"></div>
+    <details class="card full"><summary>Full simulation results</summary><div id="summary" class="md"></div></details>
+  </div>
 
-<section id="givers" class="band mist" hidden><div class="wrap reveal">
-  <h2>Givers board</h2>
-  <p class="sub">Any holder can send their own coins to the relief list. It creates no new coins and gives no say in what counts; the contract only keeps the total each account has given.</p>
-  <div class="card" id="givers-card"></div>
-</div></section>
+  <div class="tabpanel" data-panel="evidence:run" hidden>
+    <h3>Watch the bots decide</h3>
+    <p class="sub">Nobody votes and coins give no say. Five fixed bots check the official record on their own, and a quake counts only when three of them attest exactly the same thing. Here is a recording of a real run on testnet, including what would happen if bots disagreed or turned bad.</p>
+    <div class="card" id="decide-host"><div class="skeleton"></div></div>
+  </div>
 
-<section id="map" class="band"><div class="wrap reveal">
-  <h2>Sixty days of real earthquakes</h2>
-  <p class="sub">Every dot is a USGS event of magnitude 5 or more in the committed window. Press replay: each M6+ sends out waves and shakes the map; orange dots are the ones that count (USGS expects at least yellow impact), and the supply responds to those, using the chosen parameters from the simulation.</p>
-  <div class="card" id="mapcard"><div class="skeleton tall"></div></div>
-</div></section>
-
-
-
-<section id="params" class="band mist"><div class="wrap reveal">
-  <h2>The rules, fixed at launch</h2>
-  <p class="sub">Read straight from the contract. There is no owner and no method that changes any of these.</p>
-  <div class="grid2"><div class="card"><table class="kv" id="params-t"></table></div>
-  <div class="card proof"><h3>Proof there is no admin</h3><p id="keys-line" class="big-n">–</p><p class="note">Access keys on the contract account, read live. The demo keeps one key until the build is final; at the very end every key is deleted and this reads 0. Run <code>make verify-onchain</code> to also check the deployed code has no owner, admin or upgrade method.</p></div></div>
-</div></section>
-
-<section id="sim" class="band"><div class="wrap reveal">
-  <h2>We simulated it before choosing the numbers</h2>
-  <p class="sub" id="sim-sub">Loading…</p>
-  <div id="sim-cards" class="grid3"></div>
-  <div id="charts" class="charts"></div>
-  <details class="card full"><summary>Full simulation results</summary><div id="summary" class="md"></div></details>
-</div></section>
-
-<section id="check" class="band"><div class="wrap reveal">
-  <h2>How to check me</h2>
-  <p class="sub">Do not trust this page. Run the checks yourself.</p>
-  <div class="card code"><pre><code>git clone https://github.com/samuel025/tremor.git &amp;&amp; cd tremor
+  <div class="tabpanel" data-panel="evidence:check" hidden>
+    <h3>How to check me</h3>
+    <p class="sub">Run these yourself. Each one is a command in the repository.</p>
+    <div class="card code"><pre><code>git clone https://github.com/samuel025/tremor.git &amp;&amp; cd tremor
 make test              # Python reference and golden vectors
-make conformance       # Rust contract vs Python on 200 random scenarios
-make sim               # the six simulation scenarios on real data
+make conformance       # Rust contract vs Python on random scenarios
+make sim               # the simulation scenarios on real data
 make replay            # recompute the chain log offline
 make verify-onchain    # read the live contract and compare</code></pre></div>
+  </div>
 </div></section>
 
 </main>

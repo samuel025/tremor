@@ -78,7 +78,7 @@ function renderBoard(evs: Ev[], p: Params) {
   const sig = (me ?? "") + JSON.stringify(evs) + [...flags.entries()].map(([k, f]) => k + f.kind).join() + Math.floor(nowS() / 60);
   if (sig === boardSig) return; // unchanged: keep the DOM so card animations do not restart every poll
   boardSig = sig;
-  if (!evs.length) { board.innerHTML = `<div class="empty card">No events yet. The first report will appear here.</div>`; return; }
+  if (!evs.length) { board.innerHTML = `<div class="empty card"><b>No quake has counted on Live yet.</b> A quake appears here only when the USGS expects it to affect people (alert level yellow or higher) and the bots have picked it up, which can take days. To see the whole flow now, use the simulation above or the recorded bot run under <a href="#evidence-run">Evidence</a>.</div>`; return; }
   board.innerHTML = [...evs].sort((a, b) => b.created_at - a.created_at).map((e) => card(e, p)).join("");
   evs.forEach((e) => { const k = e.event_id; if (!flags.has(k) && e.mag_x10) checkEvent(k, e.mag_x10, e.origin_s, e.alert ?? 0).then((f) => { flags.set(k, f); renderBoardFlags(); }); });
 }
@@ -139,7 +139,7 @@ async function refresh() {
 // The givers board: only on a contract deployed with give(); the section stays hidden otherwise.
 async function renderGivers(s: State) {
   const gs = await listGivers(); if (!gs) return;
-  $("#givers").hidden = false; $("#nav-givers").hidden = false;
+  $("#givers").hidden = false;
   const total = BigInt(s.given_total ?? "0"), minted = BigInt(s.supply) - BigInt(s.initial_supply);
   const head = `<p class="big-n"><b>${trem(total)}</b> TREM given by ${gs.length} account${gs.length === 1 ? "" : "s"}</p><p class="note">Quakes have created ${trem(minted)} TREM for the relief list. Gifts are on top of that, and come out of the givers' own coins. The board ranks by amount, so a large holder can top it; it is a record, not a power.</p>`;
   const rows = gs.slice(0, 20).map((g, i) => `<tr><td>${i + 1}</td><td>${esc(g.account_id)}${g.account_id === me ? " <b>(you)</b>" : ""}</td><td>${trem(g.given)} TREM</td></tr>`).join("");
@@ -169,6 +169,7 @@ $("#lookup").addEventListener("submit", async (ev) => {
   catch { out.textContent = "That account has no Tremor balance, or the lookup failed."; }
 });
 
+initTabs();
 reveal();
 start();
 initMotion();
@@ -266,10 +267,31 @@ async function act(label: string, fn: () => Promise<unknown>) {
   for (const ms of [2500, 5000, 9000, 15000]) setTimeout(() => { refresh(); loadMine(); }, ms);
 }
 
-// "Open the Live walkthrough": unfold the real-contract section and bring it into view
-function openReal() { const d = document.querySelector<HTMLDetailsElement>("details#real"); if (d) { d.open = true; setTimeout(() => d.scrollIntoView({ behavior: "smooth", block: "start" }), 50); } }
-document.addEventListener("click", (ev) => { const a = (ev.target as HTMLElement).closest<HTMLElement>("[data-open=real]"); if (a) { ev.preventDefault(); openReal(); } });
-if (location.hash === "#real") setTimeout(openReal, 600);
+// ---- tabs and navigation ---------------------------------------------------------------------------------------------------
+// Two tabbed sections (Live and Evidence). A tab can be opened by a link like #live-quakes or #evidence-run; #real (an old link) opens the wallet tab.
+type TabBar = HTMLElement & { showTab?: (k: string) => void };
+function initTabs() {
+  document.querySelectorAll<TabBar>("[data-tabs]").forEach((bar) => {
+    const group = bar.dataset.tabs!;
+    const show = (k: string) => {
+      bar.querySelectorAll<HTMLButtonElement>("button").forEach((b) => { const on = b.dataset.tab === k; b.classList.toggle("on", on); b.setAttribute("aria-selected", String(on)); });
+      document.querySelectorAll<HTMLElement>(`[data-panel^="${group}:"]`).forEach((p) => (p.hidden = p.dataset.panel !== `${group}:${k}`));
+    };
+    bar.showTab = show;
+    bar.addEventListener("click", (e) => { const b = (e.target as HTMLElement).closest<HTMLButtonElement>("button"); if (b) show(b.dataset.tab!); });
+    show(bar.querySelector("button")!.dataset.tab!);
+  });
+  const go = () => {
+    const h = location.hash === "#real" ? "#live-wallet" : location.hash, m = h.match(/^#(live|evidence)-(\w+)$/); if (!m) return;
+    const bar = document.querySelector<TabBar>(`[data-tabs="${m[1]}"]`); if (!bar?.querySelector(`[data-tab="${m[2]}"]`)) return;
+    bar.showTab!(m[2]); setTimeout(() => document.getElementById(m[1])?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  };
+  addEventListener("hashchange", go); go();
+  // the nav link for the section being read is underlined
+  const links = [...document.querySelectorAll<HTMLAnchorElement>(".gnav nav a")], secs = links.map((a) => document.querySelector<HTMLElement>(a.getAttribute("href")!));
+  const spy = () => { let on = -1; secs.forEach((s, i) => { if (s && s.getBoundingClientRect().top < innerHeight * 0.35) on = i; }); links.forEach((a, i) => a.classList.toggle("on", i === on)); };
+  addEventListener("scroll", spy, { passive: true }); spy();
+}
 document.addEventListener("click", (ev) => {
   const t = ev.target as HTMLElement; const el = t.closest<HTMLElement>("button,a[data-j]"); if (!el) return;
   const j = el.dataset.j;
@@ -294,7 +316,7 @@ document.addEventListener("click", (ev) => {
 
 async function start() {
   await loadDeployments();
-  $("#contract-link").setAttribute("href", EXPLORER + DEP.contract); $("#contract-link").textContent = DEP.contract;
+  for (const id of ["#contract-link", "#contract-link2"]) { $(id).setAttribute("href", EXPLORER + DEP.contract); $(id).textContent = DEP.contract; }
   renderSteps(); renderWallet(); renderJourneyNow(); initDecide($("#decide-host"));
   if (new URLSearchParams(location.search).has("transactionHashes")) { toast("Transaction sent from your wallet. Refreshing…"); const u = new URL(location.href); u.searchParams.delete("transactionHashes"); history.replaceState(null, "", u); }
   wallet().then((w) => w.initWallet(DEP.contract, (a) => { me = a; loadMine(); boardSig = ""; if (lastState) renderBoardFlags(); })).catch(() => ($("#wallet-card").innerHTML = "<h3>Your wallet</h3><p class='note'>The wallet library could not start in this browser.</p>"));
