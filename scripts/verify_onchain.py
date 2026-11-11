@@ -15,7 +15,7 @@ RPCS = ["https://test.rpc.fastnear.com", "https://rpc.testnet.near.org"]  # the 
 C = a.contract or json.loads((ROOT / "deployments.json").read_text())[a.net or "live"]["contract"]  # public file: works in a fresh clone
 fails = 0
 ALLOWED = {"attest", "submit_claim", "contract_source_metadata", "ft_balance_of", "ft_metadata", "ft_resolve_transfer", "ft_total_supply", "ft_transfer", "ft_transfer_call",
-           "get_event", "get_log", "get_params", "get_state", "list_events", "memory", "new", "storage_balance_bounds", "storage_balance_of", "storage_deposit", "tap", "has_tapped", "give", "given_of", "list_givers", "claim_dividend", "dividend_of"}
+           "get_event", "get_log", "get_params", "get_state", "list_events", "memory", "new", "storage_balance_bounds", "storage_balance_of", "storage_deposit", "tap", "has_tapped", "give", "given_of", "list_givers", "fund_match", "match_preview", "matched_of"}
 
 def rpc(method, params):
     for url in RPCS:
@@ -49,8 +49,9 @@ ref, bad = replay(prm, log, st["now_s"])
 check("log fully read", len(log) == st["log_len"], f"({len(log)} lines)")
 check("replaying the on-chain log reproduces every claim, attestation, mint, clipped flag and supply", not bad, "; ".join(bad[:3]))
 check("total supply equals the reference", int(view("ft_total_supply")) == ref.supply, f"({ref.supply})")
-check("supply = initial supply + all quake mints + calm-day dividends", ref.supply == int(prm["s0"]) + sum(int(e["minted"]) for e in events) + int(st.get("dividends_total", 0)))
-if "dividends_total" in st: check("calm-day dividends match the reference", (int(st["dividends_total"]), st["calm_days"]) == (ref.div_total, ref.calm_days), f"({ref.calm_days} calm days, {ref.div_total / 1e6:,.2f} TREM for holders)")
+check("supply = initial supply + all quake mints (the reserve and its matches create nothing)", ref.supply == int(prm["s0"]) + sum(int(e["minted"]) for e in events))
+if "reserve" in st: check("the matching reserve and everything matched agree with the reference", (int(st["reserve"]), int(st["funded_total"]), int(st["matched_total"])) == (ref.reserve, ref.funded_total, ref.matched_total),
+                          f"(reserve {ref.reserve / 1e6:,.2f} TREM, matched {ref.matched_total / 1e6:,.2f} TREM of {ref.funded_total / 1e6:,.2f} TREM put in)")
 relief = {}
 for r in prm["relief_accounts"]:
     relief[r] = view("ft_balance_of", {"account_id": r}); check(f"relief balance {r.split('.')[0]}", int(relief[r]) == ref.tok.get(r, 0), f"({int(relief[r]) / 1e6:,.2f} TREM)")

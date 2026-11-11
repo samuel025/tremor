@@ -12,12 +12,13 @@ Two copies of the same contract code run on NEAR testnet. Both have fixed parame
 | Who confirms | The five bots, **only visitors' claims** (`--claims-only`): the demo starts empty | The five bots, every recent M6+ quake whose USGS expected impact is yellow or higher, plus claims |
 | How the bots run | `make demo-bots` (= `bots/bots.mjs --net demo --claims-only --loop 4`) on a computer that stays on (no GitHub job: the page no longer uses the Demo) | `.github/workflows/bots-live.yml`, every 20 minutes |
 | Starter coins (`tap`) | 5,000 TREM once per account, from a 300,000 TREM pool | same |
+| Donation match reserve | 100,000 TREM put in by the launcher at deploy (`fund_match`); gifts are topped up by 10% | same |
 
 ## How the deciding works
 Five publisher accounts (`bot1` to `bot5`, set in `new`, never changed) are the only accounts that can call `attest`. A quake counts when three different bots attest exactly the same (id, magnitude, origin time). Each bot reads USGS on its own and attests only what it finds there. Visitors can `submit_claim` a quake; a claim mints nothing and the bots attest it only if USGS has it, so a made-up claim stays pending and expires.
 
 ## Setting up
-- `python3 scripts/deploy.py demo [--reset]` and `python3 scripts/deploy.py live [--reset]` create the accounts (launcher, five relief accounts, five bots), deploy, fill the tap pool and make each bot a function-call key that can only call `attest`. They need funded testnet parents in `.state/` and cost test coins only. `--rekey` makes new bot keys.
+- `python3 scripts/deploy.py demo [--reset]` and `python3 scripts/deploy.py live [--reset]` create the accounts (launcher, five relief accounts, five bots), deploy, fill the tap pool, put 100,000 TREM in the donation-matching reserve and make each bot a function-call key that can only call `attest`. They need funded testnet parents in `.state/` and cost test coins only. `--rekey` makes new bot keys.
 - Bot keys: `.state/bot_keys_live.json` and `.state/bot_keys_demo.json` (a JSON object {account: private key}). They go into the GitHub Actions secrets `BOT_KEYS_LIVE` and `BOT_KEYS_DEMO`. Never commit them. If one leaks, run `deploy.py <net> --rekey`; a leaked key can only call `attest` on that contract (and only as that one bot), and the bots hold no coins.
 - The bots need NEAR in their accounts for gas (0.25 NEAR each when created, about a thousand attestations). The page is built by `.github/workflows/pages.yml` (Settings > Pages > Source: GitHub Actions).
 

@@ -15,9 +15,10 @@
   "max_claims": 32,
   "claim_wait_s": 120,
   "threshold": 3,
-  "calm_ppm": 100,
-  "giver_share_ppm": 200000,
-  "giver_cap_ppm": 5000,
+  "match_ppm": 100000,
+  "match_day_ppm": 5000,
+  "match_month_ppm": 20000,
+  "match_account_max": "1000000000",
   "tap_amount": "5000000000",
   "publisher_accounts": [
    "bot1.rounds-indep-5928.testnet",
@@ -45,54 +46,56 @@
   "tap_pool": "300000000000",
   "given_total": "1000000000",
   "givers": 1,
-  "dividends_total": "0",
-  "dividend_pot": "0",
-  "calm_days": 0,
-  "giver_bonus_total": "0",
+  "reserve": "99900000000",
+  "funded_total": "100000000000",
+  "matched_total": "100000000",
+  "matched_7d": "100000000",
+  "match_day_left": "4957181133",
+  "match_month_left": "20128724534",
   "log_len": 17,
-  "now_s": 1794338364
+  "now_s": 1794380180
  },
  "supply": "1011436226729",
  "log": [
-  "{\"event\":\"clock_started\",\"data\":{\"day\":20767,\"time\":1794338224}}",
-  "{\"event\":\"claim_submitted\",\"data\":{\"event_id\":\"us6000u1cf\",\"claimer\":\"dayo.rounds-indep-5928.testnet\",\"mag_x10\":60,\"origin_s\":1791605641,\"alert\":2,\"time\":1794338232}}",
-  "{\"event\":\"attested\",\"data\":{\"event_id\":\"us6000u1cf\",\"publisher\":\"bot1.rounds-indep-5928.testnet\",\"mag_x10\":60,\"origin_s\":1791605641,\"alert\":2,\"attestations\":1,\"time\":1794338241}}",
-  "{\"event\":\"attested\",\"data\":{\"event_id\":\"us6000u1cf\",\"publisher\":\"bot2.rounds-indep-5928.testnet\",\"mag_x10\":60,\"origin_s\":1791605641,\"alert\":2,\"attestations\":2,\"time\":1794338248}}",
-  "{\"event\":\"attested\",\"data\":{\"event_id\":\"us6000u1cf\",\"publisher\":\"bot3.rounds-indep-5928.testnet\",\"mag_x10\":60,\"origin_s\":1791605641,\"alert\":2,\"attestations\":3,\"time\":1794338257}}",
-  "{\"event\":\"event_counted\",\"data\":{\"event_id\":\"us6000u1cf\",\"mag_x10\":60,\"origin_s\":1791605641,\"alert\":2,\"minted\":\"2500000000\",\"clipped\":false,\"supply\":\"1002500000000\",\"time\":1794338257}}",
-  "{\"event\":\"claim_submitted\",\"data\":{\"event_id\":\"fake-001\",\"claimer\":\"bayo.rounds-indep-5928.testnet\",\"mag_x10\":74,\"origin_s\":1794338165,\"alert\":2,\"time\":1794338290}}",
-  "{\"event\":\"attested\",\"data\":{\"event_id\":\"us6000u18k\",\"publisher\":\"bot1.rounds-indep-5928.testnet\",\"mag_x10\":77,\"origin_s\":1791568565,\"alert\":3,\"attestations\":1,\"time\":1794338299}}",
-  "{\"event\":\"attested\",\"data\":{\"event_id\":\"us6000u18k\",\"publisher\":\"bot2.rounds-indep-5928.testnet\",\"mag_x10\":77,\"origin_s\":1791568565,\"alert\":3,\"attestations\":2,\"time\":1794338305}}",
-  "{\"event\":\"attested\",\"data\":{\"event_id\":\"us6000u18k\",\"publisher\":\"bot3.rounds-indep-5928.testnet\",\"mag_x10\":78,\"origin_s\":1791568565,\"alert\":3,\"attestations\":1,\"time\":1794338311}}",
-  "{\"event\":\"attested\",\"data\":{\"event_id\":\"us6000u18k\",\"publisher\":\"bot4.rounds-indep-5928.testnet\",\"mag_x10\":77,\"origin_s\":1791568565,\"alert\":3,\"attestations\":3,\"time\":1794338319}}",
-  "{\"event\":\"event_counted\",\"data\":{\"event_id\":\"us6000u18k\",\"mag_x10\":77,\"origin_s\":1791568565,\"alert\":3,\"minted\":\"2903803906\",\"clipped\":false,\"supply\":\"1005403803906\",\"time\":1794338319}}",
-  "{\"event\":\"attested\",\"data\":{\"event_id\":\"fake-001\",\"publisher\":\"bot1.rounds-indep-5928.testnet\",\"mag_x10\":74,\"origin_s\":1794338172,\"alert\":2,\"attestations\":1,\"time\":1794338325}}",
-  "{\"event\":\"attested\",\"data\":{\"event_id\":\"fake-001\",\"publisher\":\"bot2.rounds-indep-5928.testnet\",\"mag_x10\":74,\"origin_s\":1794338172,\"alert\":2,\"attestations\":2,\"time\":1794338332}}",
-  "{\"event\":\"attested\",\"data\":{\"event_id\":\"fake-001\",\"publisher\":\"bot3.rounds-indep-5928.testnet\",\"mag_x10\":74,\"origin_s\":1794338172,\"alert\":2,\"attestations\":3,\"time\":1794338340}}",
-  "{\"event\":\"event_counted\",\"data\":{\"event_id\":\"fake-001\",\"mag_x10\":74,\"origin_s\":1794338172,\"alert\":2,\"minted\":\"6032422823\",\"clipped\":false,\"supply\":\"1011436226729\",\"time\":1794338340}}",
-  "{\"event\":\"gave\",\"data\":{\"account\":\"ada.rounds-indep-5928.testnet\",\"amount\":\"1000000000\",\"total\":\"1000000000\",\"time\":1794338347}}"
+  "{\"event\":\"funded\",\"data\":{\"account\":\"ada.rounds-indep-5928.testnet\",\"amount\":\"100000000000\",\"reserve\":\"100000000000\",\"time\":1794380010}}",
+  "{\"event\":\"claim_submitted\",\"data\":{\"event_id\":\"us6000u1cf\",\"claimer\":\"dayo.rounds-indep-5928.testnet\",\"mag_x10\":60,\"origin_s\":1791605641,\"alert\":2,\"time\":1794380021}}",
+  "{\"event\":\"attested\",\"data\":{\"event_id\":\"us6000u1cf\",\"publisher\":\"bot1.rounds-indep-5928.testnet\",\"mag_x10\":60,\"origin_s\":1791605641,\"alert\":2,\"attestations\":1,\"time\":1794380031}}",
+  "{\"event\":\"attested\",\"data\":{\"event_id\":\"us6000u1cf\",\"publisher\":\"bot2.rounds-indep-5928.testnet\",\"mag_x10\":60,\"origin_s\":1791605641,\"alert\":2,\"attestations\":2,\"time\":1794380039}}",
+  "{\"event\":\"attested\",\"data\":{\"event_id\":\"us6000u1cf\",\"publisher\":\"bot3.rounds-indep-5928.testnet\",\"mag_x10\":60,\"origin_s\":1791605641,\"alert\":2,\"attestations\":3,\"time\":1794380048}}",
+  "{\"event\":\"event_counted\",\"data\":{\"event_id\":\"us6000u1cf\",\"mag_x10\":60,\"origin_s\":1791605641,\"alert\":2,\"minted\":\"2500000000\",\"clipped\":false,\"supply\":\"1002500000000\",\"time\":1794380048}}",
+  "{\"event\":\"claim_submitted\",\"data\":{\"event_id\":\"fake-001\",\"claimer\":\"bayo.rounds-indep-5928.testnet\",\"mag_x10\":74,\"origin_s\":1794379959,\"alert\":2,\"time\":1794380085}}",
+  "{\"event\":\"attested\",\"data\":{\"event_id\":\"us6000u18k\",\"publisher\":\"bot1.rounds-indep-5928.testnet\",\"mag_x10\":77,\"origin_s\":1791568565,\"alert\":3,\"attestations\":1,\"time\":1794380097}}",
+  "{\"event\":\"attested\",\"data\":{\"event_id\":\"us6000u18k\",\"publisher\":\"bot2.rounds-indep-5928.testnet\",\"mag_x10\":77,\"origin_s\":1791568565,\"alert\":3,\"attestations\":2,\"time\":1794380105}}",
+  "{\"event\":\"attested\",\"data\":{\"event_id\":\"us6000u18k\",\"publisher\":\"bot3.rounds-indep-5928.testnet\",\"mag_x10\":78,\"origin_s\":1791568565,\"alert\":3,\"attestations\":1,\"time\":1794380113}}",
+  "{\"event\":\"attested\",\"data\":{\"event_id\":\"us6000u18k\",\"publisher\":\"bot4.rounds-indep-5928.testnet\",\"mag_x10\":77,\"origin_s\":1791568565,\"alert\":3,\"attestations\":3,\"time\":1794380122}}",
+  "{\"event\":\"event_counted\",\"data\":{\"event_id\":\"us6000u18k\",\"mag_x10\":77,\"origin_s\":1791568565,\"alert\":3,\"minted\":\"2903803906\",\"clipped\":false,\"supply\":\"1005403803906\",\"time\":1794380122}}",
+  "{\"event\":\"attested\",\"data\":{\"event_id\":\"fake-001\",\"publisher\":\"bot1.rounds-indep-5928.testnet\",\"mag_x10\":74,\"origin_s\":1794379966,\"alert\":2,\"attestations\":1,\"time\":1794380131}}",
+  "{\"event\":\"attested\",\"data\":{\"event_id\":\"fake-001\",\"publisher\":\"bot2.rounds-indep-5928.testnet\",\"mag_x10\":74,\"origin_s\":1794379966,\"alert\":2,\"attestations\":2,\"time\":1794380139}}",
+  "{\"event\":\"attested\",\"data\":{\"event_id\":\"fake-001\",\"publisher\":\"bot3.rounds-indep-5928.testnet\",\"mag_x10\":74,\"origin_s\":1794379966,\"alert\":2,\"attestations\":3,\"time\":1794380147}}",
+  "{\"event\":\"event_counted\",\"data\":{\"event_id\":\"fake-001\",\"mag_x10\":74,\"origin_s\":1794379966,\"alert\":2,\"minted\":\"6032422823\",\"clipped\":false,\"supply\":\"1011436226729\",\"time\":1794380147}}",
+  "{\"event\":\"gave\",\"data\":{\"account\":\"ada.rounds-indep-5928.testnet\",\"amount\":\"1000000000\",\"matched\":\"100000000\",\"total\":\"1000000000\",\"reserve\":\"99900000000\",\"time\":1794380157}}"
  ],
  "events": [
   {
    "event_id": "fake-001",
    "status": "counted",
    "claimer": "bayo.rounds-indep-5928.testnet",
-   "created_at": 1794338290,
+   "created_at": 1794380085,
    "mag_x10": 74,
-   "origin_s": 1794338172,
+   "origin_s": 1794379966,
    "alert": 2,
    "attestations": 3,
    "needed": 3,
    "versions": [
     {
      "mag_x10": 74,
-     "origin_s": 1794338165,
+     "origin_s": 1794379959,
      "alert": 2,
      "attesters": []
     },
     {
      "mag_x10": 74,
-     "origin_s": 1794338172,
+     "origin_s": 1794379966,
      "alert": 2,
      "attesters": [
       "bot1.rounds-indep-5928.testnet",
@@ -101,7 +104,7 @@
      ]
     }
    ],
-   "claim_open_until": 1794338410,
+   "claim_open_until": 1794380205,
    "minted": "6032422823",
    "clipped": false
   },
@@ -109,7 +112,7 @@
    "event_id": "us6000u18k",
    "status": "counted",
    "claimer": null,
-   "created_at": 1794338299,
+   "created_at": 1794380097,
    "mag_x10": 77,
    "origin_s": 1791568565,
    "alert": 3,
@@ -143,7 +146,7 @@
    "event_id": "us6000u1cf",
    "status": "counted",
    "claimer": "dayo.rounds-indep-5928.testnet",
-   "created_at": 1794338232,
+   "created_at": 1794380021,
    "mag_x10": 60,
    "origin_s": 1791605641,
    "alert": 2,
@@ -161,16 +164,16 @@
      ]
     }
    ],
-   "claim_open_until": 1794338352,
+   "claim_open_until": 1794380141,
    "minted": "2500000000",
    "clipped": false
   }
  ],
  "relief_balances": {
-  "relief1.rounds-indep-5928.testnet": "2487245349",
-  "relief2.rounds-indep-5928.testnet": "2487245345",
-  "relief3.rounds-indep-5928.testnet": "2487245345",
-  "relief4.rounds-indep-5928.testnet": "2487245345",
-  "relief5.rounds-indep-5928.testnet": "2487245345"
+  "relief1.rounds-indep-5928.testnet": "2507245349",
+  "relief2.rounds-indep-5928.testnet": "2507245345",
+  "relief3.rounds-indep-5928.testnet": "2507245345",
+  "relief4.rounds-indep-5928.testnet": "2507245345",
+  "relief5.rounds-indep-5928.testnet": "2507245345"
  }
 }

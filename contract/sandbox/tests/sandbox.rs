@@ -15,7 +15,7 @@ impl Env {
 fn params(over: Value) -> Value {
     let mut p = json!({"s0": (1_000_000 * U).to_string(), "min_mag_x10": 60, "min_alert": 2, "base_ppm": 5000, "max_event_ppm": 15000, "cooldown_s": 86400,
         "week_cap_ppm": 15000, "month_cap_ppm": 50000, "min_age_s": 0, "max_age_s": 5_184_000, "max_open": 64, "max_claims": 32, "claim_wait_s": 3600,
-        "threshold": 3, "calm_ppm": 0, "giver_share_ppm": 0, "giver_cap_ppm": 0, "tap_amount": "0", "publisher_accounts": null, "relief_accounts": null});
+        "threshold": 3, "match_ppm": 0, "match_day_ppm": 0, "match_month_ppm": 0, "match_account_max": "0", "tap_amount": "0", "publisher_accounts": null, "relief_accounts": null});
     for (k, v) in over.as_object().unwrap() { p[k] = v.clone(); }
     p
 }
@@ -224,25 +224,28 @@ async fn give_moves_own_coins_to_relief_and_mints_nothing() -> anyhow::Result<()
 }
 
 #[tokio::test]
-async fn dividend_methods_are_wired_and_pay_nothing_before_a_day_has_passed() -> anyhow::Result<()> {
-    // The sandbox cannot jump days (moving its clock two days took over ten minutes), so the day-by-day arithmetic is checked on the
-    // same engine code by the conformance test and GV-5. Here: the methods exist on the deployed contract, settle on every balance
-    // change without disturbing it, and pay nothing while no full day has passed.
-    let e = setup(json!({"calm_ppm": 100, "giver_share_ppm": 200000, "giver_cap_ppm": 5000})).await?;
+async fn donation_match_tops_up_gifts_from_the_reserve_and_creates_nothing() -> anyhow::Result<()> {
+    // GV-5 on a simulated network (the sandbox cannot jump days, so the daily and 30-day budgets are checked on the same engine code by
+    // the conformance test and GV-7/GV-8; here: the methods are wired, the reserve is drained only by gifts, and the supply never moves).
+    let e = setup(json!({"match_ppm": 100000, "match_day_ppm": 5000, "match_month_ppm": 20000, "match_account_max": (10_000 * U).to_string()})).await?;
     let prm = e.view("get_params", json!({})).await?;
-    assert_eq!((&prm["calm_ppm"], &prm["giver_share_ppm"], &prm["giver_cap_ppm"]), (&json!(100), &json!(200000), &json!(5000)));
-    e.who("judge").call(e.c.id(), "storage_deposit").args_json(json!({})).deposit(NearToken::from_millinear(2)).max_gas().transact().await?.into_result()?;
-    let r = e.who("ada").call(e.c.id(), "ft_transfer").args_json(json!({"receiver_id": e.who("judge").id(), "amount": (100_000 * U).to_string()})).deposit(Y1).max_gas().transact().await?;
-    eprintln!("MEASURE ft_transfer with dividend settling: {} Tgas", r.total_gas_burnt.as_tgas()); r.into_result()?;
-    assert_eq!(e.tok(e.who("judge").id().as_str()).await, 100_000 * U);
-    assert_eq!(e.view("dividend_of", json!({"account_id": e.who("judge").id()})).await?, "0");
-    e.call("judge", "give", json!({"amount": (1_000 * U).to_string()}), Y1).await?.into_result()?; // a giver: the bonus starts from the next calm day
-    assert_eq!(e.view("given_of", json!({"account_id": e.who("judge").id()})).await?, (1_000 * U).to_string());
-    assert!(e.call("judge", "claim_dividend", json!({}), NONE).await?.is_failure(), "nothing to claim on the first day");
-    let rel = e.relief[0].call(e.c.id(), "claim_dividend").gas(Gas::from_tgas(30)).transact().await?; assert!(rel.is_failure(), "relief accounts earn no dividend");
+    assert_eq!((&prm["match_ppm"], &prm["match_day_ppm"], &prm["match_month_ppm"], &prm["match_account_max"]), (&json!(100000), &json!(5000), &json!(20000), &json!((10_000 * U).to_string())));
+    let no_yocto = e.call("ada", "fund_match", json!({"amount": (50_000 * U).to_string()}), NONE).await?; assert!(no_yocto.is_failure(), "funding needs one yoctoNEAR, like a transfer");
+    e.call("ada", "fund_match", json!({"amount": (50_000 * U).to_string()}), Y1).await?.into_result()?;
     let st = e.view("get_state", json!({})).await?;
-    assert_eq!((st["calm_days"].as_u64(), st["dividends_total"].as_str(), st["dividend_pot"].as_str(), st["giver_bonus_total"].as_str()), (Some(0), Some("0"), Some("0"), Some("0")));
-    assert_eq!(e.supply().await, 1_000_000 * U);
+    assert_eq!((st["reserve"].as_str(), st["funded_total"].as_str(), st["supply"].as_str()), (Some((50_000 * U).to_string().as_str()), Some((50_000 * U).to_string().as_str()), Some((1_000_000 * U).to_string().as_str())));
+    assert_eq!(e.tok(e.who("ada").id().as_str()).await, 950_000 * U);
+    let rel = e.relief[0].call(e.c.id(), "fund_match").args_json(json!({"amount": "1"})).deposit(Y1).gas(Gas::from_tgas(30)).transact().await?; assert!(rel.is_failure(), "a relief account cannot fund the reserve");
+    assert_eq!(e.view("match_preview", json!({"account_id": e.who("ada").id(), "amount": (1_000 * U).to_string()})).await?, (100 * U).to_string());
+    let r = e.call("ada", "give", json!({"amount": (1_000 * U).to_string()}), Y1).await?; let gas = r.total_gas_burnt; r.into_result()?;
+    eprintln!("MEASURE give with a match: {} Tgas", gas.as_tgas());
+    assert_eq!(e.tok(e.relief[0].id().as_str()).await, 220 * U);
+    assert_eq!(e.tok(e.relief[4].id().as_str()).await, 220 * U);
+    let st = e.view("get_state", json!({})).await?;
+    assert_eq!((st["reserve"].as_str(), st["matched_total"].as_str(), st["given_total"].as_str()), (Some((49_900 * U).to_string().as_str()), Some((100 * U).to_string().as_str()), Some((1_000 * U).to_string().as_str())));
+    assert_eq!(e.view("matched_of", json!({"account_id": e.who("ada").id()})).await?, (100 * U).to_string());
+    assert_eq!(e.supply().await, 1_000_000 * U, "matching creates no coins");
+    assert!(e.view("get_log", json!({"from": 0, "limit": 10})).await?.as_array().unwrap().iter().any(|l| l.as_str().unwrap().contains("\"event\":\"gave\"") && l.as_str().unwrap().contains("\"matched\":\"100000000\"")), "the log records the match");
     // a quake still mints exactly as before
     let o = e.now().await - 60; e.attest(&[1, 2, 3], "E1", 60, o).await?;
     assert_eq!(e.supply().await, 1_005_000 * U);

@@ -4,8 +4,7 @@ import csv, json, sys, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from simulate import *
 OUT = ROOT / "results/sim"; ch = json.load(open(OUT / "chosen.json")); c = ch["chosen"]
-CJ = json.load(open(OUT / "calm.json")); CALM = CJ["chosen_calm_ppm"]
-P = params(c["base_ppm"], c["week_ppm"], c["month_ppm"], CALM); DEF = params(5000, calm=CALM)
+P = params(c["base_ppm"], c["week_ppm"], c["month_ppm"]); DEF = params(5000); PM = params(c["base_ppm"], c["week_ppm"], c["month_ppm"], match=True)
 SEEDS = list(range(100, 120)); mean = lambda xs: sum(xs) / len(xs); pct = lambda x, d=2: f"{100 * x:.{d}f}%"
 fakes_counted = lambda s: sum(1 for e in s.fake_ids if e in s.t.ev and s.t.ev[e].status == "counted")
 
@@ -47,7 +46,7 @@ L = ["# Simulation summary", "",
      "One window is a small sample. Every number comes from the same integer reference that passes the golden vectors. Five fixed bots, three must agree; bots attest 1 to 3 hours after a quake.", "",
      "Hourly steps, seeds 100..119 (grid uses 100..111), nothing touches the network. Data: U.S. Geological Survey, ANSS ComCat.", "",
      "## Chosen parameters", "",
-     f"base share {c['base_ppm']/1e4:.2f}% at M6.0 (2x at M7, 3x at M8, max 1.5%), weekly cap {c['week_ppm']/1e4:.1f}%, monthly cap {c['month_ppm']/1e4:.1f}%, calm-day dividend {CALM/1e4:.2f}% of supply for holders after each full day with no counted quake (outside the caps, which bound quake mints; every scenario below has it switched on). "
+     f"base share {c['base_ppm']/1e4:.2f}% at M6.0 (2x at M7, 3x at M8, max 1.5%), weekly cap {c['week_ppm']/1e4:.1f}%, monthly cap {c['month_ppm']/1e4:.1f}%. Holding promises no return: supply changes only by quake mints. Scenario 7 adds the donation match. "
      f"{ch['n_pass']} of {ch['n_grid']} grid combinations passed every threshold in docs/DECISIONS.md. The grid's own pick (lowest passive-holder dilution) is base {ch['grid_pick']['base_ppm']/1e4:.2f}%, weekly {ch['grid_pick']['week_ppm']/1e4:.1f}%, monthly {ch['grid_pick']['month_ppm']/1e4:.1f}%; the confirmed values above are kept because they still pass. Full grid: `grid.csv` (passing rows first).", "",
      "## Scenario 1: real quakes, five honest bots", "", "| parameters | passive dilution (60d) | worst 30-day loss | weeks with a clipped mint | final supply (TREM) |", "|---|---|---|---|---|",
      s1row(P, "chosen"), s1row(DEF, "spec defaults (0.5% base)"), "",
@@ -71,40 +70,49 @@ L += [f"- Real events that count: {pct(s5.counted(s5.real_ids),1)}. Made-up clai
       "- Claims have their own limit, separate from the limit on events the bots start, so claim spam cannot take the slots the bots need.", "",
       "## Scenario 6: community giving (holders send their own coins to the relief list)", "",
       "Assumed behaviour, not measured: 100 holders with 0.1% of the initial supply each and one with 5%, reacting to counted quakes (the variants are written down in docs/DECISIONS.md before the run).", "",
-      "| variant | givers | gifts | coins given (TREM) | given as a share of coins minted | largest giver's share of gifts | giver bonus paid (TREM) | bonus as a share of gifts | supply and mints same as scenario 1 |", "|---|---|---|---|---|---|---|---|---|"]
-base_runs = {sd: run_s1(P, sd) for sd in SEEDS}; minted1 = base_runs[SEEDS[0]].t.supply - P.s0 - base_runs[SEEDS[0]].t.div_total
+      "| variant | givers | gifts | coins given (TREM) | given as a share of coins minted | largest giver's share of gifts | supply and mints same as scenario 1 |", "|---|---|---|---|---|---|---|"]
+base_runs = {sd: run_s1(P, sd) for sd in SEEDS}; minted1 = base_runs[SEEDS[0]].t.supply - P.s0
 for m, label in GIVE_MODES.items():
     rs = [give_runs[m]] + [run_s6(P, m, sd) for sd in SEEDS[1:]]
     for sd, x in zip(SEEDS, rs):  # hard checks G1 and G2, against scenario 1 run with the same seed (the seed sets when each bot attests)
         g = sum(x.t.given.values()); b = base_runs[sd]
         assert [d["supply"] for d in x.series] == [d["supply"] for d in b.series] and [l for l in x.t.log if l[0] == "event_counted"] == [l for l in b.t.log if l[0] == "event_counted"], f"G1 failed in {m} seed {sd}"
         assert sum(x.t.tok[a] for a in P.relief) == sum(b.t.tok[a] for a in P.relief) + g, f"G2 failed in {m} seed {sd}"
-        days = x.t.calm_days  # B1: the bonus never exceeds its share of the dividends, nor the cap summed over the calm days (an aggregate bound)
-        assert x.t.bonus_total <= P.giver_share_ppm * x.t.div_total // 10**6 + 1 and x.t.bonus_total <= P.giver_cap_ppm * g * days // 10**6 + days, f"B1 failed in {m} seed {sd}"
     tot = mean([sum(x.t.given.values()) for x in rs]); top = mean([max(x.t.given.values()) / sum(x.t.given.values()) if x.t.given else 0 for x in rs])
-    L.append(f"| {label} | {mean([len(x.t.given) for x in rs]):.1f} | {mean([sum(1 for l in x.t.log if l[0] == 'gave') for x in rs]):.1f} | {tot/U:,.0f} | {pct(tot / minted1, 1)} | {pct(top, 1) if tot else 'n/a'} | {mean([x.t.bonus_total for x in rs])/U:,.0f} | {pct(mean([x.t.bonus_total for x in rs]) / tot, 1) if tot else 'n/a'} | yes |")
-ms = give_runs["many_small"]; h0 = SMALL[0]; wh = give_runs["whale"]
-def farm(givers, each, days=60):  # B2 and B3: 60 calm days, gifts made on day 0
-    t = Tremor(Params(s0=P.s0, calm_ppm=P.calm_ppm, giver_share_ppm=P.giver_share_ppm, giver_cap_ppm=P.giver_cap_ppm), "ada"); now = 20000 * DAY
-    for i in range(givers): t.ft_transfer("ada", f"g{i}", each, now)
-    for i in range(givers): t.give(f"g{i}", each, now + 1)
-    t.roll(now + days * DAY + 5); t.check_invariants()
-    return t, sum(t.holding(f"g{i}") for i in range(givers))
-one, h1 = farm(1, 10_000 * U); many, h50 = farm(50, 200 * U); tiny, _ = farm(1, 1 * U)
-assert abs(one.bonus_total - many.bonus_total) <= 50 and abs(h1 - h50) <= 50, "B2 failed"
-assert tiny.bonus_total <= 300_000, "B3 failed"
-bonus_lines = [f"- Giver bonus (20% of each calm-day dividend, each coin given earns at most 0.5% a day): a single account giving 10,000 TREM earned {one.bonus_total / U:,.2f} TREM in 60 calm days; fifty accounts giving 200 TREM each earned {many.bonus_total / U:,.2f} TREM in total, so splitting gifts gains nothing (the giver accounts' holdings differ by {abs(h1 - h50)} base units). A lone giver of 1 TREM earned {tiny.bonus_total / U:.4f} TREM, so tiny gifts cannot farm the pool. A gift takes at least about 200 calm days to earn back; with many givers the shared pool, not the cap, limits it (the 10,000 TREM gift above earned about 12% in 60 days)."]
+    L.append(f"| {label} | {mean([len(x.t.given) for x in rs]):.1f} | {mean([sum(1 for l in x.t.log if l[0] == 'gave') for x in rs]):.1f} | {tot/U:,.0f} | {pct(tot / minted1, 1)} | {pct(top, 1) if tot else 'n/a'} | yes |")
+wh = give_runs["whale"]
 L += ["", f"Mean of {len(SEEDS)} seeds. In every variant and every seed the daily supply and every mint are identical to scenario 1, and the relief accounts end with scenario 1's balances plus exactly the gifts: giving creates nothing and moves no cap. "
       f"Quakes created {minted1/U:,.0f} TREM for the relief list in these 60 days; the gifts above are on top of that, paid by the givers alone. "
-      f"A large holder giving 10% after each M7+ ends with {wh.t.tok[WHALE]/U:,.0f} TREM of {P.s0//20//U:,} and all of the gifts. These numbers follow from the assumed behaviour: they show how the mechanic responds, not how people would act.", ""] + bonus_lines + [""]
-L += ["",
-      "## Scenario 7: the calm-day dividend (real quakes, five honest bots, the chosen quake parameters)", "",
-      "| dividend per calm day | calm days that paid (60 days plus the 3 closing days) | created for holders (TREM) | created for relief (TREM) | passive holder's loss of share (60d) | weeks with a clipped quake mint | passes every check |", "|---|---|---|---|---|---|---|"]
-for cd in CJ["candidates"]:
-    L.append(f"| {cd['calm_ppm']/1e4:.3f}%{' (chosen)' if cd['calm_ppm'] == CALM else ' (off)' if cd['calm_ppm'] == 0 else ''} | {cd['calm_days']} | {cd['holders_minted']/U:,.0f} | {cd['relief_minted']/U:,.0f} | {pct(cd['s1_dilution'])} | {pct(cd['s1_clipped_weeks'],1)} | {'yes' if cd['pass'] else 'no'} |")
-c0 = CJ["candidates"][0]; cc = next(x for x in CJ["candidates"] if x["calm_ppm"] == CALM)
-L += ["", f"The dividend is outside the weekly and monthly caps, which bound quake mints only, so relief's allowance is never spent on holders: relief received {cc['relief_minted']/U:,.0f} TREM with the chosen dividend and {c0['relief_minted']/U:,.0f} without it (slightly more, because each quake mints a share of a slightly larger supply). Holders received {cc['holders_minted']/U:,.0f} TREM. The dividend's own limit is one per day: at most {CALM/1e4:.2f}% of supply a day, about {7*CALM/1e4:.2f}% a week, on top of the quake caps. "
-      f"Said plainly: the dividend makes a holder's coin count grow (by {pct(cc['holders_minted'] / P.s0)} of the starting supply here) but hardly changes their share of the supply, because almost every coin is paid the same percentage. A passive holder's loss of share over the 60 days is {pct(cc['s1_dilution'])} with it and {pct(c0['s1_dilution'])} without. Only the relief accounts are left out, and they hold a few percent of the supply, so that is all the share there is to move. Every other account is paid in proportion to its balance, including the launcher.", "",
+      f"A large holder giving 10% after each M7+ ends with {wh.t.tok[WHALE]/U:,.0f} TREM of {P.s0//20//U:,} and all of the gifts. These numbers follow from the assumed behaviour: they show how the mechanic responds, not how people would act.", ""]
+# ---- scenario 7: the donation match (checks M1 to M4, logged in docs/DECISIONS.md before the run)
+match_runs = {m: run_s6(PM, m, 100) for m in GIVE_MODES}
+L += ["", "## Scenario 7: the donation match (the same giving behaviours, with a 100,000 TREM reserve)", "",
+      f"Launch values: the match adds 10% of a gift, at most {PM.match_day_ppm/1e4:.1f}% of supply a day and {PM.match_month_ppm/1e4:.0f}% over 30 days, and at most {PM.match_account_max/U:,.0f} TREM per account; the launcher puts {RESERVE/U:,.0f} TREM in the reserve first. "
+      "The match goes to the relief accounts, not to the giver, and creates no coins. Mean of 20 seeds.", "",
+      "| variant | coins given (TREM) | matched from the reserve (TREM) | matched as a share of gifts | reserve left at day 60 (TREM) | days the daily budget was used up | the largest giver's share of the match | supply and mints same as scenario 1 |", "|---|---|---|---|---|---|---|---|"]
+for m, label in GIVE_MODES.items():
+    rs = [match_runs[m]] + [run_s6(PM, m, sd) for sd in SEEDS[1:]]
+    for sd, x in zip(SEEDS, rs):  # M1 and M2 against scenario 1 with the same seed; M3 is checked by the invariants on every step of every run
+        b = base_runs[sd]; g = sum(x.t.given.values())
+        assert [d["supply"] for d in x.series] == [d["supply"] for d in b.series] and [l for l in x.t.log if l[0] == "event_counted"] == [l for l in b.t.log if l[0] == "event_counted"], f"M1 failed in {m} seed {sd}"
+        assert sum(x.t.tok[a] for a in PM.relief) == sum(b.t.tok[a] for a in PM.relief) + g + x.t.matched_total, f"M2 failed in {m} seed {sd}"
+        assert x.t.reserve + x.t.matched_total == RESERVE, f"M2 (reserve) failed in {m} seed {sd}"
+    tot = mean([sum(x.t.given.values()) for x in rs]); mt = mean([x.t.matched_total for x in rs])
+    full = mean([sum(1 for v in x.t.mbuckets.values() if v >= PM.s0 * PM.match_day_ppm // 10**6 - 1) for x in rs])
+    top = mean([max(x.t.matched_by.values()) / x.t.matched_total if x.t.matched_by else 0 for x in rs])
+    L.append(f"| {label} | {tot/U:,.0f} | {mt/U:,.0f} | {pct(mt / tot, 1) if tot else 'n/a'} | {mean([x.t.reserve for x in rs])/U:,.0f} | {full:.1f} | {pct(top, 1) if mt else 'n/a'} | yes |")
+def farm(accounts, each, match_max):  # M4: many accounts on one day
+    t = Tremor(Params(s0=P.s0, match_ppm=PM.match_ppm, match_day_ppm=PM.match_day_ppm, match_month_ppm=PM.match_month_ppm, match_account_max=match_max), "ada"); now = 20000 * DAY
+    t.fund_match("ada", RESERVE, now)
+    for i in range(accounts): t.ft_transfer("ada", f"g{i}", each)
+    for i in range(accounts): t.give(f"g{i}", each, now + 1)
+    t.check_invariants(); return t
+one, many = farm(1, 10_000 * U, PM.match_account_max), farm(50, 10_000 * U, PM.match_account_max)
+assert one.matched_total == PM.match_account_max and many.matched_total == PM.s0 * PM.match_day_ppm // 10**6, "M4 failed"
+L += ["", f"In every variant and every seed the daily supply and every quake mint are identical to scenario 1, the relief accounts end with scenario 1's balances plus exactly the gifts plus exactly what was matched, and the reserve plus everything matched equals what was put in (checks M1 and M2). "
+      f"No day's match exceeded the daily budget and no 30-day window the monthly budget (check M3, tested on every step). "
+      f"Said plainly about the limit that can be bypassed (check M4): one account giving 10,000 TREM gets {one.matched_total/U:,.0f} TREM of match (its allowance), but fifty accounts each giving 10,000 TREM on one day get {many.matched_total/U:,.0f} TREM in total: the daily budget stops them, not the per-account allowance, because the contract cannot tell that the accounts belong to one person. "
+      "Whoever gives first on a day takes that day's budget.", "",
       "## Scenario 8: the impact bar (honest bots send every real M6+ quake, green ones too)", ""]
 import dataclasses
 off_bar = Sim(dataclasses.replace(P, min_alert=1), SEEDS[0]); off_bar.real_events(ALL6, BOTS); off_bar.real_ids = [e for e, _, _ in ALL6]; off_bar.run()
@@ -120,5 +128,5 @@ L += [f"- Quakes sent to the contract: {len(ALL6)}; below the bar (green): {len(
       "## Top passing combinations", "", "| base | week | month | s1 dilution | s1 clipped weeks |", "|---|---|---|---|---|"]
 rows = [r for r in csv.DictReader(open(OUT / "grid.csv")) if r["pass"] == "True"][:6]
 L += [f"| {int(r['base_ppm'])/1e4:.2f}% | {int(r['week_ppm'])/1e4:.1f}% | {int(r['month_ppm'])/1e4:.1f}% | {pct(float(r['s1_dilution']))} | {pct(float(r['s1_clipped_weeks']),1)} |" for r in rows]
-L += ["", "Charts: `supply.svg` (one panel per scenario). Series: `scenario*.csv` (daily supply, minted, passive holder share in ppm (balance plus unclaimed dividend), coins given so far, dividends created so far, weekly and monthly cap use)."]
+L += ["", "Charts: `supply.svg` (one panel per scenario). Series: `scenario*.csv` (daily supply, minted, passive holder share in ppm, coins given so far, reserve left, coins matched so far, weekly and monthly cap use)."]
 (OUT / "SUMMARY.md").write_text("\n".join(L) + "\n"); print("\n".join(L))

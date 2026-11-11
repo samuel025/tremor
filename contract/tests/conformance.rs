@@ -10,22 +10,21 @@ fn params(p: &Value, publishers: &Value, relief: &Value) -> Params {
     Params { s0: g("s0") as u128, min_mag_x10: g("min_mag_x10") as u32, min_alert: g("min_alert") as u32, base_ppm: g("base_ppm") as u128, max_event_ppm: g("max_event_ppm") as u128,
         cooldown_s: g("cooldown_s"), week_cap_ppm: g("week_cap_ppm") as u128, month_cap_ppm: g("month_cap_ppm") as u128, min_age_s: g("min_age_s"),
         max_age_s: g("max_age_s"), max_open: g("max_open") as u32, max_claims: g("max_claims") as u32, claim_wait_s: g("claim_wait_s"),
-        threshold: g("threshold") as u32, calm_ppm: g("calm_ppm") as u128, giver_share_ppm: g("giver_share_ppm") as u128, giver_cap_ppm: g("giver_cap_ppm") as u128, tap_amount: g("tap_amount") as u128, publishers: strs(publishers), relief: strs(relief) }
+        threshold: g("threshold") as u32, match_ppm: g("match_ppm") as u128, match_day_ppm: g("match_day_ppm") as u128, match_month_ppm: g("match_month_ppm") as u128, match_account_max: g("match_account_max") as u128, tap_amount: g("tap_amount") as u128, publishers: strs(publishers), relief: strs(relief) }
 }
 
 fn snapshot(c: &Core) -> Value {
     let tok: serde_json::Map<String, Value> = c.tok.iter().filter(|(_, v)| **v != 0).map(|(k, v)| (k.clone(), json!(*v as u64))).collect();
     let buckets: serde_json::Map<String, Value> = c.buckets.iter().filter(|(_, v)| **v != 0).map(|(k, v)| (k.to_string(), json!(*v as u64))).collect();
-    let paid: serde_json::Map<String, Value> = c.paid.iter().filter(|(_, v)| **v != 0).map(|(k, v)| (k.clone(), json!(v.to_string()))).collect();
-    let gpaid: serde_json::Map<String, Value> = c.gpaid.iter().filter(|(_, v)| **v != 0).map(|(k, v)| (k.clone(), json!(v.to_string()))).collect();
+    let matched_by: serde_json::Map<String, Value> = c.matched_by.iter().filter(|(_, v)| **v != 0).map(|(k, v)| (k.clone(), json!(*v as u64))).collect();
+    let mbuckets: serde_json::Map<String, Value> = c.mbuckets.iter().filter(|(_, v)| **v != 0).map(|(k, v)| (k.to_string(), json!(*v as u64))).collect();
     let given: serde_json::Map<String, Value> = c.given.iter().map(|(k, v)| (k.clone(), json!(*v as u64))).collect();
     let events: serde_json::Map<String, Value> = c.ev.iter().map(|(k, e)| {
         let versions: Vec<Value> = e.versions.iter().map(|((m, o, a), s)| json!([*m, *o, *a, s.iter().collect::<Vec<_>>()])).collect();
         (k.clone(), json!([e.status.as_str(), e.minted as u64, e.clipped, e.claimer.clone().unwrap_or_default(), e.created_at, versions]))
     }).collect();
     json!({"supply": c.supply as u64, "tok": tok, "buckets": buckets, "recent": c.recent, "tapped": c.tapped.iter().collect::<Vec<_>>(), "given": given,
-        "div": [json!(c.acc.to_string()), json!(c.div_pot as u64), json!(c.div_total as u64), json!(c.calm_days), json!(c.settled_to.map(|v| v as i64).unwrap_or(-1)), json!(c.quake_day.map(|v| v as i64).unwrap_or(-1))],
-        "paid": paid, "gdiv": [json!(c.gacc.to_string()), json!(c.bonus_total as u64), json!(c.given_sum as u64)], "gpaid": gpaid, "events": events})
+        "match": [c.reserve as u64, c.funded_total as u64, c.matched_total as u64, c.given_sum as u64], "matched_by": matched_by, "mbuckets": mbuckets, "events": events})
 }
 
 #[test]
@@ -43,9 +42,9 @@ fn rust_matches_python_reference() {
             let now = st["now"].as_u64().unwrap();
             // an origin before 1970 (a negative number in the vectors) can never be valid: treated as a rejection, as Python rejects it
             let ok = match st["op"].as_str().unwrap() {
-                "transfer" => c.ft_transfer(&s(0), &s(1), n(2) as u128, now).is_ok(),
-                "tap" => c.tap(&s(0), "pool", now).is_ok(),
-                "claim_div" => c.claim_dividend(&s(0), now).is_ok(),
+                "transfer" => c.ft_transfer(&s(0), &s(1), n(2) as u128).is_ok(),
+                "tap" => c.tap(&s(0), "pool").is_ok(),
+                "fund" => c.fund_match(&s(0), n(1) as u128, now).is_ok(),
                 "give" => c.give(&s(0), n(1) as u128, now).is_ok(),
                 "attest" => a[3].as_i64().unwrap() >= 0 && c.attest(&s(0), &s(1), n(2) as u32, n(3), n(4) as u32, now).is_ok(),
                 "claim" => a[3].as_i64().unwrap() >= 0 && c.submit_claim(&s(0), &s(1), n(2) as u32, n(3), n(4) as u32, now).is_ok(),
@@ -68,7 +67,7 @@ fn golden_vector_one_from_rules_md() {
     // GV-1 straight from RULES.md, independent of the Python reference: each event is confirmed by 3 bots at its own origin time.
     let pubs: Vec<String> = (1..=5).map(|i| format!("bot{i}")).collect();
     let p = Params { s0: 1_000_000_000_000, min_mag_x10: 60, min_alert: 2, base_ppm: 5000, max_event_ppm: 15000, cooldown_s: 86400, week_cap_ppm: 15000, month_cap_ppm: 50000,
-        min_age_s: 0, max_age_s: 5_184_000, max_open: 64, max_claims: 32, claim_wait_s: 43200, threshold: 3, calm_ppm: 0, giver_share_ppm: 0, giver_cap_ppm: 0, tap_amount: 0, publishers: pubs.clone(),
+        min_age_s: 0, max_age_s: 5_184_000, max_open: 64, max_claims: 32, claim_wait_s: 43200, threshold: 3, match_ppm: 0, match_day_ppm: 0, match_month_ppm: 0, match_account_max: 0, tap_amount: 0, publishers: pubs.clone(),
         relief: (1..=5).map(|i| format!("r{i}")).collect() };
     let t0 = 20000 * DAY;
     let mut c = Core::new(p, "ada").unwrap();
@@ -89,13 +88,13 @@ fn golden_vector_one_from_rules_md() {
 fn golden_vector_four_from_rules_md() {
     // GV-4 straight from RULES.md: giving moves a holder's own coins to the relief list and creates nothing.
     let p = Params { s0: 1_000_000_000_000, min_mag_x10: 60, min_alert: 2, base_ppm: 5000, max_event_ppm: 15000, cooldown_s: 86400, week_cap_ppm: 15000, month_cap_ppm: 50000,
-        min_age_s: 0, max_age_s: 5_184_000, max_open: 64, max_claims: 32, claim_wait_s: 43200, threshold: 3, calm_ppm: 0, giver_share_ppm: 0, giver_cap_ppm: 0, tap_amount: 0,
+        min_age_s: 0, max_age_s: 5_184_000, max_open: 64, max_claims: 32, claim_wait_s: 43200, threshold: 3, match_ppm: 0, match_day_ppm: 0, match_month_ppm: 0, match_account_max: 0, tap_amount: 0,
         publishers: (1..=5).map(|i| format!("bot{i}")).collect(), relief: (1..=5).map(|i| format!("relief{i}")).collect() };
     let t0 = 20000 * DAY;
     let mut c = Core::new(p, "ada").unwrap();
-    assert_eq!(c.give("ada", 12_000_003, t0), Ok(12_000_003));
+    assert_eq!(c.give("ada", 12_000_003, t0), Ok((12_000_003, 0)));
     assert_eq!((c.tok["relief1"], c.tok["relief2"], c.tok["relief5"]), (2_400_003, 2_400_000, 2_400_000));
-    assert_eq!(c.give("ada", 1_000_000, t0 + 1), Ok(13_000_003));
+    assert_eq!(c.give("ada", 1_000_000, t0 + 1), Ok((13_000_003, 0)));
     assert!(c.give("stranger", 1, t0 + 2).is_err());
     assert!(c.give("relief1", 1, t0 + 3).is_err());
     assert!(c.give("ada", 0, t0 + 4).is_err());
@@ -108,36 +107,10 @@ fn golden_vector_four_from_rules_md() {
 }
 
 #[test]
-fn golden_vector_five_from_rules_md() {
-    // GV-5 straight from RULES.md: calm days pay holders, a quake day pays nothing, relief accounts earn nothing.
-    let p = Params { s0: 1_000_000_000_000, min_mag_x10: 60, min_alert: 2, base_ppm: 5000, max_event_ppm: 15000, cooldown_s: 86400, week_cap_ppm: 15000, month_cap_ppm: 50000,
-        min_age_s: 0, max_age_s: 5_184_000, max_open: 64, max_claims: 32, claim_wait_s: 43200, threshold: 3, calm_ppm: 100, giver_share_ppm: 0, giver_cap_ppm: 0, tap_amount: 0,
-        publishers: (1..=5).map(|i| format!("bot{i}")).collect(), relief: (1..=5).map(|i| format!("relief{i}")).collect() };
-    let t0 = 20000 * DAY;
-    let mut c = Core::new(p, "ada").unwrap();
-    c.ft_transfer("ada", "bob", 100_000_000_000, t0).unwrap();
-    assert_eq!(c.supply, 1_000_000_000_000);
-    assert_eq!(c.claim_dividend("bob", t0 + 2 * DAY + 10), Ok(20_001_000));
-    assert_eq!((c.supply, c.tok["bob"], c.div_pot), (1_000_200_010_000, 100_020_001_000, 180_009_000));
-    assert_eq!(c.claim_dividend("ada", t0 + 2 * DAY + 10), Ok(180_009_000));
-    assert_eq!((c.tok["ada"], c.div_pot), (900_180_009_000, 0));
-    assert!(c.claim_dividend("ada", t0 + 2 * DAY + 11).is_err());
-    assert!(c.claim_dividend("relief1", t0 + 2 * DAY + 12).is_err());
-    let mut out = None;
-    for b in ["bot1", "bot2", "bot3"] { out = c.attest(b, "E1", 60, t0 + 2 * DAY + 20, 2, t0 + 2 * DAY + 20).unwrap(); }
-    assert_eq!(out.unwrap().0, 5_001_000_050);
-    assert_eq!((c.supply, c.tok["relief1"], c.tok["relief5"]), (1_005_201_010_050, 1_000_200_010, 1_000_200_010));
-    assert!(c.claim_dividend("bob", t0 + 3 * DAY + 5).is_err());
-    assert_eq!(c.claim_dividend("bob", t0 + 4 * DAY + 5), Ok(10_052_010));
-    assert_eq!((c.supply, c.tok["bob"], c.calm_days), (1_005_301_530_151, 100_030_053_010, 3));
-    c.check_invariants();
-}
-
-#[test]
 fn golden_vector_six_from_rules_md() {
     // GV-6 straight from RULES.md: only quakes with expected human impact count; three bots must agree on the alert level too.
     let p = Params { s0: 1_000_000_000_000, min_mag_x10: 60, min_alert: 2, base_ppm: 5000, max_event_ppm: 15000, cooldown_s: 86400, week_cap_ppm: 15000, month_cap_ppm: 50000,
-        min_age_s: 0, max_age_s: 5_184_000, max_open: 64, max_claims: 32, claim_wait_s: 43200, threshold: 3, calm_ppm: 0, giver_share_ppm: 0, giver_cap_ppm: 0, tap_amount: 0,
+        min_age_s: 0, max_age_s: 5_184_000, max_open: 64, max_claims: 32, claim_wait_s: 43200, threshold: 3, match_ppm: 0, match_day_ppm: 0, match_month_ppm: 0, match_account_max: 0, tap_amount: 0,
         publishers: (1..=5).map(|i| format!("bot{i}")).collect(), relief: (1..=5).map(|i| format!("relief{i}")).collect() };
     let t0 = 20000 * DAY;
     let mut c = Core::new(p, "ada").unwrap();
@@ -154,33 +127,58 @@ fn golden_vector_six_from_rules_md() {
     c.check_invariants();
 }
 
-fn bonus_params(calm: u128) -> Params {
+fn match_params(rate: u128, day: u128, month: u128, account_max: u128) -> Params {
     Params { s0: 1_000_000_000_000, min_mag_x10: 60, min_alert: 2, base_ppm: 5000, max_event_ppm: 15000, cooldown_s: 86400, week_cap_ppm: 15000, month_cap_ppm: 50000,
-        min_age_s: 0, max_age_s: 5_184_000, max_open: 64, max_claims: 32, claim_wait_s: 43200, threshold: 3, calm_ppm: calm, giver_share_ppm: 200000, giver_cap_ppm: 5000, tap_amount: 0,
+        min_age_s: 0, max_age_s: 5_184_000, max_open: 64, max_claims: 32, claim_wait_s: 43200, threshold: 3, match_ppm: rate, match_day_ppm: day, match_month_ppm: month, match_account_max: account_max, tap_amount: 0,
         publishers: (1..=5).map(|i| format!("bot{i}")).collect(), relief: (1..=5).map(|i| format!("relief{i}")).collect() }
+}
+const U: u128 = 1_000_000;
+
+#[test]
+fn golden_vector_five_from_rules_md() {
+    // GV-5 straight from RULES.md: a gift is topped up by 10% from the reserve; nothing is created.
+    let t0 = 20000 * DAY;
+    let mut c = Core::new(match_params(100_000, 5000, 20000, 10_000 * U), "ada").unwrap();
+    assert_eq!(c.fund_match("ada", 50_000 * U, t0), Ok(50_000 * U));
+    assert_eq!(c.give("ada", 1_000 * U, t0 + 1), Ok((1_000 * U, 100 * U)));
+    assert_eq!((c.supply, c.reserve, c.tok["relief1"], c.tok["relief5"]), (1_000_000 * U, 49_900 * U, 220 * U, 220 * U));
+    assert_eq!(c.give("ada", 12_000_003, t0 + 2), Ok((1_012_000_003, 1_200_000)));
+    assert_eq!((c.reserve, c.tok["relief1"], c.tok["relief2"]), (49_898_800_000, 222_640_003, 222_640_000));
+    assert!(c.fund_match("relief1", 1, t0 + 3).is_err());
+    assert!(c.give("stranger", 1, t0 + 4).is_err());
+    assert!(c.fund_match("ada", 0, t0 + 5).is_err());
+    let mut out = None;
+    for b in ["bot1", "bot2", "bot3"] { out = c.attest(b, "E1", 60, t0 + 10, 2, t0 + 10).unwrap(); }
+    assert_eq!(out.unwrap().0, 5_000 * U);
+    assert_eq!((c.supply, c.reserve, c.tok["relief1"], c.tok["relief2"]), (1_005_000 * U, 49_898_800_000, 1_222_640_003, 1_222_640_000));
+    c.check_invariants();
 }
 
 #[test]
 fn golden_vector_seven_from_rules_md() {
-    // GV-7 straight from RULES.md: givers share a reserved part of the calm-day dividend.
+    // GV-7 straight from RULES.md: a daily budget, a 30-day budget and a window that slides.
     let t0 = 20000 * DAY;
-    let mut c = Core::new(bonus_params(100), "ada").unwrap();
-    c.ft_transfer("ada", "bob", 100_000_000_000, t0).unwrap();
-    c.give("ada", 10_000_000_000, t0 + 1).unwrap();
-    assert_eq!(c.claim_dividend("bob", t0 + 2 * DAY + 10), Ok(16_162_424));
-    assert_eq!((c.supply, c.tok["bob"], c.div_pot), (1_000_200_010_000, 100_016_162_424, 183_847_576));
-    assert_eq!(c.claim_dividend("ada", t0 + 2 * DAY + 11), Ok(143_845_575 + 40_002_000));
-    assert_eq!((c.tok["ada"], c.div_pot, c.bonus_total), (890_183_847_575, 1, 40_002_000));
+    let mut c = Core::new(match_params(1_000_000, 5000, 20000, 1_000_000 * U), "ada").unwrap();
+    c.fund_match("ada", 100_000 * U, t0).unwrap();
+    let steps: [(u64, u128, u128); 8] = [(1, 4_000, 4_000), (2, 3_000, 1_000), (3, 1, 0), (DAY + 1, 5_000, 5_000), (2 * DAY + 1, 5_000, 5_000), (3 * DAY + 1, 5_000, 5_000), (4 * DAY + 1, 5_000, 0), (30 * DAY + 1, 5_000, 5_000)];
+    for (dt, gift, matched) in steps { assert_eq!(c.give("ada", gift * U, t0 + dt).unwrap().1, matched * U, "gift {gift} at +{dt}"); }
+    assert_eq!((c.matched_total, c.reserve, c.supply), (25_000 * U, 75_000 * U, 1_000_000 * U));
+    assert_eq!((c.given.get("ada").copied(), c.tok["relief1"]), (Some(32_001 * U), 11_400_200_000));
     c.check_invariants();
 }
 
 #[test]
 fn golden_vector_eight_from_rules_md() {
-    // GV-8: a lone giver of 100 TREM earns only the cap, 0.5 TREM, from the 20 TREM pool; the rest goes to holders.
+    // GV-8: a per-account allowance, an empty reserve, and a refill by anyone.
     let t0 = 20000 * DAY;
-    let mut c = Core::new(bonus_params(100), "ada").unwrap();
-    c.give("ada", 100_000_000, t0).unwrap();
-    assert!(c.claim_dividend("ada", t0 + DAY + 5).is_ok());
-    assert_eq!((c.supply, c.tok["ada"], c.div_pot, c.bonus_total), (1_000_100_000_000, 999_999_999_999, 1, 500_000));
+    let mut c = Core::new(match_params(100_000, 100_000, 100_000, 500 * U), "ada").unwrap();
+    c.fund_match("ada", 800 * U, t0).unwrap();
+    c.ft_transfer("ada", "bob", 10_000 * U).unwrap(); c.ft_transfer("ada", "carol", 10_000 * U).unwrap();
+    let gifts: [(&str, u128, u128); 5] = [("bob", 4_000, 400), ("bob", 4_000, 100), ("bob", 1_000, 0), ("carol", 4_000, 300), ("carol", 1_000, 0)];
+    for (i, (who, gift, matched)) in gifts.into_iter().enumerate() { assert_eq!(c.give(who, gift * U, t0 + 3 + i as u64).unwrap().1, matched * U, "{who} gives {gift}"); }
+    assert_eq!(c.reserve, 0);
+    c.fund_match("bob", U, t0 + 8).unwrap();
+    assert_eq!(c.give("carol", 100 * U, t0 + 9).unwrap().1, U);
+    assert_eq!((c.reserve, c.matched_total, c.funded_total, c.supply, c.tok["relief1"]), (0, 801 * U, 801 * U, 1_000_000 * U, 2_980_200_000));
     c.check_invariants();
 }

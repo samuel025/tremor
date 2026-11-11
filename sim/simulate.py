@@ -26,14 +26,20 @@ ALL6 = load_catalog()                 # every real M6+ quake in the window
 CAT = load_catalog(min_alert=2)       # the ones that count: USGS expects at least yellow impact (the contract's bar)
 
 
-def params(base=5000, week=15000, month=50000, calm=0):
-    return Params(base_ppm=base, week_cap_ppm=week, month_cap_ppm=month, calm_ppm=calm, giver_share_ppm=200000 if calm else 0, giver_cap_ppm=5000 if calm else 0, min_age_s=H, max_age_s=90 * DAY, publishers=tuple(BOTS), threshold=3)
+RESERVE = 100_000 * U   # the matching reserve the launcher funds in scenario 7 (10% of the starting supply)
+
+
+def params(base=5000, week=15000, month=50000, match=False):
+    """match=True turns on the donation match with the values chosen for Live: 10% of a gift, at most 0.5% of supply a day and 2% over 30 days, and at most 1,000 TREM per account."""
+    return Params(base_ppm=base, week_cap_ppm=week, month_cap_ppm=month, match_ppm=100000 if match else 0, match_day_ppm=5000 if match else 0, match_month_ppm=20000 if match else 0,
+                  match_account_max=1000 * U if match else 0, min_age_s=H, max_age_s=90 * DAY, publishers=tuple(BOTS), threshold=3)
 
 
 class Sim:
     def __init__(self, p, seed):
         self.p, self.rng, self.seed = p, random.Random(seed), seed
         self.t = Tremor(p, "launcher"); self.t.ft_transfer("launcher", "passive", p.s0 // 100)
+        if p.match_ppm: self.t.fund_match("launcher", RESERVE, T0)
         self.act = {}; self.series = []; self.prev_minted = 0
         self.refused = {}  # reason -> count, for attempts the contract refused
         self.on_count = None  # called as on_count(hour, event_id, mag_x10) when an event counts (scenario 6: holders react)
@@ -63,18 +69,17 @@ class Sim:
         for h in range(HOURS + 72):
             for fn in self.act.get(h, []): fn(h)
             if h % 24 == 23 and h < HOURS:
-                self.t.roll(self.now(h))  # settle the calm days that have passed, as any transaction would
-                d = h // 24; st = self.t.state(self.now(h)); minted_total = self.t.supply - S0 - self.t.div_total
+                d = h // 24; st = self.t.state(self.now(h)); minted_total = self.t.supply - S0
                 self.series.append(dict(day=d, supply=self.t.supply, minted_today=minted_total - self.prev_minted,  # quake mints only: the caps apply to these
-                     passive_share_ppm=self.t.holding("passive") * 10**6 // self.t.supply, given_total=sum(self.t.given.values()),
-                    dividends_total=self.t.div_total,
+                     passive_share_ppm=self.t.tok["passive"] * 10**6 // self.t.supply, given_total=sum(self.t.given.values()),
+                     reserve=self.t.reserve, matched_total=self.t.matched_total,
                     week_use_pct=round(100 * st["m7"] / max(1, self.t.supply * self.p.week_cap_ppm // 10**6), 2), month_use_pct=round(100 * st["m30"] / max(1, self.t.supply * self.p.month_cap_ppm // 10**6), 2)))
                 self.prev_minted = minted_total
-        self.t.roll(self.now(HOURS + 72)); self.t.check_invariants(); return self
+        self.t.check_invariants(); return self
 
     # ---- metrics
-    def passive_dilution(self):  # the passive holder's loss of share: balance plus unclaimed dividend, against the 1% it started with
-        return 1 - self.t.holding("passive") * 100 / self.t.supply
+    def passive_dilution(self):  # the passive holder's loss of share, against the 1% it started with
+        return 1 - self.t.tok["passive"] * 100 / self.t.supply
 
     def worst_30d_loss(self):
         sh = [10**6 * 0.01] + [s["passive_share_ppm"] for s in self.series]
@@ -83,10 +88,6 @@ class Sim:
     def worst_week_mint_share(self):  # trailing-7-day minting / supply at the end of that day (the cap is relative to supply at mint time, which is <= this)
         mint = [s["minted_today"] for s in self.series]; sup = [s["supply"] for s in self.series]
         return max(sum(mint[max(0, i - 6):i + 1]) / sup[i] for i in range(len(mint)))
-
-    def worst_week_dividend_share(self):  # C1: dividends created in any 7 days / supply at the end of those days
-        dv = [0] + [s["dividends_total"] for s in self.series]; sup = [s["supply"] for s in self.series]
-        return max((dv[i + 1] - dv[max(0, i - 6)]) / sup[i] for i in range(len(sup)))
 
     def clipped_weeks(self):
         wk = {}

@@ -1,30 +1,117 @@
 {
- "name": "GV-8 giver bonus cap: a lone small giver earns only 0.5% of the gift a day",
+ "name": "GV-8 per-account allowance and an empty reserve",
  "params": {
   "s0": 1000000000000,
   "base_ppm": 5000,
   "min_age_s": 0,
-  "calm_ppm": 100,
-  "giver_share_ppm": 200000,
-  "giver_cap_ppm": 5000
+  "match_ppm": 100000,
+  "match_day_ppm": 100000,
+  "match_month_ppm": 100000,
+  "match_account_max": 500000000
  },
  "steps": [
   {
-   "op": "give",
+   "op": "fund",
    "who": "ada",
-   "amount": 100000000,
+   "amount": 800000000,
    "now": 1728000000,
+   "expect_ok": true,
+   "expect_supply": 1000000000000,
+   "expect_reserve": 800000000
+  },
+  {
+   "op": "transfer",
+   "who": "ada",
+   "to": "bob",
+   "amount": 10000000000,
+   "now": 1728000001,
    "expect_ok": true,
    "expect_supply": 1000000000000
   },
   {
-   "op": "claim_dividend",
+   "op": "transfer",
    "who": "ada",
-   "now": 1728086405,
+   "to": "carol",
+   "amount": 10000000000,
+   "now": 1728000002,
    "expect_ok": true,
-   "expect_supply": 1000100000000,
-   "expect_balance": 999999999999,
-   "expect_pot": 1
+   "expect_supply": 1000000000000
+  },
+  {
+   "op": "give",
+   "who": "bob",
+   "amount": 4000000000,
+   "now": 1728000003,
+   "expect_ok": true,
+   "expect_supply": 1000000000000,
+   "expect_matched": 400000000,
+   "expect_reserve": 400000000
+  },
+  {
+   "op": "give",
+   "who": "bob",
+   "amount": 4000000000,
+   "now": 1728000004,
+   "expect_ok": true,
+   "expect_supply": 1000000000000,
+   "expect_matched": 100000000,
+   "expect_reserve": 300000000
+  },
+  {
+   "op": "give",
+   "who": "bob",
+   "amount": 1000000000,
+   "now": 1728000005,
+   "expect_ok": true,
+   "expect_supply": 1000000000000,
+   "expect_matched": 0,
+   "expect_reserve": 300000000
+  },
+  {
+   "op": "give",
+   "who": "carol",
+   "amount": 4000000000,
+   "now": 1728000006,
+   "expect_ok": true,
+   "expect_supply": 1000000000000,
+   "expect_matched": 300000000,
+   "expect_reserve": 0
+  },
+  {
+   "op": "give",
+   "who": "carol",
+   "amount": 1000000000,
+   "now": 1728000007,
+   "expect_ok": true,
+   "expect_supply": 1000000000000,
+   "expect_matched": 0,
+   "expect_reserve": 0
+  },
+  {
+   "op": "fund",
+   "who": "bob",
+   "amount": 1000000,
+   "now": 1728000008,
+   "expect_ok": true,
+   "expect_supply": 1000000000000,
+   "expect_reserve": 1000000
+  },
+  {
+   "op": "give",
+   "who": "carol",
+   "amount": 100000000,
+   "now": 1728000009,
+   "expect_ok": true,
+   "expect_supply": 1000000000000,
+   "expect_matched": 1000000,
+   "expect_reserve": 0,
+   "expect_relief": [
+    2980200000,
+    2980200000,
+    2980200000,
+    2980200000,
+    2980200000
+   ]
   }
  ]
 }

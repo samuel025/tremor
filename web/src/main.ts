@@ -113,9 +113,8 @@ function renderParams(p: Params) {
     ["Bots that decide (fixed at launch)", `${p.publisher_accounts.length}`], ["Bots that must agree", `${p.threshold} of ${p.publisher_accounts.length}`],
     ["A quake must be this old before bots confirm it", duration(p.min_age_s)],
     ["Mint at M6.0 (×2 at M7, ×3 at M8)", `${(p.base_ppm / 1e4).toFixed(2)}% of supply`], ["Most one event can mint", `${(p.max_event_ppm / 1e4).toFixed(1)}% of supply`],
-    ...(p.giver_share_ppm && p.giver_cap_ppm ? [["Giver bonus (out of the calm-day dividend)", `${(p.giver_share_ppm / 1e4).toFixed(0)}% reserved, each coin given earns up to ${(p.giver_cap_ppm / 1e4).toFixed(1)}% a day`] as [string, string]] : []),
+    ...(p.match_ppm ? [["Donation match (from the reserve, never minted)", `${(p.match_ppm / 1e4).toFixed(0)}% of each gift`] as [string, string], ["Most the match adds in a day / over 30 days", `${(p.match_day_ppm! / 1e4).toFixed(1)}% / ${(p.match_month_ppm! / 1e4).toFixed(1)}% of supply`] as [string, string], ["Most the match adds for one account, ever", `${trem(p.match_account_max ?? "0", 0)} TREM`] as [string, string]] : []),
     ["Cooldown (aftershocks mint less)", duration(p.cooldown_s)], ["Weekly cap", `${(p.week_cap_ppm / 1e4).toFixed(1)}% of supply`], ["Monthly cap", `${(p.month_cap_ppm / 1e4).toFixed(1)}% of supply`],
-    ...(p.calm_ppm ? [["Calm-day dividend for holders (outside the caps, one a day)", `${(p.calm_ppm / 1e4).toFixed(2)}% of supply per day with no counted quake`] as [string, string]] : []),
     ["Oldest quake that can count", duration(p.max_age_s)], ["Open visitor claims at once", `${p.max_claims}`],
   ];
   $("#params-t").innerHTML = rows.map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join("");
@@ -128,10 +127,10 @@ async function refresh() {
     skew = s.now_s - Math.floor(Date.now() / 1000); lastEvs = evs; lastState = s; state0 = s;
     banner(null); renderJourneyNow(); renderChips(s); renderMeters(s, params); renderBoard(evs, params); renderUnreported(evs, params); renderRelief(params);
     if (s.given_total !== undefined) renderGivers(s);
-    if (s.dividends_total !== undefined && params.calm_ppm) {
-      $("#calm-card").hidden = false;
-      $("#calm-t").textContent = `${s.calm_days} paid · ${trem(s.dividends_total)} TREM for holders`;
-      $("#calm-n").innerHTML = `Each full day (UTC) with no counted quake creates ${(params.calm_ppm / 1e4).toFixed(2)}% of the supply for everyone who holds coins, in proportion to what they hold${params.giver_share_ppm ? `, with ${(params.giver_share_ppm / 1e4).toFixed(0)}% of it reserved as a bonus for people who have given to relief` : ""}. The five relief accounts get none of it. It is separate from the weekly and monthly caps above, which limit quake mints for relief; its own limit is one dividend a day. ${trem(s.dividend_pot ?? "0")} TREM is waiting to be credited; a holder's share is added whenever their balance next changes, or when they claim it.`;
+    if (s.reserve !== undefined && params.match_ppm) {
+      $("#match-card").hidden = false;
+      $("#match-t").textContent = `${trem(s.reserve, 0)} TREM left in the reserve`;
+      $("#match-n").innerHTML = `When someone gives coins to the relief list, the reserve adds ${(params.match_ppm / 1e4).toFixed(0)}% on top of the gift. The match is never newly created: it comes from coins people put into the reserve (${trem(s.funded_total ?? "0", 0)} TREM so far), and ${trem(s.matched_total ?? "0", 0)} TREM has been matched. It goes to the relief accounts, not to the giver. Limits: at most ${(params.match_day_ppm! / 1e4).toFixed(1)}% of supply a day (${trem(s.match_day_left ?? "0", 0)} TREM left today) and ${(params.match_month_ppm! / 1e4).toFixed(1)}% over 30 days (${trem(s.match_month_left ?? "0", 0)} TREM left), and ${trem(params.match_account_max ?? "0", 0)} TREM for any one account, ever. When the reserve is empty, gifts still go through, just without a match. Anyone can add coins to it; nobody can take them out.`;
     }
     accessKeyCount().then((n) => { $("#keys-line").innerHTML = `<b>${n}</b> access key${n === 1 ? "" : "s"}`; }).catch(() => ($("#keys-line").textContent = "unavailable"));
   } catch (e) { banner("Could not read the testnet contract right now. This page is read-only and will retry. " + (e instanceof Error ? e.message.slice(0, 120) : "")); }
@@ -146,7 +145,7 @@ async function renderGivers(s: State) {
   $("#givers").hidden = false;
   const total = BigInt(s.given_total ?? "0"), minted = BigInt(s.supply) - BigInt(s.initial_supply);
   const head = `<p class="big-n"><b>${trem(total)}</b> TREM given by ${gs.length} account${gs.length === 1 ? "" : "s"}</p><p class="note">Quakes have created ${trem(minted)} TREM for the relief list. Gifts are on top of that, and come out of the givers' own coins. The board ranks by amount, so a large holder can top it; it is a record, not a power.</p>`;
-  const bonus = params?.giver_share_ppm && params?.giver_cap_ppm ? `<p class="note"><b>Givers also earn a bonus.</b> ${(params.giver_share_ppm / 1e4).toFixed(0)}% of each calm-day dividend is set aside for givers, shared by how much each has given, and each coin given can earn at most ${(params.giver_cap_ppm / 1e4).toFixed(1)}% of a coin a day. So a gift takes at least about ${Math.round(1e6 / params.giver_cap_ppm)} calm days to earn back, and giving through many accounts gains nothing. ${trem(s.giver_bonus_total ?? "0")} TREM of bonus has been set aside so far.</p>` : "";
+  const bonus = s.matched_total !== undefined && params?.match_ppm ? `<p class="note"><b>Gifts are matched.</b> The reserve has added ${trem(s.matched_total, 0)} TREM to gifts so far, and ${trem(s.reserve ?? "0", 0)} TREM is left. Givers get recognition, not a payout: the match goes to relief.</p>` : "";
   const key = `<p class="note">Tiers by total given: Bronze 100 TREM, Silver 1,000, Gold 5,000. <b>Quake rounds</b> counts how many times the account gave after at least one new quake had counted since its previous gift.</p>`;
   const rows = gs.slice(0, 20).map((g, i) => `<tr><td>${i + 1}</td><td>${esc(g.account_id)}${g.account_id === me ? " <b>(you)</b>" : ""}</td><td>${(() => { const t = tier(g.given); return t ? `<span class="tier ${t.key}">${t.name}</span>` : ""; })()}</td><td>${trem(g.given)} TREM</td><td>${rounds.get(g.account_id) ?? 0}</td></tr>`).join("");
   $("#givers-card").innerHTML = head + bonus + key + (gs.length ? `<div class="tbl"><table><thead><tr><th>#</th><th>Account</th><th>Tier</th><th>Given</th><th>Quake rounds</th></tr></thead><tbody>${rows}</tbody></table></div>${gs.length > 20 ? `<p class="note">Showing the first 20 of ${gs.length}.</p>` : ""}` : `<p class="note">Nobody has given yet. Connect a wallet in the Live walkthrough, take the free starter coins, and be the first.</p>`);
@@ -155,7 +154,7 @@ async function renderGivers(s: State) {
 async function initSim() {
   try {
     const ch = await (await fetch("sim/chosen.json")).json(); const c = ch.chosen;
-    $("#sim-sub").textContent = `The rules ran against 60 real days of USGS data and eight scenarios (honest bots, a swarm, bad bots, offline bots, claim spam, holders giving, the calm-day dividend, the impact bar). ${ch.n_pass} of ${ch.n_grid} parameter combinations passed every threshold we wrote down first; we kept the rules we had already confirmed.`;
+    $("#sim-sub").textContent = `The rules ran against 60 real days of USGS data and eight scenarios (honest bots, a swarm, bad bots, offline bots, claim spam, holders giving, the donation match, the impact bar). ${ch.n_pass} of ${ch.n_grid} parameter combinations passed every threshold we wrote down first; we kept the rules we had already confirmed.`;
     $("#sim-cards").innerHTML = [
       ["Chosen rules", `${(c.base_ppm / 1e4).toFixed(2)}% base · ${(c.week_ppm / 1e4).toFixed(1)}% weekly · ${(c.month_ppm / 1e4).toFixed(0)}% monthly cap`, "Picked from the grid by the simulation, then confirmed"],
       ["A passive holder, 60 real days", `${pct(c.s1_dilution, 2)} diluted`, `Only quakes USGS expects to affect people count: 5 of the 28 M6+ quakes. Caps bound in ${pct(c.s1_clipped_weeks, 0)} of weeks.`],
@@ -231,7 +230,7 @@ function renderSteps() {
 }
 
 // what we know about the connected account, and the guided path built from it
-const mine = { tok: 0n, tapped: false, reg: false, given: 0n, due: 0n };
+const mine = { tok: 0n, tapped: false, reg: false, given: 0n };
 let unreported: Quake[] = [], checkingQuakes = true;
 let ignoreBefore = Number((() => { try { return sessionStorage.getItem("tremor-ignore"); } catch { return 0; } })() ?? 0);
 function renderJourneyNow() {
@@ -242,12 +241,11 @@ function renderJourneyNow() {
   host.innerHTML = renderJourney(c);
 }
 async function loadMine() {
-  if (!me) { Object.assign(mine, { tok: 0n, tapped: false, reg: false, given: 0n, due: 0n }); renderWallet(); renderJourneyNow(); return; }
+  if (!me) { Object.assign(mine, { tok: 0n, tapped: false, reg: false, given: 0n }); renderWallet(); renderJourneyNow(); return; }
   try {
     const [bal, tapped, reg] = await Promise.all([view<string>("ft_balance_of", { account_id: me }), view<boolean>("has_tapped", { account_id: me }), registered(me)]);
     Object.assign(mine, { tok: BigInt(bal), tapped, reg });
     mine.given = BigInt(await view<string>("given_of", { account_id: me }).catch(() => "0"));
-    mine.due = BigInt(await view<string>("dividend_of", { account_id: me }).catch(() => "0"));
   } catch { /* keep the last known values */ }
   renderWallet(); renderJourneyNow();
 }
@@ -259,8 +257,8 @@ function renderWallet() {
   card.innerHTML = `<h3>${esc(me)}</h3>
     <div class="two"><div><small>In your wallet</small><b>${trem(mine.tok)}</b><span>TREM</span></div></div>
     <div class="acts">${tapOn ? `<button class="blue" id="w-tap" ${mine.tapped ? "disabled" : ""}>${mine.tapped ? "Starter coins taken" : `Get ${trem(params!.tap_amount, 0)} starter TREM`}</button>` : ""}</div>
-    ${state0?.given_total !== undefined && mine.tok > 0n ? `<div class="acts"><input id="w-give" type="number" min="1" step="1" value="${mine.tok >= 100_000_000n ? 100 : 1}" aria-label="TREM to give"><button class="blue" id="w-givebtn">Give to the relief list</button>${mine.given > 0n ? `<span class="note">You have given <b>${trem(mine.given)}</b> TREM.</span>` : ""}</div><p class="note">Giving sends your own coins to the five relief accounts. It creates nothing and cannot be undone.</p>` : ""}
-    ${state0?.dividends_total !== undefined && mine.tok > 0n ? `<div class="acts"><button class="blue" id="w-claim" ${mine.due > 0n ? "" : "disabled"}>${mine.due > 0n ? `Claim ${trem(mine.due, 4)} TREM calm-day dividend` : "No calm-day dividend to claim yet"}</button></div><p class="note">Calm days pay holders a small dividend. It is added by itself whenever your balance changes; claiming just does it now.</p>` : ""}
+    ${state0?.given_total !== undefined && mine.tok > 0n ? `<div class="acts"><input id="w-give" type="number" min="1" step="1" value="${mine.tok >= 100_000_000n ? 100 : 1}" aria-label="TREM to give"><button class="blue" id="w-givebtn">Give to the relief list</button>${mine.given > 0n ? `<span class="note">You have given <b>${trem(mine.given)}</b> TREM.</span>` : ""}</div><p class="note" id="w-giveprev">Giving sends your own coins to the five relief accounts. It cannot be undone.</p>${params?.match_ppm ? `<p class="note">While the reserve has coins, the contract adds ${(params.match_ppm / 1e4).toFixed(0)}% on top of your gift (to the relief accounts, not to you). It creates no coins.</p>` : ""}` : ""}
+    ${state0?.reserve !== undefined && mine.tok > 0n ? `<div class="acts"><input id="w-fund" type="number" min="1" step="1" value="10" aria-label="TREM to put in the reserve"><button class="out" id="w-fundbtn">Put coins in the matching reserve</button></div><p class="note">Optional. These coins can only leave the reserve as matches added to gifts to the relief list: nobody can take them back, including you.</p>` : ""}
     <p class="note">Holding coins is optional. Nobody needs coins to claim a quake, and coins give no say in what counts: only the five bots decide.</p>
     <details class="mk" open><summary>Claim a made-up quake (to watch the bots ignore it)</summary><div class="vote"><input id="w-fid" value="fake-${Math.floor(100 + Math.random() * 900)}" aria-label="Event id" spellcheck="false"><input id="w-fmag" type="number" step="0.1" min="6" max="10" value="7.4" aria-label="Magnitude"><button class="out" id="w-fake">Claim it</button></div></details>
     <button class="out" id="w-out">Disconnect</button>`;
@@ -298,6 +296,12 @@ function initTabs() {
   const spy = () => { let on = -1; secs.forEach((s, i) => { if (s && s.getBoundingClientRect().top < innerHeight * 0.35) on = i; }); links.forEach((a, i) => a.classList.toggle("on", i === on)); };
   addEventListener("scroll", spy, { passive: true }); spy();
 }
+document.addEventListener("input", async (ev) => {   // show what the reserve would add to the gift being typed
+  const el = ev.target as HTMLInputElement; if (el.id !== "w-give" || !me || !params?.match_ppm) return;
+  const n = Math.floor(Number(el.value)); const out = document.getElementById("w-giveprev"); if (!out) return;
+  if (!(n > 0)) { out.textContent = "Enter a whole number of TREM."; return; }
+  try { const m = BigInt(await view<string>("match_preview", { account_id: me, amount: String(BigInt(n) * 1_000_000n) })); out.innerHTML = m > 0n ? `Your gift of <b>${n.toLocaleString("en-US")}</b> TREM would be topped up by <b>${trem(m)}</b> TREM from the reserve, so the relief accounts receive ${trem(BigInt(n) * 1_000_000n + m)} TREM. The extra is not newly created and does not go to you.` : `The reserve would add nothing to this gift (it is empty, or a budget or your allowance is used up). The gift itself goes through.`; } catch { /* keep the text */ }
+});
 document.addEventListener("click", (ev) => {
   const t = ev.target as HTMLElement; const el = t.closest<HTMLElement>("button,a[data-j]"); if (!el) return;
   const j = el.dataset.j;
@@ -312,7 +316,9 @@ document.addEventListener("click", (ev) => {
   }
   if (el.id === "w-out") return void wallet().then((w) => w.disconnectWallet()).then(() => { me = null; loadMine(); boardSig = ""; renderBoardFlags(); });
   if (el.id === "w-tap") return void registered(me!).then((reg) => act("Starter coins", () => send("tap", {}, reg ? "0" : "1250000000000000000000")));
-  if (el.id === "w-claim") return void act("Dividend", () => send("claim_dividend", {}));
+  if (el.id === "w-fundbtn") { const n = Math.floor(Number(($("#w-fund") as HTMLInputElement).value));
+    if (!(n > 0) || BigInt(n) * 1_000_000n > mine.tok) return void toast("Enter a whole number of TREM, no more than you hold.");
+    return void act("Reserve", () => send("fund_match", { amount: String(BigInt(n) * 1_000_000n) }, "1")); }
   if (el.id === "w-givebtn") { const n = Math.floor(Number(($("#w-give") as HTMLInputElement).value));
     if (!(n > 0) || BigInt(n) * 1_000_000n > mine.tok) return void toast("Enter a whole number of TREM, no more than you hold.");
     return void act("Gift", () => send("give", { amount: String(BigInt(n) * 1_000_000n) }, "1")); }

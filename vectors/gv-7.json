@@ -1,48 +1,111 @@
 {
- "name": "GV-7 giver bonus: givers share a reserved part of the calm-day dividend; relief earns nothing",
+ "name": "GV-7 match budgets: a daily budget, a 30-day budget, and a window that slides",
  "params": {
   "s0": 1000000000000,
   "base_ppm": 5000,
   "min_age_s": 0,
-  "calm_ppm": 100,
-  "giver_share_ppm": 200000,
-  "giver_cap_ppm": 5000
+  "match_ppm": 1000000,
+  "match_day_ppm": 5000,
+  "match_month_ppm": 20000,
+  "match_account_max": 1000000000000
  },
  "steps": [
   {
-   "op": "transfer",
+   "op": "fund",
    "who": "ada",
-   "to": "bob",
    "amount": 100000000000,
    "now": 1728000000,
    "expect_ok": true,
-   "expect_supply": 1000000000000
+   "expect_supply": 1000000000000,
+   "expect_reserve": 100000000000
   },
   {
    "op": "give",
    "who": "ada",
-   "amount": 10000000000,
+   "amount": 4000000000,
    "now": 1728000001,
    "expect_ok": true,
-   "expect_supply": 1000000000000
+   "expect_supply": 1000000000000,
+   "expect_matched": 4000000000,
+   "expect_reserve": 96000000000
   },
   {
-   "op": "claim_dividend",
-   "who": "bob",
-   "now": 1728172810,
-   "expect_ok": true,
-   "expect_supply": 1000200010000,
-   "expect_balance": 100016162424,
-   "expect_pot": 183847576
-  },
-  {
-   "op": "claim_dividend",
+   "op": "give",
    "who": "ada",
-   "now": 1728172811,
+   "amount": 3000000000,
+   "now": 1728000002,
    "expect_ok": true,
-   "expect_supply": 1000200010000,
-   "expect_balance": 890183847575,
-   "expect_pot": 1
+   "expect_supply": 1000000000000,
+   "expect_matched": 1000000000,
+   "expect_reserve": 95000000000
+  },
+  {
+   "op": "give",
+   "who": "ada",
+   "amount": 1000000,
+   "now": 1728000003,
+   "expect_ok": true,
+   "expect_supply": 1000000000000,
+   "expect_matched": 0,
+   "expect_reserve": 95000000000
+  },
+  {
+   "op": "give",
+   "who": "ada",
+   "amount": 5000000000,
+   "now": 1728086401,
+   "expect_ok": true,
+   "expect_supply": 1000000000000,
+   "expect_matched": 5000000000,
+   "expect_reserve": 90000000000
+  },
+  {
+   "op": "give",
+   "who": "ada",
+   "amount": 5000000000,
+   "now": 1728172801,
+   "expect_ok": true,
+   "expect_supply": 1000000000000,
+   "expect_matched": 5000000000,
+   "expect_reserve": 85000000000
+  },
+  {
+   "op": "give",
+   "who": "ada",
+   "amount": 5000000000,
+   "now": 1728259201,
+   "expect_ok": true,
+   "expect_supply": 1000000000000,
+   "expect_matched": 5000000000,
+   "expect_reserve": 80000000000
+  },
+  {
+   "op": "give",
+   "who": "ada",
+   "amount": 5000000000,
+   "now": 1728345601,
+   "expect_ok": true,
+   "expect_supply": 1000000000000,
+   "expect_matched": 0,
+   "expect_reserve": 80000000000
+  },
+  {
+   "op": "give",
+   "who": "ada",
+   "amount": 5000000000,
+   "now": 1730592001,
+   "expect_ok": true,
+   "expect_supply": 1000000000000,
+   "expect_matched": 5000000000,
+   "expect_reserve": 75000000000,
+   "expect_relief": [
+    11400200000,
+    11400200000,
+    11400200000,
+    11400200000,
+    11400200000
+   ],
+   "expect_given": 32001000000
   }
  ]
 }

@@ -35,11 +35,10 @@ def build(results=None):
     ]
     mapping = {
         "web.scenarios": str(R["web_conformance"]["scenarios"]), "web.steps": f"{R['web_conformance']['steps']:,}", "web.mismatches": str(R["web_conformance"]["mismatches"]), "verify.live": vos["live"]["contract"], "verify.demo": vos["demo"]["contract"], "tap": f"{R['tap_amount']:,}", "conformance.scenarios": str(cf["scenarios"]),
-        "gb.nonshare": f"{100 - S['gbonus']['share']:g}", "gb.share": f"{S['gbonus']['share']:g}", "gb.cap": f"{S['gbonus']['cap']:g}", "gb.payback": f"{100 / S['gbonus']['cap']:.0f}", "gb.single": S["gbonus"]["single"], "gb.tiny": S["gbonus"]["tiny"],
+        "match.rate": f"{S['match']['rate']:g}", "match.day": f"{S['match']['day']:g}", "match.month": f"{S['match']['month']:g}", "match.account": S["match"]["account"], "match.reserve": S["match"]["reserve"],
+        "match.one": S["match"]["one"], "match.fifty": S["match"]["fifty"],
         "bar.counted": str(S["bar"]["counted"]), "bar.green": str(S["bar"]["green"]), "bar.on": f"{S['bar']['dilution_on']:g}", "bar.off": f"{S['bar']['dilution_off']:g}", "bar.clipped_off": f"{S['bar']['clipped_off']:g}",
         "bar.pick_week": f"{S['bar']['grid_pick']['week_ppm'] / 1e4:g}",
-        "calm.pct": f"{S['calm']['ppm'] / 1e4:g}", "calm.days": str(S["calm"]["days"]), "calm.holders": f"{S['calm']['holders']:,}", "calm.relief": f"{S['calm']['relief']:,}", "calm.relief_without": f"{S['calm']['relief_without']:,}",
-        "calm.dilution": f"{S['calm']['dilution'] * 100:.2f}", "calm.dilution_without": f"{S['calm']['dilution_without'] * 100:.2f}",
         "params.base": pct(c["base_ppm"]), "params.week": pct(c["week_ppm"]), "params.month": pct(c["month_ppm"]),
         "sim.bad2": f"{S['bad2_fakes_counted']:g}", "sim.bad3": f"{S['bad3_fakes_counted']:g}", "sim.bad3_extra": f"{S['bad3_extra_supply_pct']:g}",
         "sim.off2": f"{S['offline2_real_counted_pct']:g}", "sim.off3": f"{S['offline3_real_counted_pct']:g}",

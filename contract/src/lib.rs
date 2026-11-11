@@ -1,5 +1,5 @@
 //! Tremor: NEP-141 token + earthquake event system in one contract. No owner, no upgrade path, every parameter (including the five
-//! publisher bots and the relief list) is fixed in `new`. Testnet prototype; the coin has no value.
+//! publisher bots and the relief list) is fixed in `new`. Testnet; the coin has no value.
 pub mod engine;
 
 use engine::{Core, Params, Status};
@@ -40,9 +40,10 @@ pub struct ParamsArg {
     pub max_claims: u32,
     pub claim_wait_s: u64,
     pub threshold: u32,
-    pub calm_ppm: u32,    // share of supply created for holders after each full day with no counted quake (outside the caps); 0 disables it
-    pub giver_share_ppm: u32, // part of each calm-day dividend reserved for givers (200000 = 20%); 0 disables the giver bonus
-    pub giver_cap_ppm: u32,   // most a coin ever given can earn per calm day, in ppm of that coin (5000 = 0.5%)
+    pub match_ppm: u32,       // donation match: a gift of n is topped up by n * match_ppm / 10^6 from the reserve (100000 = 10%); 0 disables matching
+    pub match_day_ppm: u32,   // most the reserve may add in one UTC day, in ppm of the supply
+    pub match_month_ppm: u32, // most the reserve may add over 30 days, in ppm of the supply
+    pub match_account_max: U128, // most the reserve may add because of one account's gifts, ever
     pub tap_amount: U128, // starter coins per account from the tap pool; "0" disables the tap
     pub publisher_accounts: Option<Vec<AccountId>>, // only filled by get_params
     pub relief_accounts: Option<Vec<AccountId>>,    // only filled by get_params
@@ -60,10 +61,12 @@ pub struct StateView {
     pub tap_pool: U128,
     pub given_total: U128, // coins holders have given to the relief list, ever
     pub givers: u32,
-    pub dividends_total: U128, // coins created for holders on calm days, ever
-    pub dividend_pot: U128,    // of those, not yet credited to an account
-    pub calm_days: u64,        // days that paid a dividend
-    pub giver_bonus_total: U128, // of the dividends, the part set aside for givers
+    pub reserve: U128,         // the donation-matching reserve, now
+    pub funded_total: U128,    // coins ever put into the reserve
+    pub matched_total: U128,   // coins the reserve has added to gifts, ever
+    pub matched_7d: U128,      // of those, in the last 7 days
+    pub match_day_left: U128,  // what the reserve may still add today
+    pub match_month_left: U128, // what the reserve may still add over the 30-day window
     pub log_len: u64,
     pub now_s: u64,
 }
@@ -122,7 +125,7 @@ impl Contract {
             s0: params.s0.0, min_mag_x10: params.min_mag_x10, min_alert: params.min_alert, base_ppm: params.base_ppm as u128, max_event_ppm: params.max_event_ppm as u128,
             cooldown_s: params.cooldown_s, week_cap_ppm: params.week_cap_ppm as u128, month_cap_ppm: params.month_cap_ppm as u128,
             min_age_s: params.min_age_s, max_age_s: params.max_age_s, max_open: params.max_open, max_claims: params.max_claims,
-            claim_wait_s: params.claim_wait_s, threshold: params.threshold, calm_ppm: params.calm_ppm as u128, giver_share_ppm: params.giver_share_ppm as u128, giver_cap_ppm: params.giver_cap_ppm as u128, tap_amount: params.tap_amount.0,
+            claim_wait_s: params.claim_wait_s, threshold: params.threshold, match_ppm: params.match_ppm as u128, match_day_ppm: params.match_day_ppm as u128, match_month_ppm: params.match_month_ppm as u128, match_account_max: params.match_account_max.0, tap_amount: params.tap_amount.0,
             publishers: publisher_accounts.iter().map(|a| a.to_string()).collect(), relief: relief_accounts.iter().map(|a| a.to_string()).collect(),
         };
         let core = unwrap_or_panic(Core::new(p, launcher.as_str()));
@@ -167,7 +170,7 @@ impl Contract {
         if unused > 0 {
             let refund = unused.min(self.core.ft_balance_of(receiver_id.as_str())); // bounded by what the receiver still holds
             if refund > 0 {
-                let _ = self.core.ft_transfer(receiver_id.as_str(), sender_id.as_str(), refund, now_s());
+                let _ = self.core.ft_transfer(receiver_id.as_str(), sender_id.as_str(), refund);
                 self.flush();
                 self.emit_standard("ft_transfer", format!("[{{\"old_owner_id\":\"{}\",\"new_owner_id\":\"{}\",\"amount\":\"{}\",\"memo\":\"refund\"}}]", receiver_id, sender_id, refund));
                 return U128(amount.0 - refund);
@@ -176,8 +179,8 @@ impl Contract {
         U128(amount.0)
     }
 
-    /// Includes calm-day dividends that are due but not yet settled by a transaction, so it never lags behind the rules.
-    pub fn ft_total_supply(&self) -> U128 { U128(self.rolled().supply) }
+    /// Includes the matching reserve: its coins exist, they are just not in any account until a gift draws them out to the relief list.
+    pub fn ft_total_supply(&self) -> U128 { U128(self.core.supply) }
     pub fn ft_balance_of(&self, account_id: AccountId) -> U128 { U128(self.core.ft_balance_of(account_id.as_str())) }
     pub fn ft_metadata(&self) -> FtMetadata {
         FtMetadata { spec: "ft-1.0.0".into(), name: "Tremor (testnet, no value)".into(), symbol: "TREM".into(), icon: None,
@@ -219,39 +222,42 @@ impl Contract {
             let refund = dep.saturating_sub(STORAGE_MIN);
             if refund.as_yoctonear() > 0 { let _ = Promise::new(who.clone()).transfer(refund); }
         }
-        unwrap_or_panic(self.core.tap(who.as_str(), env::current_account_id().as_str(), now_s()));
+        unwrap_or_panic(self.core.tap(who.as_str(), env::current_account_id().as_str()));
         self.flush();
     }
     pub fn has_tapped(&self, account_id: AccountId) -> bool { self.core.tapped.contains(account_id.as_str()) }
 
-    // ---------------- giving
-    /// Any holder: send `amount` of your own coins to the five relief accounts, split like a mint. Creates no coins, changes no cap
-    /// and gives the giver no say in anything; the contract only remembers each giver's running total. Needs one yoctoNEAR, like a
-    /// transfer, so a limited function-call key can never give coins away. Returns the caller's total given so far.
+    // ---------------- giving and matching
+    /// Any holder: send `amount` of your own coins to the five relief accounts, split like a mint. While the matching reserve has coins
+    /// and the budgets allow, the gift is topped up from the reserve (never by minting). Creates no coins, changes no cap and gives the
+    /// giver no say in anything; the contract only remembers each giver's running total. Needs one yoctoNEAR, like a transfer, so a limited
+    /// function-call key can never give coins away. Returns the match that was added to this gift.
     #[payable]
     pub fn give(&mut self, amount: U128) -> U128 {
         assert_one_yocto();
-        let total = unwrap_or_panic(self.core.give(&caller(), amount.0, now_s()));
+        let (_, matched) = unwrap_or_panic(self.core.give(&caller(), amount.0, now_s()));
         self.flush();
-        U128(total)
+        U128(matched)
+    }
+    /// Any holder except a relief account: put `amount` of your own coins into the matching reserve. They leave it only as matches added to
+    /// gifts to the relief list: nobody can take them back. Same yoctoNEAR rule as `give`. Returns the reserve afterwards.
+    #[payable]
+    pub fn fund_match(&mut self, amount: U128) -> U128 {
+        assert_one_yocto();
+        let reserve = unwrap_or_panic(self.core.fund_match(&caller(), amount.0, now_s()));
+        self.flush();
+        U128(reserve)
     }
     pub fn given_of(&self, account_id: AccountId) -> U128 { U128(*self.core.given.get(account_id.as_str()).unwrap_or(&0)) }
+    /// What the reserve would add if this account gave `amount` right now (changes nothing).
+    pub fn match_preview(&self, account_id: AccountId, amount: U128) -> U128 { U128(self.core.match_for(account_id.as_str(), amount.0, now_s())) }
+    /// Coins the reserve has added because of this account's gifts, ever.
+    pub fn matched_of(&self, account_id: AccountId) -> U128 { U128(*self.core.matched_by.get(account_id.as_str()).unwrap_or(&0)) }
     /// Givers in account order (the page sorts them by amount).
     pub fn list_givers(&self, from: u32, limit: u32) -> Vec<GiverView> {
         self.core.given.iter().skip(from as usize).take(limit.min(100) as usize)
             .map(|(a, n)| GiverView { account_id: a.parse().unwrap(), given: U128(*n) }).collect()
     }
-
-    // ---------------- calm-day dividend
-    /// Credit the caller with the dividend their balance has earned on calm days. It is also credited automatically whenever the
-    /// balance changes, so calling this is optional. Relief accounts earn nothing.
-    pub fn claim_dividend(&mut self) -> U128 {
-        let owed = unwrap_or_panic(self.core.claim_dividend(&caller(), now_s()));
-        self.flush();
-        U128(owed)
-    }
-    /// What `claim_dividend` would credit this account right now.
-    pub fn dividend_of(&self, account_id: AccountId) -> U128 { U128(self.core.dividend_of(account_id.as_str(), now_s())) }
 
     // ---------------- quakes
     /// Only the five fixed publisher accounts. They post what they found in USGS; the event counts when `threshold` different publishers
@@ -272,19 +278,21 @@ impl Contract {
         let p = &self.core.p;
         ParamsArg { s0: U128(p.s0), min_mag_x10: p.min_mag_x10, min_alert: p.min_alert, base_ppm: p.base_ppm as u32, max_event_ppm: p.max_event_ppm as u32, cooldown_s: p.cooldown_s,
             week_cap_ppm: p.week_cap_ppm as u32, month_cap_ppm: p.month_cap_ppm as u32, min_age_s: p.min_age_s, max_age_s: p.max_age_s, max_open: p.max_open,
-            max_claims: p.max_claims, claim_wait_s: p.claim_wait_s, threshold: p.threshold, calm_ppm: p.calm_ppm as u32, giver_share_ppm: p.giver_share_ppm as u32, giver_cap_ppm: p.giver_cap_ppm as u32, tap_amount: U128(p.tap_amount),
+            max_claims: p.max_claims, claim_wait_s: p.claim_wait_s, threshold: p.threshold, match_ppm: p.match_ppm as u32, match_day_ppm: p.match_day_ppm as u32, match_month_ppm: p.match_month_ppm as u32, match_account_max: U128(p.match_account_max), tap_amount: U128(p.tap_amount),
             publisher_accounts: Some(p.publishers.iter().map(|a| a.parse().unwrap()).collect()),
             relief_accounts: Some(p.relief.iter().map(|a| a.parse().unwrap()).collect()) }
     }
     pub fn get_state(&self) -> StateView {
         let now = now_s();
-        let core = self.rolled(); // as if the calm days that have passed were already settled
+        let core = &self.core;
         let (m7, m30, wl, ml) = core.state(now);
         StateView { supply: U128(core.supply), initial_supply: U128(core.p.s0), minted_7d: U128(m7), minted_30d: U128(m30),
             week_left: U128(wl), month_left: U128(ml), pending_events: self.core.ev.values().filter(|e| e.status == Status::Pending).count() as u32,
             tap_pool: U128(self.core.ft_balance_of(env::current_account_id().as_str())),
             given_total: U128(self.core.given.values().sum()), givers: self.core.given.len() as u32,
-            dividends_total: U128(core.div_total), dividend_pot: U128(core.div_pot), calm_days: core.calm_days, giver_bonus_total: U128(core.bonus_total), log_len: self.log.len() as u64, now_s: now }
+            reserve: U128(core.reserve), funded_total: U128(core.funded_total), matched_total: U128(core.matched_total), matched_7d: U128(core.matched_last(now, 7)),
+            match_day_left: U128((core.supply * core.p.match_day_ppm / 1_000_000).saturating_sub(core.matched_last(now, 1))),
+            match_month_left: U128((core.supply * core.p.match_month_ppm / 1_000_000).saturating_sub(core.matched_last(now, 30))), log_len: self.log.len() as u64, now_s: now }
     }
     pub fn get_event(&self, event_id: String) -> Option<EventView> { self.core.ev.get(&event_id).map(|e| self.view(&event_id, e)) }
     pub fn list_events(&self, from: u32, limit: u32) -> Vec<EventView> {
@@ -296,7 +304,6 @@ impl Contract {
 }
 
 impl Contract {
-    fn rolled(&self) -> Core { let mut c = self.core.clone(); c.roll(now_s()); c.pending_log.clear(); c }
     fn view(&self, id: &str, e: &engine::Ev) -> EventView {
         let versions: Vec<VersionView> = e.versions.iter().map(|((m, o, a), s)| VersionView { mag_x10: *m, origin_s: *o, alert: *a, attesters: s.iter().map(|a| a.parse().unwrap()).collect() }).collect();
         let lead = e.versions.iter().max_by_key(|(_, s)| s.len()).map(|((m, o, a), s)| (*m, *o, *a, s.len() as u32)).unwrap_or((0, 0, 0, 0));
@@ -309,7 +316,7 @@ impl Contract {
         require!(sender != receiver, "Sender and receiver should be different");
         require!(amount > 0, "The amount should be a positive number");
         require!(self.registered.contains(receiver), "The account is not registered");
-        unwrap_or_panic(self.core.ft_transfer(sender.as_str(), receiver.as_str(), amount, now_s()));
+        unwrap_or_panic(self.core.ft_transfer(sender.as_str(), receiver.as_str(), amount));
         self.flush();
         self.emit_standard("ft_transfer", format!("[{{\"old_owner_id\":\"{}\",\"new_owner_id\":\"{}\",\"amount\":\"{}\"{}}}]", sender, receiver, amount,
             memo.map(|m| format!(",\"memo\":{}", near_sdk::serde_json::to_string(&m).unwrap())).unwrap_or_default()));
@@ -320,11 +327,6 @@ impl Contract {
     /// Append the core's pending log lines to the on-chain log and emit them as NEP-297 events; a counted event also emits the ft_mint events.
     fn flush(&mut self) {
         for (event, data) in std::mem::take(&mut self.core.pending_log) {
-            if event == "credited" { // a dividend credit: a NEP-141 mint event for that account; not kept in the on-chain log
-                let v: near_sdk::serde_json::Value = near_sdk::serde_json::from_str(&data).unwrap();
-                self.emit_standard("ft_mint", format!("[{{\"owner_id\":{},\"amount\":{},\"memo\":\"calm-day dividend\"}}]", v["account"], v["amount"]));
-                continue;
-            }
             let line = format!("{{\"event\":\"{}\",\"data\":{}}}", event, data);
             env::log_str(&format!("EVENT_JSON:{{\"standard\":\"tremor\",\"version\":\"1.0.0\",\"event\":\"{}\",\"data\":[{}]}}", event, data));
             if event == "event_counted" {
@@ -337,9 +339,19 @@ impl Contract {
             if event == "gave" {
                 let v: near_sdk::serde_json::Value = near_sdk::serde_json::from_str(&data).unwrap();
                 let n: u128 = v["amount"].as_str().unwrap().parse().unwrap();
-                let parts: Vec<String> = self.core.p.relief.iter().zip(engine::split(n)).filter(|(_, part)| *part > 0)
+                let m: u128 = v["matched"].as_str().unwrap().parse().unwrap();
+                let mut parts: Vec<String> = self.core.p.relief.iter().zip(engine::split(n)).filter(|(_, part)| *part > 0)
                     .map(|(a, part)| format!("{{\"old_owner_id\":{},\"new_owner_id\":\"{}\",\"amount\":\"{}\",\"memo\":\"give\"}}", v["account"], a, part)).collect();
+                if m > 0 { // the match leaves the reserve, which the contract's own account holds for indexers
+                    let me = env::current_account_id();
+                    parts.extend(self.core.p.relief.iter().zip(engine::split(m)).filter(|(_, part)| *part > 0)
+                        .map(|(a, part)| format!("{{\"old_owner_id\":\"{}\",\"new_owner_id\":\"{}\",\"amount\":\"{}\",\"memo\":\"match\"}}", me, a, part)));
+                }
                 self.emit_standard("ft_transfer", format!("[{}]", parts.join(",")));
+            }
+            if event == "funded" {
+                let v: near_sdk::serde_json::Value = near_sdk::serde_json::from_str(&data).unwrap();
+                self.emit_standard("ft_transfer", format!("[{{\"old_owner_id\":{},\"new_owner_id\":\"{}\",\"amount\":{},\"memo\":\"match reserve\"}}]", v["account"], env::current_account_id(), v["amount"]));
             }
             self.log.push(line);
         }

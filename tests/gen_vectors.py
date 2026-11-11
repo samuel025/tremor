@@ -46,22 +46,24 @@ gv4 = dict(name="GV-4 giving: a holder's own coins go to the relief list; nothin
     dict(op="quake", event_id="E1", mag_x10=60, origin_s=T0 + 10, now=T0 + 10, expect_ok=True, expect_supply=1_005_000 * U,
          expect_relief=[1_002_600_003, 1_002_600_000, 1_002_600_000, 1_002_600_000, 1_002_600_000], expect_given=13_000_003),
 ])
-# GV-5: calm_ppm = 100 (0.01% of supply per calm day). D = 86,400 s; T0 is the start of day 20000.
+# GV-5: the donation match. The launcher puts 50,000 TREM in the reserve. A gift is topped up by 10%, from the reserve, never by minting.
+# Budgets 0.5% of supply a day (5,000 TREM) and 2% over 30 days (20,000 TREM); one account's gifts can add at most 10,000 TREM.
 D = 86400
-gv5 = dict(name="GV-5 calm-day dividend: a day with no counted quake pays holders, a quake day pays nothing", params=dict(P, calm_ppm=100), steps=[
-    # the first transaction starts the clock; nothing is paid for earlier days
-    dict(op="transfer", who="ada", to="bob", amount=100_000 * U, now=T0, expect_ok=True, expect_supply=1_000_000 * U),
-    # two days later: days 20000 and 20001 were calm. 100 TREM, then 0.01% of 1,000,100 = 100.01 TREM. bob holds a tenth: 20.001
-    dict(op="claim_dividend", who="bob", now=T0 + 2 * D + 10, expect_ok=True, expect_supply=1_000_200_010_000, expect_balance=100_020_001_000, expect_pot=180_009_000),
-    dict(op="claim_dividend", who="ada", now=T0 + 2 * D + 10, expect_ok=True, expect_supply=1_000_200_010_000, expect_balance=900_180_009_000, expect_pot=0),
-    dict(op="claim_dividend", who="ada", now=T0 + 2 * D + 11, expect_ok=False, expect_supply=1_000_200_010_000),   # nothing left to claim
-    dict(op="claim_dividend", who="relief1", now=T0 + 2 * D + 12, expect_ok=False, expect_supply=1_000_200_010_000),
-    # a M6.0 quake on day 20002: 0.5% of 1,000,200.01 = 5,001.00005 TREM (the dividends are outside the caps and use none of the weekly allowance)
-    dict(op="quake", event_id="E1", mag_x10=60, origin_s=T0 + 2 * D + 20, now=T0 + 2 * D + 20, expect_ok=True, expect_supply=1_005_201_010_050, expect_relief=[1_000_200_010] * 5),
-    # day 20003: the only finished day since is 20002, a quake day, so nothing is paid
-    dict(op="claim_dividend", who="bob", now=T0 + 3 * D + 5, expect_ok=False, expect_supply=1_005_201_010_050),
-    # day 20004: day 20003 was calm: 0.01% of 1,005,201.01005 = 100.520101 TREM, shared over the 1,000,200.01 TREM not held by relief accounts
-    dict(op="claim_dividend", who="bob", now=T0 + 4 * D + 5, expect_ok=True, expect_supply=1_005_301_530_151, expect_balance=100_030_053_010, expect_relief=[1_000_200_010] * 5),
+M = dict(P, match_ppm=100_000, match_day_ppm=5000, match_month_ppm=20000, match_account_max=10_000 * U)
+gv5 = dict(name="GV-5 donation match: a gift is topped up from the reserve; nothing is created", params=M, steps=[
+    dict(op="fund", who="ada", amount=50_000 * U, now=T0, expect_ok=True, expect_supply=1_000_000 * U, expect_reserve=50_000 * U),
+    # a gift of 1,000 TREM adds 100 TREM from the reserve: the relief list receives 1,100 TREM, 220 each
+    dict(op="give", who="ada", amount=1_000 * U, now=T0 + 1, expect_ok=True, expect_supply=1_000_000 * U, expect_reserve=49_900 * U, expect_matched=100 * U,
+         expect_relief=[220 * U] * 5, expect_given=1_000 * U),
+    # 12.000003 TREM adds 1.2 TREM (floor of 1.2000003); 13.200003 TREM is split: a fifth is 2.64, with 3 left over for the first account
+    dict(op="give", who="ada", amount=12_000_003, now=T0 + 2, expect_ok=True, expect_supply=1_000_000 * U, expect_reserve=49_898_800_000, expect_matched=1_200_000,
+         expect_relief=[222_640_003] + [222_640_000] * 4, expect_given=1_012_000_003),
+    dict(op="fund", who="relief1", amount=1, now=T0 + 3, expect_ok=False, expect_supply=1_000_000 * U, expect_reserve=49_898_800_000),   # a relief account cannot fund
+    dict(op="give", who="stranger", amount=1, now=T0 + 4, expect_ok=False, expect_supply=1_000_000 * U, expect_reserve=49_898_800_000),   # holds nothing
+    dict(op="fund", who="ada", amount=0, now=T0 + 5, expect_ok=False, expect_supply=1_000_000 * U, expect_reserve=49_898_800_000),
+    # a quake mints exactly what it would have without the reserve: 0.5% of an unchanged supply, 1,000 TREM each
+    dict(op="quake", event_id="E1", mag_x10=60, origin_s=T0 + 10, now=T0 + 10, expect_ok=True, expect_supply=1_005_000 * U, expect_reserve=49_898_800_000,
+         expect_relief=[1_222_640_003] + [1_222_640_000] * 4, expect_given=1_012_000_003),
 ])
 # GV-6: only quakes with expected human impact count. alert 1 green, 2 yellow, 3 orange, 4 red; the bar is yellow (2).
 gv6 = dict(name="GV-6 impact bar: a green quake is refused, and three bots must agree on the alert level too", params=P, steps=[
@@ -75,21 +77,33 @@ gv6 = dict(name="GV-6 impact bar: a green quake is refused, and three bots must 
     dict(op="attest", who="bot4", event_id="a2", mag_x10=60, origin_s=T0, alert=3, now=T0 + 8, expect_ok=True, expect_supply=1_005_000 * U),    # a third orange: counts, M6.0 mints 0.5% as always
     dict(op="attest", who="bot5", event_id="a2", mag_x10=60, origin_s=T0, alert=3, now=T0 + 9, expect_ok=False, expect_supply=1_005_000 * U),   # already counted
 ])
-# GV-7: the giver bonus. calm_ppm 100, 20% of each dividend reserved for givers, each coin given may earn at most 0.5% a day.
-# The launcher gives 10,000 TREM on day 0 (relief then holds 10,000), bob holds 100,000. Days 0 and 1 are settled on day 2.
-# Day 0: dividend 100 TREM, giver pool 20 TREM = 0.002 per coin given (below the 0.005 cap), so givers take all 20 and holders get 80 over the
-# 990,000 TREM not held by relief. Day 1: dividend 100.01, pool 20.002. The launcher's bonus is 40.002 TREM; bob's share is on his balance only.
-gv7 = dict(name="GV-7 giver bonus: givers share a reserved part of the calm-day dividend; relief earns nothing", params=dict(P, calm_ppm=100, giver_share_ppm=200000, giver_cap_ppm=5000), steps=[
-    dict(op="transfer", who="ada", to="bob", amount=100_000 * U, now=T0, expect_ok=True, expect_supply=1_000_000 * U),
-    dict(op="give", who="ada", amount=10_000 * U, now=T0 + 1, expect_ok=True, expect_supply=1_000_000 * U),
-    dict(op="claim_dividend", who="bob", now=T0 + 2 * D + 10, expect_ok=True, expect_supply=1_000_200_010_000, expect_balance=100_016_162_424, expect_pot=183_847_576),
-    dict(op="claim_dividend", who="ada", now=T0 + 2 * D + 11, expect_ok=True, expect_supply=1_000_200_010_000, expect_balance=890_183_847_575, expect_pot=1),
+# GV-7: the budgets. Match rate 100% so the budgets alone decide. Reserve 100,000 TREM; budget 5,000 TREM a day and 20,000 TREM over 30 days.
+# Days 0 to 4, then day 30, when day 0 has left the 30-day window.
+gv7 = dict(name="GV-7 match budgets: a daily budget, a 30-day budget, and a window that slides", params=dict(P, match_ppm=1_000_000, match_day_ppm=5000, match_month_ppm=20000, match_account_max=1_000_000 * U), steps=[
+    dict(op="fund", who="ada", amount=100_000 * U, now=T0, expect_ok=True, expect_supply=1_000_000 * U, expect_reserve=100_000 * U),
+    dict(op="give", who="ada", amount=4_000 * U, now=T0 + 1, expect_ok=True, expect_supply=1_000_000 * U, expect_matched=4_000 * U, expect_reserve=96_000 * U),   # day 0: 4,000 of 5,000 used
+    dict(op="give", who="ada", amount=3_000 * U, now=T0 + 2, expect_ok=True, expect_supply=1_000_000 * U, expect_matched=1_000 * U, expect_reserve=95_000 * U),   # only 1,000 left today
+    dict(op="give", who="ada", amount=1 * U, now=T0 + 3, expect_ok=True, expect_supply=1_000_000 * U, expect_matched=0, expect_reserve=95_000 * U),              # nothing left today; the gift still goes through
+    dict(op="give", who="ada", amount=5_000 * U, now=T0 + D + 1, expect_ok=True, expect_supply=1_000_000 * U, expect_matched=5_000 * U, expect_reserve=90_000 * U),       # day 1: a fresh daily budget
+    dict(op="give", who="ada", amount=5_000 * U, now=T0 + 2 * D + 1, expect_ok=True, expect_supply=1_000_000 * U, expect_matched=5_000 * U, expect_reserve=85_000 * U),
+    dict(op="give", who="ada", amount=5_000 * U, now=T0 + 3 * D + 1, expect_ok=True, expect_supply=1_000_000 * U, expect_matched=5_000 * U, expect_reserve=80_000 * U),   # 20,000 matched in 4 days
+    dict(op="give", who="ada", amount=5_000 * U, now=T0 + 4 * D + 1, expect_ok=True, expect_supply=1_000_000 * U, expect_matched=0, expect_reserve=80_000 * U),          # the 30-day budget is used
+    dict(op="give", who="ada", amount=5_000 * U, now=T0 + 30 * D + 1, expect_ok=True, expect_supply=1_000_000 * U, expect_matched=5_000 * U, expect_reserve=75_000 * U,   # day 0 has left the window: 5,000 free again
+         expect_relief=[11_400_200_000] * 5, expect_given=32_001 * U),
 ])
-# GV-8: the cap binds. A lone giver of 100 TREM could take the whole 20 TREM pool, but a coin may earn only 0.5% a day: 0.5 TREM. The rest of
-# the dividend goes to holders. Day 0 is settled on day 1.
-gv8 = dict(name="GV-8 giver bonus cap: a lone small giver earns only 0.5% of the gift a day", params=dict(P, calm_ppm=100, giver_share_ppm=200000, giver_cap_ppm=5000), steps=[
-    dict(op="give", who="ada", amount=100 * U, now=T0, expect_ok=True, expect_supply=1_000_000 * U),
-    dict(op="claim_dividend", who="ada", now=T0 + D + 5, expect_ok=True, expect_supply=1_000_100_000_000, expect_balance=999_999_999_999, expect_pot=1),
+# GV-8: the per-account allowance, an empty reserve, and a refill. Match rate 10%; one account's gifts can add at most 500 TREM.
+gv8 = dict(name="GV-8 per-account allowance and an empty reserve", params=dict(P, match_ppm=100_000, match_day_ppm=100_000, match_month_ppm=100_000, match_account_max=500 * U), steps=[
+    dict(op="fund", who="ada", amount=800 * U, now=T0, expect_ok=True, expect_supply=1_000_000 * U, expect_reserve=800 * U),
+    dict(op="transfer", who="ada", to="bob", amount=10_000 * U, now=T0 + 1, expect_ok=True, expect_supply=1_000_000 * U),
+    dict(op="transfer", who="ada", to="carol", amount=10_000 * U, now=T0 + 2, expect_ok=True, expect_supply=1_000_000 * U),
+    dict(op="give", who="bob", amount=4_000 * U, now=T0 + 3, expect_ok=True, expect_supply=1_000_000 * U, expect_matched=400 * U, expect_reserve=400 * U),
+    dict(op="give", who="bob", amount=4_000 * U, now=T0 + 4, expect_ok=True, expect_supply=1_000_000 * U, expect_matched=100 * U, expect_reserve=300 * U),   # bob's allowance (500) runs out
+    dict(op="give", who="bob", amount=1_000 * U, now=T0 + 5, expect_ok=True, expect_supply=1_000_000 * U, expect_matched=0, expect_reserve=300 * U),
+    dict(op="give", who="carol", amount=4_000 * U, now=T0 + 6, expect_ok=True, expect_supply=1_000_000 * U, expect_matched=300 * U, expect_reserve=0),       # carol would get 400, the reserve has 300
+    dict(op="give", who="carol", amount=1_000 * U, now=T0 + 7, expect_ok=True, expect_supply=1_000_000 * U, expect_matched=0, expect_reserve=0),
+    dict(op="fund", who="bob", amount=1 * U, now=T0 + 8, expect_ok=True, expect_supply=1_000_000 * U, expect_reserve=1 * U),                               # anyone can refill it
+    dict(op="give", who="carol", amount=100 * U, now=T0 + 9, expect_ok=True, expect_supply=1_000_000 * U, expect_matched=1 * U, expect_reserve=0,
+         expect_relief=[2_980_200_000] * 5),
 ])
 for n, g in ((1, gv1), (2, gv2), (3, gv3), (4, gv4), (5, gv5), (6, gv6), (7, gv7), (8, gv8)):
     (out / f"gv-{n}.json").write_text(json.dumps(g, indent=1) + "\n")

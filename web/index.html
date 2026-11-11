@@ -45,7 +45,7 @@
   <div class="grid3">
     <div class="card stat"><small>Step 1</small><b>USGS reports a quake that affects people</b><p class="note">Magnitude 6 or more, and the USGS's own estimate of impact (its PAGER alert level) at yellow or higher. Remote or low-impact quakes never count.</p></div>
     <div class="card stat"><small>Step 2</small><b>Three of five fixed bots agree</b><p class="note">Five bots read the official record on their own. A quake counts only when three attest exactly the same thing. Coins give no say.</p></div>
-    <div class="card stat"><small>Step 3</small><b>Relief gets new coins</b><p class="note">A small amount of new TREM is split between five fixed relief accounts, inside weekly and monthly caps. Calm days pay holders a little, and holders can give their own coins too.</p></div>
+    <div class="card stat"><small>Step 3</small><b>Relief gets new coins</b><p class="note">A small amount of new TREM is split between five fixed relief accounts, inside weekly and monthly caps. Holders can also give their own coins to the same five accounts, and a reserve tops each gift up.</p></div>
   </div>
   <p class="note howmore">Honest limits: this is a testnet prototype with no value. Trust sits in the five bots, here all run by one entrant on one server. <a href="#evidence-check">See how to check every claim yourself</a>.</p>
 </div></section>
@@ -70,8 +70,8 @@
       <div class="card meter"><div class="mh"><b>This week</b><span id="wk-t">–</span></div><div class="bar"><i id="wk-bar"></i></div><p class="note" id="wk-n"></p></div>
       <div class="card meter"><div class="mh"><b>This month</b><span id="mo-t">–</span></div><div class="bar"><i id="mo-bar"></i></div><p class="note" id="mo-n"></p></div>
     </div>
-    <div class="card meter wide" id="calm-card" hidden><div class="mh"><b>Calm days</b><span id="calm-t">–</span></div><p class="note" id="calm-n"></p></div>
-    <div class="card meter wide"><div class="mh"><b>Supply against the start</b><span id="sp-t">–</span></div><div class="bar"><i id="sp-bar"></i></div><p class="note">Supply only ever grows: when a confirmed quake mints for the relief list, and by a much smaller amount for holders after a day with no counted quake.</p></div>
+    <div class="card meter wide" id="match-card" hidden><div class="mh"><b>Donation match</b><span id="match-t">–</span></div><p class="note" id="match-n"></p></div>
+    <div class="card meter wide"><div class="mh"><b>Supply against the start</b><span id="sp-t">–</span></div><div class="bar"><i id="sp-bar"></i></div><p class="note">Supply only ever grows, and only when a confirmed quake mints for the relief list. Gifts and the donation match move existing coins and create none.</p></div>
   </div>
 
   <div class="tabpanel" data-panel="live:quakes" hidden>

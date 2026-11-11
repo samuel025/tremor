@@ -45,6 +45,7 @@ if "--no-reset" not in sys.argv:
 
 print("\nStep 1: the parameters, the five fixed bots, the starting supply")
 prm = view("get_params"); ref = Tremor(params_from_chain(prm), acct("ada"))
+ref.fund_match(acct("ada"), int(view("get_state")["funded_total"]), 0)   # deploy.py put the matching reserve in; the reference starts with the same
 check("supply", 1_000_000 * U, supply()); check("publishers (fixed at launch)", 5, len(prm["publisher_accounts"])); check("bots that must agree", 3, prm["threshold"])
 rows = [r for r in csv.DictReader(l for l in open(ROOT / "data/usgs_60d.csv") if not l.startswith("#"))]
 LEVEL = {"green": 1, "yellow": 2, "orange": 3, "red": 4}  # USGS PAGER alert level as the rules number it
@@ -106,11 +107,13 @@ except Reject: minted = 0
 check("a third bad bot makes it count (capped)", ref.supply, supply()); print(f"  the fake minted {minted / U:,.2f} TREM; the weekly and monthly caps still apply")
 st = view("get_state"); print(f"  caps meter: weekly allowance left {int(st['week_left']) / U:,.2f} TREM, monthly left {int(st['month_left']) / U:,.2f} TREM")
 
-print("\nStep 7b: a holder gives 1,000 of their own TREM to the relief list: coins move, nothing is created, no cap moves")
-before = ref.supply
-out = call("ada", "give", {"amount": str(1_000 * U)}, "1 yoctoNEAR"); ref.give(acct("ada"), 1_000 * U, now())
+print("\nStep 7b: a holder gives 1,000 of their own TREM to the relief list: the reserve tops it up by 10%, nothing is created, no cap moves")
+before, reserve0 = ref.supply, int(view("get_state")["reserve"])
+out = call("ada", "give", {"amount": str(1_000 * U)}, "1 yoctoNEAR"); matched = ref.give(acct("ada"), 1_000 * U, now())
 check("the give was accepted", False, refused(out)); check("supply unchanged", before, supply())
 check("total given by ada", str(ref.given[acct("ada")]), view("given_of", {"account_id": acct("ada")}))
+check("coins the reserve added to the gift (10%)", 100 * U, matched); check("coins the reserve added, on chain", str(matched), view("matched_of", {"account_id": acct("ada")}))
+check("the reserve shrank by exactly the match", reserve0 - matched, int(view("get_state")["reserve"]))
 check("relief1 balance (reference)", ref.tok[prm["relief_accounts"][0]], int(view("ft_balance_of", {"account_id": prm["relief_accounts"][0]})))
 check("a give without the 1 yoctoNEAR a transfer needs is refused", True, refused(call("ada", "give", {"amount": str(U)})))
 
