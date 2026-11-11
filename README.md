@@ -118,7 +118,7 @@ The contract cannot look at the internet, so someone has to carry the earthquake
 
 ## Two projects, one entrant
 
-Other NEAR HACKATHON project by the same entrant: Rounds (TODO(human): add the link). The two are independent: different code, different track.
+Other NEAR HACKATHON project by the same entrant: [Rounds](https://github.com/samuel025/Rounds) (live app: https://roundcap.vercel.app), collective ownership and payouts that a Sputnik DAO approves to the exact number, entered in Social Money and Open Innovation. The two are independent: a different idea, different code and different tracks. Rounds' README names Tremor in return.
 
 ## AI assistance, libraries, licence, data
 
