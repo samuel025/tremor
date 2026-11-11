@@ -7,7 +7,6 @@
 - Live page: https://samuel025.github.io/tremor/ (or run it yourself: `make web-dev`).
 - Live contract (testnet, real timing: a quake is confirmed after it is 6 hours old): `tremor-live.rounds-fund-5928.testnet`
 - Demo contract (testnet; used only by `make demo`, the scripted on-chain scene, and not by the page): `tremor.rounds-indep-5928.testnet`
-- Demo video and X post: TODO(human): add the links.
 - Built for the NEAR HACKATHON, track **Memecoins With Mechanics**. All code was written from Nov 7, 2026.
 
 ## Results
@@ -92,11 +91,9 @@ The contract cannot look at the internet, so someone has to carry the earthquake
 ## Honest limits
 
 - **Trust sits in the five bots.** They are chosen at launch, and three of them decide. If three are bad, fakes count up to the caps and real quakes can be blocked; the caps and the fixed relief list bound the damage, they do not remove it. On Live all five run in one scheduled job because one entrant cannot be five operators; a real launch would use five separate operators.
-- **One data source.** Everything depends on USGS, which revises events and sometimes publishes an alert level late or changes it. A green quake can still affect people, and bots that see different levels do not match, so the quake waits. Live will often show nothing new for days.
 - **The relief list can never change.** Here its five accounts are stand-ins on testnet. A real launch would need each one to be an account controlled by the organisation itself, and no organisation may be named without its agreement.
 - **No incentives.** Nobody is rewarded for reporting or punished for lying; a bad bot loses nothing on chain.
 - **Small sample.** The simulation uses one real 60-day window (352 events of M5+, 28 of M6+). The bad-bot and offline scenarios hold by the rules (three of five), so they confirm the contract rather than discover anything. With the impact bar few quakes count, so a passive holder loses 1.56% of their share over 60 days.
-- **The match is not a profit for holders.** It makes gifts bigger without creating coins, and it goes to relief, not to the giver: holding or giving earns nothing back (the givers board is a record, and it ranks by amount, so a large holder can top it). The per-account allowance can be bypassed by giving from many accounts, because the contract cannot tell that they are one person; the reserve and the daily and 30-day budgets are the real limits, and they are first come, first served. In the simulation, 1,000 TREM of match went to one account giving 10,000 TREM, and 5,000 TREM in total to fifty accounts doing the same on one day.
 
 ## Repo map
 
