@@ -102,7 +102,7 @@ Cloned the repo into an empty folder and ran the README commands: `make test` (3
 
 ## Page restructured (2026-11-10), the human's request
 - The page had 12 stacked sections and two navigation bars, with everything about the live contract spread over six of them. It is now four parts under one navigation bar: How it works (three plain steps), Try it (the simulation, unchanged), Live on NEAR testnet (tabs: Overview, Quakes, Relief & givers, Rules, Try it with a wallet) and The evidence (tabs: 60 real days, Simulation results, A recorded bot run, Check it yourself). Design, colours, type and animations are unchanged; the tabs reuse the existing segmented control.
-- Links: `#live-quakes`, `#live-wallet`, `#evidence-run` and the like open the matching tab; the old `#real` link opens the wallet tab. The empty Live board now explains that a quake appears only when USGS expects impact, and points to the simulation and the recorded run.
+- Links: `#live-quakes`, `#live-wallet` (also `#live-relief`: the wallet and relief tab are now one), `#evidence-run` and the like open the matching tab; the old `#real` link opens the wallet tab. The empty Live board now explains that a quake appears only when USGS expects impact, and points to the simulation and the recorded run.
 - Checked in headless Chrome at 1280 px and 390 px: every tab renders, no console errors, no sideways scroll. Not checked: a real wallet session, dark mode (the page is light only).
 
 ## Giver bonus deployed (2026-11-10)

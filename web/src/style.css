@@ -201,3 +201,13 @@ h2 .tag{display:inline-block;vertical-align:middle;font:600 14px/1 var(--text);l
 @media(max-width:520px){.launch{display:none}}
 .tier{display:inline-block;font-size:12px;font-weight:600;padding:3px 10px;border-radius:9999px;background:var(--ctl);color:var(--slate)}.tier.silver{background:var(--white);box-shadow:0 0 0 1px var(--ink);color:var(--ink)}.tier.gold{background:var(--ink);color:#fff}
 .tabbar{scrollbar-width:none}.tabbar::-webkit-scrollbar{display:none}
+/* wallet & relief tab: one account bar, then three action cards */
+.first{margin-top:0}
+.acctbar{margin:0 0 20px;padding:20px 28px}.ab{display:flex;gap:24px;align-items:center;justify-content:space-between;flex-wrap:wrap}.ab small{display:block;color:var(--slate);font-size:12px}.ab .acc{font:600 21px/1.25 var(--display);word-break:break-all}.ab .two{margin:0}.ab .blue.big{margin:0}
+.acards{display:grid;gap:16px;margin:0 0 20px}.acard{padding:24px 28px}.acard h3{font:600 21px/1.25 var(--display);margin:0 0 10px;display:flex;align-items:center;gap:12px}
+.acard .n{flex:none;width:30px;height:30px;border-radius:50%;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font:600 15px/1 var(--text)}
+.acard .reliefmini{margin:14px 0 4px}.acard .reliefmini>div{background:var(--white);border-radius:12px;padding:10px 12px}.band.mist .acard .reliefmini>div{background:var(--mist)}.acard .nm{margin:0}
+.acard .modebar{margin:0 0 12px}.acard .mode.warn{padding:12px 18px}
+.step h4{font:600 18px/1.25 var(--display);margin:2px 0 0;letter-spacing:.2px}.acard .journey{margin:0}.acard .step{padding:16px 20px}
+.acard .mk{margin:12px 0 0}
+#givers-card .big-n{font-size:32px;letter-spacing:-.4px}

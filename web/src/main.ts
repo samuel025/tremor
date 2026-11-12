@@ -89,8 +89,7 @@ function tickCountdowns() { document.querySelectorAll<HTMLElement>(".cd").forEac
 
 async function renderRelief(p: Params) {
   const bals = await Promise.all(p.relief_accounts.map((a) => view<string>("ft_balance_of", { account_id: a })));
-  const max = bals.reduce((m, b) => (BigInt(b) > m ? BigInt(b) : m), 1n);
-  $("#relief-list").innerHTML = p.relief_accounts.map((a, i) => `<div class="card rl"><b>${esc(short(a))}</b><span class="amt">${trem(bals[i])} <small>TREM received</small></span><div class="bar thin"><i style="width:${Number((BigInt(bals[i]) * 100n) / max)}%"></i></div></div>`).join("");
+  $("#relief-list").innerHTML = p.relief_accounts.map((a, i) => `<div><small>${esc(short(a))}</small><b>${trem(bals[i], 0)}</b> <small>TREM received</small></div>`).join("");
 }
 
 async function renderUnreported(evs: Ev[], p: Params) {
@@ -124,7 +123,7 @@ async function refresh() {
   try {
     const [s, evs] = await Promise.all([view<State>("get_state"), listEvents()]);
     if (!params) { params = await view<Params>("get_params"); renderParams(params); renderRelief(params); }
-    skew = s.now_s - Math.floor(Date.now() / 1000); lastEvs = evs; lastState = s; state0 = s;
+    skew = s.now_s - Math.floor(Date.now() / 1000); lastEvs = evs; lastState = s; state0 = s; renderWallet();
     banner(null); renderJourneyNow(); renderChips(s); renderMeters(s, params); renderBoard(evs, params); renderUnreported(evs, params); renderRelief(params);
     if (s.given_total !== undefined) renderGivers(s);
     if (s.reserve !== undefined && params.match_ppm) {
@@ -148,7 +147,7 @@ async function renderGivers(s: State) {
   const bonus = s.matched_total !== undefined && params?.match_ppm ? `<p class="note"><b>Gifts are matched.</b> The reserve has added ${trem(s.matched_total, 0)} TREM to gifts so far, and ${trem(s.reserve ?? "0", 0)} TREM is left. Givers get recognition, not a payout: the match goes to relief.</p>` : "";
   const key = `<p class="note">Tiers by total given: Bronze 100 TREM, Silver 1,000, Gold 5,000. <b>Quake rounds</b> counts how many times the account gave after at least one new quake had counted since its previous gift.</p>`;
   const rows = gs.slice(0, 20).map((g, i) => `<tr><td>${i + 1}</td><td>${esc(g.account_id)}${g.account_id === me ? " <b>(you)</b>" : ""}</td><td>${(() => { const t = tier(g.given); return t ? `<span class="tier ${t.key}">${t.name}</span>` : ""; })()}</td><td>${trem(g.given)} TREM</td><td>${rounds.get(g.account_id) ?? 0}</td></tr>`).join("");
-  $("#givers-card").innerHTML = head + bonus + key + (gs.length ? `<div class="tbl"><table><thead><tr><th>#</th><th>Account</th><th>Tier</th><th>Given</th><th>Quake rounds</th></tr></thead><tbody>${rows}</tbody></table></div>${gs.length > 20 ? `<p class="note">Showing the first 20 of ${gs.length}.</p>` : ""}` : `<p class="note">Nobody has given yet. Connect a wallet in the Live walkthrough, take the free starter coins, and be the first.</p>`);
+  $("#givers-card").innerHTML = head + bonus + key + (gs.length ? `<div class="tbl"><table><thead><tr><th>#</th><th>Account</th><th>Tier</th><th>Given</th><th>Quake rounds</th></tr></thead><tbody>${rows}</tbody></table></div>${gs.length > 20 ? `<p class="note">Showing the first 20 of ${gs.length}.</p>` : ""}` : `<p class="note">Nobody has given yet. Connect a wallet above, take the free starter coins, and be the first.</p>`);
 }
 
 async function initSim() {
@@ -226,7 +225,7 @@ let toastTimer: number | undefined;
 function toast(msg: string, ms = 6000) { const t = toastEl(); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = window.setTimeout(() => (t.hidden = true), ms); }
 
 function renderSteps() {
-  $("#modebar").innerHTML = `<div class="mode warn"><div><b>This is the real Live contract, so it is slow.</b><p>A quake is only confirmed once it is ${duration(params?.min_age_s ?? 21600)} old, and the bots run every 20 minutes, so a result takes hours. For an instant feel, use the simulation above.</p></div></div>`;
+  $("#modebar").innerHTML = `<div class="mode warn slim"><div><b>The real contract is slow.</b><p>A quake is confirmed once it is ${duration(params?.min_age_s ?? 21600)} old, and the bots run every 20 minutes, so a result takes hours. For an instant feel, use the simulation above.</p></div></div>`;
 }
 
 // what we know about the connected account, and the guided path built from it
@@ -251,17 +250,28 @@ async function loadMine() {
 }
 
 function renderWallet() {
-  const card = $("#wallet-card");
-  if (!me) { card.innerHTML = `<h3>Your wallet</h3><p class="note">Not connected. Use step 1 above.</p>`; return; }
+  const bar = $("#wallet-card");
+  if (!me) {
+    bar.innerHTML = `<div class="ab"><div><b>Your wallet</b><p class="note first">Not connected. Connect a free testnet wallet (Meteor, switched to <b>testnet</b>) to use the three actions below. Nothing here has any value.</p></div><button class="blue big" data-j="connect">Connect wallet</button></div>`;
+  } else {
+    bar.innerHTML = `<div class="ab"><div><small>Connected as</small><b class="acc">${esc(me)}</b></div><div class="two"><div><small>Your coins</small><b>${trem(mine.tok)}</b><span>TREM</span></div>${mine.given > 0n ? `<div><small>Given so far</small><b>${trem(mine.given)}</b><span>TREM</span></div>` : ""}</div><button class="out" id="w-out">Disconnect</button></div>`;
+  }
+  // 1. coins
   const tapOn = params && BigInt(params.tap_amount) > 0n;
-  card.innerHTML = `<h3>${esc(me)}</h3>
-    <div class="two"><div><small>In your wallet</small><b>${trem(mine.tok)}</b><span>TREM</span></div></div>
-    <div class="acts">${tapOn ? `<button class="blue" id="w-tap" ${mine.tapped ? "disabled" : ""}>${mine.tapped ? "Starter coins taken" : `Get ${trem(params!.tap_amount, 0)} starter TREM`}</button>` : ""}</div>
-    ${state0?.given_total !== undefined && mine.tok > 0n ? `<div class="acts"><input id="w-give" type="number" min="1" step="1" value="${mine.tok >= 100_000_000n ? 100 : 1}" aria-label="TREM to give"><button class="blue" id="w-givebtn">Give to the relief list</button>${mine.given > 0n ? `<span class="note">You have given <b>${trem(mine.given)}</b> TREM.</span>` : ""}</div><p class="note" id="w-giveprev">Giving sends your own coins to the five relief accounts. It cannot be undone.</p>${params?.match_ppm ? `<p class="note">While the reserve has coins, the contract adds ${(params.match_ppm / 1e4).toFixed(0)}% on top of your gift (to the relief accounts, not to you). It creates no coins.</p>` : ""}` : ""}
-    ${state0?.reserve !== undefined && mine.tok > 0n ? `<div class="acts"><input id="w-fund" type="number" min="1" step="1" value="10" aria-label="TREM to put in the reserve"><button class="out" id="w-fundbtn">Put coins in the matching reserve</button></div><p class="note">Optional. These coins can only leave the reserve as matches added to gifts to the relief list: nobody can take them back, including you.</p>` : ""}
-    <p class="note">Holding coins is optional. Nobody needs coins to claim a quake, and coins give no say in what counts: only the five bots decide.</p>
-    <details class="mk" open><summary>Claim a made-up quake (to watch the bots ignore it)</summary><div class="vote"><input id="w-fid" value="fake-${Math.floor(100 + Math.random() * 900)}" aria-label="Event id" spellcheck="false"><input id="w-fmag" type="number" step="0.1" min="6" max="10" value="7.4" aria-label="Magnitude"><button class="out" id="w-fake">Claim it</button></div></details>
-    <button class="out" id="w-out">Disconnect</button>`;
+  $("#coins-body").innerHTML = !me ? `<p class="note first">Connect a wallet first.</p>` :
+    `<p class="note first">${tapOn ? `Every account can take ${trem(params!.tap_amount, 0)} free starter TREM, once. They come from a pool the launcher filled, and no new coins are created. You need coins only to give or to see dilution; claiming a quake needs none.` : "Starter coins are not offered on this contract."}</p>
+     ${tapOn ? `<div class="acts"><button class="blue" id="w-tap" ${mine.tapped ? "disabled" : ""}>${mine.tapped ? "Starter coins taken ✓" : `Get ${trem(params!.tap_amount, 0)} starter TREM`}</button></div>` : ""}`;
+  // 2. give (the relief list itself is static in the page and filled by renderRelief)
+  const giveOn = state0?.given_total !== undefined, fundOn = state0?.reserve !== undefined;
+  const ml = $("#match-line");
+  ml.innerHTML = state0?.reserve !== undefined && params?.match_ppm ? `<b>Gifts are topped up ${(params.match_ppm / 1e4).toFixed(0)}%</b> from a reserve of existing coins (${trem(state0.reserve, 0)} TREM left). The extra goes to the relief accounts, not to you.` : "";
+  const host = $("#give-body");
+  const active = document.activeElement as HTMLElement | null;
+  if (active && host.contains(active) && active.tagName === "INPUT") return; // do not rebuild under someone who is typing
+  host.innerHTML = !me ? `<p class="note">Connect a wallet to give.</p>` : !giveOn ? "" : mine.tok <= 0n ? `<p class="note">You hold no coins yet: take the starter coins in step 1.</p>` :
+    `<div class="acts"><input id="w-give" type="number" min="1" step="1" value="${mine.tok >= 100_000_000n ? 100 : 1}" aria-label="TREM to give"><span class="note nm">TREM</span><button class="blue" id="w-givebtn">Give to the relief list</button></div>
+     <p class="note" id="w-giveprev">Giving sends your own coins to the five relief accounts. It cannot be undone.</p>
+     ${fundOn ? `<details class="mk"><summary>Add coins to the matching reserve instead</summary><div class="acts"><input id="w-fund" type="number" min="1" step="1" value="10" aria-label="TREM to put in the reserve"><span class="note nm">TREM</span><button class="out" id="w-fundbtn">Put coins in the reserve</button></div><p class="note">Optional. These coins can only leave the reserve as matches added to gifts: nobody can take them back, including you.</p></details>` : ""}`;
 }
 let state0: State | null = null;
 
@@ -286,7 +296,7 @@ function initTabs() {
     show(bar.querySelector("button")!.dataset.tab!);
   });
   const go = () => {
-    const h = location.hash === "#real" ? "#live-wallet" : location.hash, m = h.match(/^#(live|evidence)-(\w+)$/); if (!m) return;
+    const h = location.hash === "#real" || location.hash === "#live-relief" ? "#live-wallet" : location.hash, m = h.match(/^#(live|evidence)-(\w+)$/); if (!m) return;
     const bar = document.querySelector<TabBar>(`[data-tabs="${m[1]}"]`); if (!bar?.querySelector(`[data-tab="${m[2]}"]`)) return;
     bar.showTab!(m[2]); setTimeout(() => document.getElementById(m[1])?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   };
@@ -331,7 +341,7 @@ async function start() {
   for (const id of ["#contract-link", "#contract-link2"]) { $(id).setAttribute("href", EXPLORER + DEP.contract); $(id).textContent = DEP.contract; }
   renderSteps(); renderWallet(); renderJourneyNow(); initDecide($("#decide-host"));
   if (new URLSearchParams(location.search).has("transactionHashes")) { toast("Transaction sent from your wallet. Refreshing…"); const u = new URL(location.href); u.searchParams.delete("transactionHashes"); history.replaceState(null, "", u); }
-  wallet().then((w) => w.initWallet(DEP.contract, (a) => { me = a; loadMine(); boardSig = ""; if (lastState) renderBoardFlags(); })).catch(() => ($("#wallet-card").innerHTML = "<h3>Your wallet</h3><p class='note'>The wallet library could not start in this browser.</p>"));
+  wallet().then((w) => w.initWallet(DEP.contract, (a) => { me = a; loadMine(); boardSig = ""; if (lastState) renderBoardFlags(); })).catch(() => ($("#wallet-card").innerHTML = "<b>Your wallet</b><p class='note first'>The wallet library could not start in this browser.</p>"));
   await refresh(); renderSteps(); loadMine(); initSim(); setInterval(() => { if (!document.hidden) refresh(); }, POLL_MS); setInterval(() => { if (!document.hidden) tickCountdowns(); }, 1000);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) { refresh(); loadMine(); } }); // catch up once on return
 }

@@ -23,20 +23,17 @@ export function renderJourney(c: Ctx): string {
   const p = c.params, ev = myEvent(c), t = c.now;
   const final = !!ev && ev.status === "counted";
   const dead = !!ev && unconfirmed(ev, t);
-  const done = [!!c.me, !!ev, final || dead];
-  const now = done.findIndex((d) => !d); const cur = now === -1 ? 3 : now;
+  if (!c.me) return `<p class="note first">Anyone can tell the contract about a quake, but a claim creates nothing by itself: five fixed bots read the official U.S. Geological Survey record, and only quakes they find there can count.</p><p class="note">Connect your wallet (top of this tab) to try it.</p>`;
+  const done = [!!ev, final || dead];
+  const now = done.findIndex((d) => !d); const cur = now === -1 ? 2 : now;
   const q = c.unreported[0];
-  const tapAmt = p ? BigInt(p.tap_amount) : 0n;
   const steps: { title: string; sum: string; body: string }[] = [
-    { title: "Connect a free wallet", sum: c.me ? `Connected as ${esc(c.me)}` : "",
-      body: `<p>You need a free testnet account. It takes a minute in the Meteor wallet (switch it to <b>testnet</b>). Nothing here has any value.</p><button class="blue big" data-j="connect">Connect wallet</button>` },
     { title: "Tell the contract about an earthquake", sum: ev ? `You claimed ${esc(ev.event_id)} (${mag(ev.mag_x10)})` : "",
       body: `<p>Anyone can tell the contract about a quake, but a claim creates nothing by itself. Five fixed <b>bots</b> read the official U.S. Geological Survey record, and only quakes they find there can count.</p>
         ${c.net === "live" && !q ? `<p>The bots have already confirmed every recent real quake on the <b>Live</b> contract. You can still make up a fake below, or switch to the Demo (top bar).</p>`
           : q ? `<p>A real earthquake from the USGS whose expected impact is high enough to count:</p><p class="pick"><b>${mag(q.mag_x10)}</b> ${esc(q.place || "unnamed region")} <span class="note">USGS expected impact: ${alertName(q.alert)}</span></p><button class="blue big" data-j="claim" data-id="${esc(q.id)}" data-mag="${q.mag_x10}" data-origin="${q.origin_s}" data-alert="${q.alert}">Tell the contract about it</button>`
           : `<p class="hint">${c.checking ? "Looking up recent earthquakes…" : "No unreported real quake right now."}</p>`}
-        <p class="hint">Or <a href="#" data-j="fake">claim a made-up quake</a> and watch the bots ignore it.</p>
-        ${tapAmt > 0n && !c.tapped ? `<p class="hint">Want to hold some coins too, to see them get diluted? <a href="#" data-j="tap">Get ${trem(tapAmt, 0)} free starter TREM</a>.</p>` : ""}` },
+        <p class="hint">Or <a href="#" data-j="fake">claim a made-up quake</a> and watch the bots ignore it.</p>` },
     { title: "Watch the five bots decide", sum: final ? "Confirmed" : "Not confirmed",
       body: !ev ? "" : `<p>${ev.attestations} of ${ev.needed} needed bots agree on this quake. ${/^fake/i.test(ev.event_id) ? "No bot will confirm it: the USGS has no such event." : "Each bot checks the USGS record on its own and says so only if it finds the same quake."}</p>
         ${botChips(ev, p)}${dead ? "" : `<p class="note">${c.net === "live" ? `Live bots wait ${duration(p?.min_age_s ?? 0)} after a quake (it can still be revised) and run every 20 minutes.` : "On the Demo the bots check every few seconds."}</p>`}
@@ -46,7 +43,7 @@ export function renderJourney(c: Ctx): string {
   ];
   const li = steps.map((s, i) => {
     const state = i < cur ? "done" : i === cur ? "now" : "todo";
-    return `<li class="step ${state}"><span class="num" aria-hidden="true">${state === "done" ? "✓" : i + 1}</span><div><h3>${i + 1}. ${esc(s.title)}</h3>${state === "done" && s.sum ? `<p class="sum">${s.sum}</p>` : ""}${state === "now" ? s.body : ""}</div></li>`;
+    return `<li class="step ${state}"><span class="num" aria-hidden="true">${state === "done" ? "✓" : String.fromCharCode(97 + i)}</span><div><h4>${esc(s.title)}</h4>${state === "done" && s.sum ? `<p class="sum">${s.sum}</p>` : ""}${state === "now" ? s.body : ""}</div></li>`;
   }).join("");
   return `<ol class="journey">${li}</ol>`;
 }

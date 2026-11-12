@@ -61,7 +61,7 @@
   <h2>Live on NEAR testnet</h2>
   <p class="sub">This is the real contract, read straight from the chain. <a id="contract-link2" href="#" rel="noopener">–</a></p>
   <div class="tabbar"><div class="seg" role="tablist" aria-label="Live contract views" data-tabs="live">
-    <button role="tab" data-tab="overview">Overview</button><button role="tab" data-tab="quakes">Quakes</button><button role="tab" data-tab="relief">Relief &amp; givers</button><button role="tab" data-tab="rules">Rules</button><button role="tab" data-tab="wallet">Try it with a wallet</button>
+    <button role="tab" data-tab="overview">Overview</button><button role="tab" data-tab="quakes">Quakes</button><button role="tab" data-tab="wallet">Wallet &amp; relief</button><button role="tab" data-tab="rules">Rules</button>
   </div></div>
 
   <div class="tabpanel" data-panel="live:overview">
@@ -83,17 +83,6 @@
     <div id="unrep" class="list"></div>
   </div>
 
-  <div class="tabpanel" data-panel="live:relief" hidden>
-    <h3>The relief list</h3>
-    <p class="sub">Five fixed accounts, set at launch and never changed. Each mint is split equally. On testnet they are stand-ins: nothing real is donated.</p>
-    <div id="relief-list" class="relief"></div>
-    <div id="givers" hidden>
-      <h3 class="gap">Givers board</h3>
-      <p class="sub">Any holder can send their own coins to the relief list. It creates no new coins and gives no say in what counts; the contract only keeps the total each account has given.</p>
-      <div class="card" id="givers-card"></div>
-    </div>
-  </div>
-
   <div class="tabpanel" data-panel="live:rules" hidden>
     <h3>The rules, fixed at launch</h3>
     <p class="sub">Read straight from the contract. There is no owner and no method that changes any of these.</p>
@@ -102,9 +91,22 @@
   </div>
 
   <div class="tabpanel" data-panel="live:wallet" hidden>
-    <div id="modebar" class="modebar"></div>
-    <div id="journey-host"><div class="skeleton tall"></div></div>
-    <div id="wallet-card"></div>
+    <div id="wallet-card" class="card acctbar"></div>
+    <div class="acards">
+      <div class="card acard" id="coins-card"><h3><span class="n">1</span>Get coins</h3><div id="coins-body"></div></div>
+      <div class="card acard" id="give-card"><h3><span class="n">2</span>Give to the relief list</h3>
+        <p class="note first">Five fixed accounts, set at launch and never changed. Every gift and every quake mint is split equally between them. On testnet they are stand-ins: nothing real is donated.</p>
+        <div id="relief-list" class="reliefmini"></div>
+        <div id="match-line" class="note"></div>
+        <div id="give-body"></div>
+      </div>
+      <div class="card acard" id="quake-card"><h3><span class="n">3</span>Tell the contract about a quake</h3><div id="modebar" class="modebar"></div><div id="journey-host"><div class="skeleton tall"></div></div></div>
+    </div>
+    <div id="givers" hidden>
+      <h3 class="gap">Givers board</h3>
+      <p class="sub">Any holder can send their own coins to the relief list. It creates no new coins and gives no say in what counts; the contract only keeps the total each account has given.</p>
+      <div class="card" id="givers-card"></div>
+    </div>
     <form id="lookup" class="lookup"><label for="acct">Look up any testnet account (no wallet needed)</label><div class="row"><input id="acct" placeholder="ada.example.testnet" autocomplete="off" spellcheck="false"><button class="btn" type="submit">Look up</button></div><p id="lookup-out" class="note" aria-live="polite"></p></form>
   </div>
 </div></section>
