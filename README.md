@@ -9,6 +9,28 @@
 - Demo contract (testnet; used only by `make demo`, the scripted on-chain scene, and not by the page): `tremor.rounds-indep-5928.testnet`
 - Built for the NEAR HACKATHON, track **Memecoins With Mechanics**. All code was written from Nov 7, 2026.
 
+## At a glance
+
+Screenshots of the page ([live here](https://samuel025.github.io/tremor/)); the Live parts are read from the testnet contract.
+
+**1. The idea.** A coin that grows only when a quake that affects people is confirmed.
+![The top of the page](docs/screenshots/1-top.png)
+
+**2. How it works.** USGS reports a quake, three of five fixed bots agree, and the relief accounts get new coins inside caps.
+![How it works](docs/screenshots/2-how-it-works.png)
+
+**3. Try it, no wallet needed.** A simulation in the browser: pick a quake, set the five bots to honest, bad or offline, give coins and watch the reserve match them.
+![The simulation](docs/screenshots/3-simulator.png)
+
+**4. Live on NEAR testnet.** The real contract's weekly and monthly caps, the donation match reserve and the supply, read from the chain.
+![Live overview](docs/screenshots/4-live-overview.png)
+
+**5. Wallet and relief.** One place to connect a wallet, take starter coins, give to the five relief accounts (with the match), report a quake and read the givers board.
+![Wallet and relief](docs/screenshots/5-wallet-and-relief.png)
+
+**6. Evidence.** Sixty real days of USGS earthquakes replayed against the rules; orange dots are the quakes that count.
+![Sixty real days](docs/screenshots/6-evidence.png)
+
 ## Results
 
 Every number below is read from `results/results.json`, which `make results` fills by running the commands. `make check-readme` fails if this README is out of date.
